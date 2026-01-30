@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="vi">
+    <head>
+        <meta charset="UTF-8">
+        <title>Quản Lý Công Việc</title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <div class="calendar-header">
+            <button id="prevMonth">❮</button>
+            <h1 id="monthYear"></h1>
+            <button id="nextMonth">❯</button>
+        </div>
+        <div class="weekdays">
+            <div>Thứ hai</div>
+            <div>Thứ ba</div>
+            <div>Thứ tư</div>
+            <div>Thứ năm</div>
+            <div>Thứ sáu</div>
+            <div>Thứ bảy</div>
+            <div>Chủ nhật</div>
+        </div>
+        <div id="calendar"></div>
+        <h2 id="selectedDateTitle">Chọn ngày để xem công việc</h2>
+        <button id="openAddModal" class="btn-add">➕ Thêm công việc</button>
+        <table>
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>Nội dung</th>
+                    <th>Đơn vị</th>
+                    <th>Thời gian HT</th>
+                    <th>Mức độ</th>
+                    <th>Trạng thái</th>
+                    <th>Ghi chú</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody id="taskTable"></tbody>
+        </table>
+        <div id="taskModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2 id="modalTitle">Thêm công việc</h2>
+                <input type="hidden" id="taskId">
+                <label>Nội dung công việc</label>
+                <textarea id="content"></textarea>
+                <label>Đơn vị thực hiện</label>
+                <input type="text" id="unit">
+                <label>Thời gian hoàn thành</label>
+                <input type="text" id="duration">
+                <label>Mức độ</label>
+                <select id="priority">
+                    <option>Thấp</option>
+                    <option>Trung bình</option>
+                    <option>Cao</option>
+                </select>
+                <label>Trạng thái</label>
+                <select id="status">
+                    <option>Chưa xử lý</option>
+                    <option>Đang xử lý</option>
+                    <option>Đã xử lý</option>
+                </select>
+                <label>Ghi chú</label>
+                <textarea id="note"></textarea>
+                <button id="saveTaskBtn" class="btn-add">💾 Lưu công việc</button>
+            </div>
+        </div>
+        <script type="module" src="firebase.js"></script>
+        <script type="module" src="script.js"></script>
+    </body>
+</html>
