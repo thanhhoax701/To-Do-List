@@ -23,7 +23,7 @@
         <div id="calendar"></div>
         <h2 id="selectedDateTitle">Chọn ngày để xem công việc</h2>
         <button id="openAddModal" class="btn-add">➕ Thêm công việc</button>
-        <button id="duplicateDayBtn" class="btn-duplicate-day">📅 Nhân bản sang ngày khác</button>
+        <button id="duplicateDayBtn" class="btn-duplicate-day">📅 Nhân bản công việc</button>
         <table>
             <thead>
                 <tr>
@@ -39,6 +39,7 @@
             </thead>
             <tbody id="taskTable"></tbody>
         </table>
+        <!-- MODAL TASK -->
         <div id="taskModal" class="modal">
             <div class="modal-content">
                 <span class="close">&times;</span>
@@ -65,6 +66,28 @@
                 <label>Ghi chú</label>
                 <textarea id="note"></textarea>
                 <button id="saveTaskBtn" class="btn-add">💾 Lưu công việc</button>
+            </div>
+        </div>
+        <!-- MODAL NHÂN BẢN NÂNG CAO -->
+        <div id="advancedDuplicateModal" class="modal">
+            <div class="modal-content" style="max-width:420px">
+                <span class="close" id="closeAdvancedDuplicate">&times;</span>
+                <h3>Nhân bản công việc</h3>
+                <label>Chọn kiểu nhân bản</label>
+                <select id="duplicateType">
+                    <option value="multi">Nhân bản sang nhiều ngày</option>
+                    <option value="week">Nhân bản cả tuần</option>
+                    <option value="month">Nhân bản cả tháng</option>
+                </select>
+                <div id="multiDateBox" style="margin-top:10px">
+                    <label>Chọn nhiều ngày</label>
+                    <input type="date" id="multiDatePicker">
+                    <button id="addDateBtn">➕ Thêm ngày</button>
+                    <ul id="dateList"></ul>
+                </div>
+                <button id="confirmAdvancedDuplicate" class="btn-add" style="margin-top:10px">
+                    🔁 Xác nhận nhân bản
+                </button>
             </div>
         </div>
         <script type="module" src="firebase.js"></script>

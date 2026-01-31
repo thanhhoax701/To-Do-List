@@ -22,8 +22,10 @@ const statusInput = document.getElementById("status");
 const noteInput = document.getElementById("note");
 const saveTaskBtn = document.getElementById("saveTaskBtn");
 
+/* ===== BIẾN TOÀN CỤC ===== */
 let currentDate = new Date();
 let selectedDate = null;
+let multiDates = [];
 
 /* ===== CALENDAR ===== */
 function renderCalendar() {
@@ -282,46 +284,6 @@ window.addEventListener("load", () => {
     }, 100);
 });
 
-// // ===== NHÂN BẢN CÔNG VIỆC THEO NGÀY ===== //
-// document.getElementById("duplicateDayBtn").onclick = async () => {
-//     if (!selectedDate) {
-//         alert("Vui lòng chọn ngày trước!");
-//         return;
-//     }
-
-//     const targetDate = prompt("Nhập ngày muốn nhân bản tới (YYYY-MM-DD):");
-//     if (!targetDate) return;
-
-//     const [ty, tm] = targetDate.split("-");
-//     const tw = getWeekNumber(targetDate);
-
-//     const [sy, sm] = selectedDate.split("-");
-//     const sw = getWeekNumber(selectedDate);
-
-//     const sourceRef = ref(db, `tasks/${sy}/${sm}/${sw}/${selectedDate}`);
-
-//     onValue(sourceRef, async (snap) => {
-//         if (!snap.exists()) {
-//             alert("Ngày này không có công việc để nhân bản!");
-//             return;
-//         }
-
-//         const tasks = [];
-//         snap.forEach(ch => tasks.push(ch.val()));
-
-//         for (const task of tasks) {
-//             const newTask = {
-//                 ...task,
-//                 startDate: targetDate
-//             };
-
-//             await push(ref(db, `tasks/${ty}/${tm}/${tw}/${targetDate}`), newTask);
-//         }
-
-//         alert(`✅ Đã nhân bản ${tasks.length} công việc sang ${targetDate}`);
-//     }, { onlyOnce: true });
-// };
-
 /* ===== NHÂN BẢN TOÀN BỘ NGÀY (FIX FULL) ===== */
 document.getElementById("duplicateDayBtn").onclick = async () => {
     if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
@@ -348,3 +310,95 @@ document.getElementById("duplicateDayBtn").onclick = async () => {
 
     alert(`✅ Đã nhân bản ${count} công việc sang ${targetDate}`);
 };
+
+
+/* ===== NÂNG CAO: NHÂN BẢN NHIỀU NGÀY / TUẦN / THÁNG ===== */
+// const advModal = document.getElementById("advancedDuplicateModal");
+// const closeAdvModal = document.getElementById("closeAdvancedDuplicate");
+// const duplicateType = document.getElementById("duplicateType");
+// const multiDatePicker = document.getElementById("multiDatePicker");
+// const addDateBtn = document.getElementById("addDateBtn");
+// const dateList = document.getElementById("dateList");
+// const confirmAdvBtn = document.getElementById("confirmAdvancedDuplicate");
+
+// let advancedDates = [];
+
+// /* Mở modal */
+// document.getElementById("duplicateDayBtn").onclick = () => {
+//     if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
+//     advModal.style.display = "flex";
+// };
+
+// /* Đóng modal */
+// closeAdvModal.onclick = () => advModal.style.display = "none";
+// advModal.onclick = e => { if (e.target === advModal) advModal.style.display = "none"; };
+
+// /* Thêm ngày vào danh sách */
+// addDateBtn.onclick = () => {
+//     const d = multiDatePicker.value;
+//     if (!d || advancedDates.includes(d)) return;
+//     advancedDates.push(d);
+
+//     const li = document.createElement("li");
+//     li.textContent = d + " ❌";
+//     li.style.cursor = "pointer";
+//     li.onclick = () => {
+//         advancedDates = advancedDates.filter(x => x !== d);
+//         li.remove();
+//     };
+//     dateList.appendChild(li);
+// };
+
+// /* Hàm nhân bản */
+// confirmAdvBtn.onclick = async () => {
+//     const [sy, sm] = selectedDate.split("-");
+//     const sw = getWeekNumber(selectedDate);
+
+//     const snap = await get(ref(db, `tasks/${sy}/${sm}/${sw}/${selectedDate}`));
+//     if (!snap.exists()) return alert("Không có công việc để nhân bản!");
+
+//     const tasks = [];
+//     snap.forEach(ch => tasks.push(ch.val()));
+
+//     const duplicateTo = async (targetDate) => {
+//         const [ty, tm] = targetDate.split("-");
+//         const tw = getWeekNumber(targetDate); // ✅ ĐÚNG
+
+//         for (const task of tasks) {
+//             await push(ref(db, `tasks/${ty}/${tm}/${tw}/${targetDate}`), {
+//                 ...task,
+//                 startDate: targetDate
+//             });
+//         }
+//     };
+
+
+//     if (duplicateType.value === "multi") {
+//         for (const d of advancedDates) await duplicateTo(d);
+//         alert(`✅ Đã nhân bản ${tasks.length * advancedDates.length} công việc`);
+//     }
+
+//     if (duplicateType.value === "week") {
+//         const base = new Date(selectedDate);
+//         for (let i = 0; i < 7; i++) {
+//             const d = new Date(base);
+//             d.setDate(base.getDate() + i);
+//             await duplicateTo(d.toISOString().split("T")[0]);
+//         }
+//         alert(`✅ Đã nhân bản ${tasks.length * 7} công việc cho cả tuần`);
+//     }
+
+//     if (duplicateType.value === "month") {
+//         const base = new Date(selectedDate);
+//         const daysInMonth = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+//         for (let i = 1; i <= daysInMonth; i++) {
+//             const d = new Date(base.getFullYear(), base.getMonth(), i);
+//             await duplicateTo(d.toISOString().split("T")[0]);
+//         }
+//         alert(`✅ Đã nhân bản ${tasks.length * daysInMonth} công việc cho cả tháng`);
+//     }
+
+//     advModal.style.display = "none";
+//     dateList.innerHTML = "";
+//     advancedDates = [];
+// };

@@ -292,3 +292,11 @@ td select {
     background: #138496;
     transform: translateY(-1px);
 }
+
+#duplicateModal input[type="date"] {
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
