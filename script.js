@@ -1,5 +1,5 @@
 import { db } from "./firebase.js";
-import { ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { ref, push, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 /* ===== DOM ===== */
 const calendarDiv = document.getElementById("calendar");
@@ -125,6 +125,7 @@ function loadTasks(ds) {
                 <td></td>
                 <td>${t.note}</td>
                 <td>
+                    <button class="btn-duplicate">🔁 Nhân bản</button>
                     <button class="btn-edit">✏️ Sửa</button>
                     <button class="btn-delete">🗑️ Xóa</button>
                 </td>
@@ -146,6 +147,25 @@ function loadTasks(ds) {
 
             row.children[4].appendChild(prSelect);
             row.children[5].appendChild(stSelect);
+
+            row.querySelector(".btn-duplicate").onclick = async () => {
+                const confirmDup = confirm("Bạn có muốn nhân bản công việc này không?");
+                if (!confirmDup) return;
+
+                const newTask = {
+                    content: t.content,
+                    unit: t.unit,
+                    duration: t.duration,
+                    priority: t.priority,
+                    status: t.status,
+                    note: t.note,
+                    startDate: t.startDate
+                };
+
+                await push(ref(db, `tasks/${y}/${m}/${w}/${ds}`), newTask);
+                alert("🔁 Đã nhân bản công việc!");
+            };
+
 
             row.querySelector(".btn-delete").onclick = async () => {
                 const confirmDelete = confirm("Bạn có chắc muốn xóa công việc này không?");
@@ -193,6 +213,7 @@ document.getElementById("openAddModal").onclick = () => {
     openModal("Thêm công việc");
 };
 
+/* ===== MODAL SAVE ===== */
 saveTaskBtn.onclick = async () => {
     if (!selectedDate) {
         alert("Vui lòng chọn ngày trước!");
@@ -260,3 +281,70 @@ window.addEventListener("load", () => {
         });
     }, 100);
 });
+
+// // ===== NHÂN BẢN CÔNG VIỆC THEO NGÀY ===== //
+// document.getElementById("duplicateDayBtn").onclick = async () => {
+//     if (!selectedDate) {
+//         alert("Vui lòng chọn ngày trước!");
+//         return;
+//     }
+
+//     const targetDate = prompt("Nhập ngày muốn nhân bản tới (YYYY-MM-DD):");
+//     if (!targetDate) return;
+
+//     const [ty, tm] = targetDate.split("-");
+//     const tw = getWeekNumber(targetDate);
+
+//     const [sy, sm] = selectedDate.split("-");
+//     const sw = getWeekNumber(selectedDate);
+
+//     const sourceRef = ref(db, `tasks/${sy}/${sm}/${sw}/${selectedDate}`);
+
+//     onValue(sourceRef, async (snap) => {
+//         if (!snap.exists()) {
+//             alert("Ngày này không có công việc để nhân bản!");
+//             return;
+//         }
+
+//         const tasks = [];
+//         snap.forEach(ch => tasks.push(ch.val()));
+
+//         for (const task of tasks) {
+//             const newTask = {
+//                 ...task,
+//                 startDate: targetDate
+//             };
+
+//             await push(ref(db, `tasks/${ty}/${tm}/${tw}/${targetDate}`), newTask);
+//         }
+
+//         alert(`✅ Đã nhân bản ${tasks.length} công việc sang ${targetDate}`);
+//     }, { onlyOnce: true });
+// };
+
+/* ===== NHÂN BẢN TOÀN BỘ NGÀY (FIX FULL) ===== */
+document.getElementById("duplicateDayBtn").onclick = async () => {
+    if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
+
+    const targetDate = prompt("Nhập ngày muốn nhân bản tới (YYYY-MM-DD):");
+    if (!targetDate || targetDate === selectedDate) return;
+
+    const [sy, sm] = selectedDate.split("-");
+    const sw = getWeekNumber(selectedDate);
+
+    const [ty, tm] = targetDate.split("-");
+    const tw = getWeekNumber(targetDate);
+
+    const snap = await get(ref(db, `tasks/${sy}/${sm}/${sw}/${selectedDate}`));
+
+    if (!snap.exists()) return alert("Ngày này không có công việc để nhân bản!");
+
+    let count = 0;
+    snap.forEach(ch => {
+        const task = ch.val();
+        push(ref(db, `tasks/${ty}/${tm}/${tw}/${targetDate}`), { ...task, startDate: targetDate });
+        count++;
+    });
+
+    alert(`✅ Đã nhân bản ${count} công việc sang ${targetDate}`);
+};

@@ -263,3 +263,32 @@ td select {
     background: rgba(0, 0, 0, 0.08);
     transform: rotate(90deg);
 }
+
+/* Duplicate rows */
+.btn-duplicate {
+    background: #6f42c1;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.btn-duplicate:hover {
+    background: #5a32a3;
+    transform: translateY(-1px);
+}
+
+/* Duplicate day */
+.btn-duplicate-day {
+    background: #17a2b8;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    margin-left: 10px;
+}
+
+.btn-duplicate-day:hover {
+    background: #138496;
+    transform: translateY(-1px);
+}
