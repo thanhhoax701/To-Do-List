@@ -13,6 +13,8 @@ const prevBtn = document.getElementById("prevMonth");
 const nextBtn = document.getElementById("nextMonth");
 
 // Nút xóa (ngày, tuần, tháng, công việc được chọn)
+const deleteSelectMain = document.getElementById("deleteSelectMain");
+const deleteSelect = document.getElementById("deleteSelect");
 const deleteDayBtn = document.getElementById("deleteDayBtn");
 const deleteWeekBtn = document.getElementById("deleteWeekBtn");
 const deleteMonthBtn = document.getElementById("deleteMonthBtn");
@@ -42,6 +44,9 @@ const priorityInput = document.getElementById("priority");
 const statusInput = document.getElementById("status");
 const noteInput = document.getElementById("note");
 const saveTaskBtn = document.getElementById("saveTaskBtn");
+
+// Loading indicator
+const loadingIndicator = document.getElementById("loadingIndicator");
 
 /* ========== BIẾN TOÀN CỤC ========== */
 // Ngày hiện tại đang hiển thị trên lịch
@@ -251,6 +256,16 @@ function showCustomConfirm(html) {
         customAlertCancel.onclick = () => { hideCustomAlert(); resolve(false); };
         customAlertModal.style.display = 'flex';
     });
+}
+
+// Hiển thị loading indicator
+function showLoading() {
+    if (loadingIndicator) loadingIndicator.classList.add('active');
+}
+
+// Ẩn loading indicator
+function hideLoading() {
+    if (loadingIndicator) loadingIndicator.classList.remove('active');
 }
 
 // Chuyển chuỗi YYYY-MM-DD sang định dạng DD-MM-YYYY
@@ -641,152 +656,173 @@ confirmAdvBtn.onclick = async () => {
     const [sy, sm] = selectedDate.split("-");
     const sw = getWeekNumber(selectedDate);
 
-    // Helper: lấy tất cả công việc của một tuần
-    async function getAllWeekTasks(year, month, weekId) {
-        const r = ref(db, `tasks/${year}/${month}/${weekId}`);
-        const snap = await get(r);
-        const allTasks = {};
-        if (snap.exists()) {
-            snap.forEach(dateSnap => {
-                const dateKey = dateSnap.key;
-                allTasks[dateKey] = [];
-                dateSnap.forEach(ch => {
-                    allTasks[dateKey].push(ch.val());
-                });
-            });
-        }
-        return allTasks;
-    }
-
-    let allSourceTasks = {};
-    let sourceTaskCount = 0;
-
-    // Lấy công việc từ nguồn (tuần hoặc ngày)
-    if (duplicateType.value === "week" || duplicateType.value === "month") {
-        // Nhân bản tuần/tháng: lấy toàn bộ công việc của tuần/tháng
-        if (duplicateType.value === "week") {
-            allSourceTasks = await getAllWeekTasks(sy, sm, sw);
-            sourceTaskCount = Object.values(allSourceTasks).reduce((sum, arr) => sum + arr.length, 0);
-            await showCustomAlert(`🔎 Tìm thấy ${sourceTaskCount} công việc ở tuần ${sw}`);
-        } else {
-            // Month: lấy tất cả công việc của tháng
-            const r = ref(db, `tasks/${sy}/${sm}`);
+    try {
+        async function getAllWeekTasks(year, month, weekId) {
+            const r = ref(db, `tasks/${year}/${month}/${weekId}`);
             const snap = await get(r);
-            sourceTaskCount = 0;
+            const allTasks = {};
             if (snap.exists()) {
-                snap.forEach(weekSnap => {
-                    weekSnap.forEach(dateSnap => {
-                        const dateKey = dateSnap.key;
-                        allSourceTasks[dateKey] = [];
-                        dateSnap.forEach(ch => {
-                            allSourceTasks[dateKey].push(ch.val());
-                            sourceTaskCount++;
-                        });
+                snap.forEach(dateSnap => {
+                    const dateKey = dateSnap.key;
+                    allTasks[dateKey] = [];
+                    dateSnap.forEach(ch => {
+                        allTasks[dateKey].push(ch.val());
                     });
                 });
             }
-            await showCustomAlert(`🔎 Tìm thấy ${sourceTaskCount} công việc ở tháng ${sm}/${sy}`);
+            return allTasks;
         }
-    } else {
-        // Nhân bản ngày hoặc nhiều ngày: lấy công việc của ngày được chọn
-        const snap = await get(ref(db, `tasks/${sy}/${sm}/${sw}/${selectedDate}`));
-        if (snap.exists()) {
-            allSourceTasks[selectedDate] = [];
-            snap.forEach(ch => {
-                allSourceTasks[selectedDate].push(ch.val());
-            });
-            sourceTaskCount = allSourceTasks[selectedDate].length;
-        }
-        await showCustomAlert(`🔎 Tìm thấy ${sourceTaskCount} công việc ở ${formatDisplayDate(selectedDate)}`);
-    }
 
-    if (sourceTaskCount === 0) return alert("Không có công việc để nhân bản!");
+        let allSourceTasks = {};
+        let sourceTaskCount = 0;
 
-    const duplicateTo = async (targetDate, sourceStartDate) => {
-        const [ty, tm] = targetDate.split("-");
-        const tw = getWeekNumber(targetDate);
-
-        // Nếu đang nhân bản tuần/tháng, lấy công việc tương ứng ngày nguồn và nhân bản sang ngày đích
+        // Lấy công việc từ nguồn (tuần hoặc ngày)
         if (duplicateType.value === "week" || duplicateType.value === "month") {
-            // Tìm ngày tương ứng trong allSourceTasks
-            // sourceStartDate là ngày bắt đầu của tuần/tháng nguồn
-            const sourceStart = parseYMD(sourceStartDate);
-            const targetStart = parseYMD(targetDate);
+            // Nhân bản tuần/tháng: lấy toàn bộ công việc của tuần/tháng
+            if (duplicateType.value === "week") {
+                allSourceTasks = await getAllWeekTasks(sy, sm, sw);
+                sourceTaskCount = Object.values(allSourceTasks).reduce((sum, arr) => sum + arr.length, 0);
+                await showCustomAlert(`🔎 Tìm thấy ${sourceTaskCount} công việc ở tuần ${sw}`);
+            } else {
+                // Month: lấy tất cả công việc của tháng
+                const r = ref(db, `tasks/${sy}/${sm}`);
+                const snap = await get(r);
+                sourceTaskCount = 0;
+                if (snap.exists()) {
+                    snap.forEach(weekSnap => {
+                        weekSnap.forEach(dateSnap => {
+                            const dateKey = dateSnap.key;
+                            allSourceTasks[dateKey] = [];
+                            dateSnap.forEach(ch => {
+                                allSourceTasks[dateKey].push(ch.val());
+                                sourceTaskCount++;
+                            });
+                        });
+                    });
+                }
+                await showCustomAlert(`🔎 Tìm thấy ${sourceTaskCount} công việc ở tháng ${sm}/${sy}`);
+            }
+        } else {
+            // Nhân bản ngày hoặc nhiều ngày: lấy công việc của ngày được chọn
+            const snap = await get(ref(db, `tasks/${sy}/${sm}/${sw}/${selectedDate}`));
+            if (snap.exists()) {
+                allSourceTasks[selectedDate] = [];
+                snap.forEach(ch => {
+                    allSourceTasks[selectedDate].push(ch.val());
+                });
+                sourceTaskCount = allSourceTasks[selectedDate].length;
+            }
+            await showCustomAlert(`🔎 Tìm thấy ${sourceTaskCount} công việc ở ${formatDisplayDate(selectedDate)}`);
+        }
 
-            for (const [sourceDateKey, tasksArr] of Object.entries(allSourceTasks)) {
-                // Tính offset ngày từ ngày bắt đầu tuần/tháng (use local dates)
-                const sourceDate = parseYMD(sourceDateKey);
-                const dayOffset = Math.round((sourceDate - sourceStart) / (1000 * 60 * 60 * 24));
-                const newTargetDate = new Date(targetStart);
-                newTargetDate.setDate(targetStart.getDate() + dayOffset);
-                const newTargetDateStr = toYMDLocal(newTargetDate);
-                const [nty, ntm] = newTargetDateStr.split("-");
-                const ntw = getWeekNumber(newTargetDateStr);
+        if (sourceTaskCount === 0) return alert("Không có công việc để nhân bản!");
 
+        const duplicateTo = async (targetDate, sourceStartDate) => {
+            const [ty, tm] = targetDate.split("-");
+            const tw = getWeekNumber(targetDate);
+
+            // Nếu đang nhân bản tuần/tháng, lấy công việc tương ứng ngày nguồn và nhân bản sang ngày đích
+            if (duplicateType.value === "week" || duplicateType.value === "month") {
+                // Tìm ngày tương ứng trong allSourceTasks
+                // sourceStartDate là ngày bắt đầu của tuần/tháng nguồn
+                const sourceStart = parseYMD(sourceStartDate);
+                const targetStart = parseYMD(targetDate);
+
+                for (const [sourceDateKey, tasksArr] of Object.entries(allSourceTasks)) {
+                    // Tính offset ngày từ ngày bắt đầu tuần/tháng (use local dates)
+                    const sourceDate = parseYMD(sourceDateKey);
+                    const dayOffset = Math.round((sourceDate - sourceStart) / (1000 * 60 * 60 * 24));
+                    const newTargetDate = new Date(targetStart);
+                    newTargetDate.setDate(targetStart.getDate() + dayOffset);
+                    const newTargetDateStr = toYMDLocal(newTargetDate);
+                    const [nty, ntm] = newTargetDateStr.split("-");
+                    const ntw = getWeekNumber(newTargetDateStr);
+
+                    for (const task of tasksArr) {
+                        await push(ref(db, `tasks/${nty}/${ntm}/${ntw}/${newTargetDateStr}`), {
+                            ...task,
+                            startDate: newTargetDateStr
+                        });
+                    }
+                }
+            } else {
+                // Nhân bản ngày: dùng công việc từ selectedDate
+                const tasksArr = allSourceTasks[selectedDate] || [];
                 for (const task of tasksArr) {
-                    await push(ref(db, `tasks/${nty}/${ntm}/${ntw}/${newTargetDateStr}`), {
+                    await push(ref(db, `tasks/${ty}/${tm}/${tw}/${targetDate}`), {
                         ...task,
-                        startDate: newTargetDateStr
+                        startDate: targetDate
                     });
                 }
             }
-        } else {
-            // Nhân bản ngày: dùng công việc từ selectedDate
-            const tasksArr = allSourceTasks[selectedDate] || [];
-            for (const task of tasksArr) {
-                await push(ref(db, `tasks/${ty}/${tm}/${tw}/${targetDate}`), {
-                    ...task,
-                    startDate: targetDate
-                });
-            }
-        }
-    };
+        };
 
-    try {
         if (duplicateType.value === "multi") {
-            if (advancedDates.length === 0) {
-                const targetDate = prompt("Nhập ngày muốn nhân bản tới (YYYY-MM-DD):");
-                if (!targetDate || targetDate === selectedDate) return alert("Ngày đích không hợp lệ hoặc trùng ngày nguồn!");
-                await duplicateTo(targetDate);
-                await showCustomAlert(`✅ Đã nhân bản ${sourceTaskCount} công việc sang ${formatDisplayDate(targetDate)}`);
-            } else {
-                for (const d of advancedDates) await duplicateTo(d);
-                await showCustomAlert(`✅ Đã nhân bản ${sourceTaskCount * advancedDates.length} công việc`);
+            showLoading();
+            try {
+                if (advancedDates.length === 0) {
+                    const targetDate = prompt("Nhập ngày muốn nhân bản tới (YYYY-MM-DD):");
+                    if (!targetDate || targetDate === selectedDate) return alert("Ngày đích không hợp lệ hoặc trùng ngày nguồn!");
+                    await duplicateTo(targetDate);
+                    hideLoading();
+                    await showCustomAlert(`✅ Đã nhân bản ${sourceTaskCount} công việc sang ${formatDisplayDate(targetDate)}`);
+                } else {
+                    for (const d of advancedDates) await duplicateTo(d);
+                    hideLoading();
+                    await showCustomAlert(`✅ Đã nhân bản ${sourceTaskCount * advancedDates.length} công việc`);
+                }
+            } catch (error) {
+                hideLoading();
+                throw error;
             }
         }
 
         if (duplicateType.value === "week") {
-            // Nhân bản tuần: người dùng chọn tuần đích để nhân bản vào
-            if (!targetWeekSelect.value) return alert("Vui lòng chọn tuần đích!");
-            const [ty, tm, tw] = targetWeekSelect.value.split("|");
-            const weekNum = parseInt(tw.replace("week", ""));
+            // Nhân bản tuần: người dùng chọn tuần đích để nhân bản vào - cần loading
+            showLoading();
+            try {
+                if (!targetWeekSelect.value) return alert("Vui lòng chọn tuần đích!");
+                const [ty, tm, tw] = targetWeekSelect.value.split("|");
+                const weekNum = parseInt(tw.replace("week", ""));
 
-            // Lấy ngày đầu tuần nguồn
-            const sourceWeekNum = parseInt(getWeekNumber(selectedDate).replace("week", ""));
-            const [sy, sm] = selectedDate.split("-");
-            const sourceRange = getWeekStartEnd(parseInt(sy), parseInt(sm), sourceWeekNum);
+                // Lấy ngày đầu tuần nguồn
+                const sourceWeekNum = parseInt(getWeekNumber(selectedDate).replace("week", ""));
+                const [sy, sm] = selectedDate.split("-");
+                const sourceRange = getWeekStartEnd(parseInt(sy), parseInt(sm), sourceWeekNum);
 
-            // Lấy ngày đầu tuần đích
-            const targetRange = getWeekStartEnd(parseInt(ty), parseInt(tm), weekNum);
+                // Lấy ngày đầu tuần đích
+                const targetRange = getWeekStartEnd(parseInt(ty), parseInt(tm), weekNum);
 
-            await duplicateTo(targetRange.startDate, sourceRange.startDate);
+                await duplicateTo(targetRange.startDate, sourceRange.startDate);
 
-            // Hiển thị chi tiết số công việc của mỗi ngày trong tuần
-            let detailMsg = `✅ Nhân bản tuần ${weekNum} - ${pad(tm)}/${ty}<br>`;
-            detailMsg += `   (${targetRange.startStr} - ${targetRange.endStr})<br>`;
-            detailMsg += `   Tổng: ${sourceTaskCount} công việc trên ${Object.keys(allSourceTasks).length} ngày`;
-            await showCustomAlert(detailMsg);
+                // Hiển thị chi tiết số công việc của mỗi ngày trong tuần
+                let detailMsg = `✅ Nhân bản tuần ${weekNum} - ${pad(tm)}/${ty}<br>`;
+                detailMsg += `   (${targetRange.startStr} - ${targetRange.endStr})<br>`;
+                detailMsg += `   Tổng: ${sourceTaskCount} công việc trên ${Object.keys(allSourceTasks).length} ngày`;
+                hideLoading();
+                await showCustomAlert(detailMsg);
+            } catch (error) {
+                hideLoading();
+                throw error;
+            }
         }
 
         if (duplicateType.value === "month") {
-            // Nhân bản tháng: người dùng chọn tháng đích để nhân bản vào
-            if (!targetMonthPicker.value) return alert("Vui lòng chọn tháng đích!");
-            const [ty, tm] = targetMonthPicker.value.split("-");
-            const [sy, sm] = selectedDate.split("-");
-            const sourceFirstDate = `${sy}-${sm}-01`;
-            const targetFirstDate = `${ty}-${tm}-01`;
-            await duplicateTo(targetFirstDate, sourceFirstDate);
-            await showCustomAlert(`✅ Đã nhân bản ${sourceTaskCount} công việc sang tháng ${tm}/${ty}`);
+            // Nhân bản tháng: người dùng chọn tháng đích để nhân bản vào - cần loading
+            showLoading();
+            try {
+                if (!targetMonthPicker.value) return alert("Vui lòng chọn tháng đích!");
+                const [ty, tm] = targetMonthPicker.value.split("-");
+                const [sy, sm] = selectedDate.split("-");
+                const sourceFirstDate = `${sy}-${sm}-01`;
+                const targetFirstDate = `${ty}-${tm}-01`;
+                await duplicateTo(targetFirstDate, sourceFirstDate);
+                hideLoading();
+                await showCustomAlert(`✅ Đã nhân bản ${sourceTaskCount} công việc sang tháng ${tm}/${ty}`);
+            } catch (error) {
+                hideLoading();
+                throw error;
+            }
         }
     } catch (error) {
         console.error(error);
@@ -982,107 +1018,128 @@ async function countDaysAndTasksForWeekById(y, m, weekId) {
 
 }
 
-/* ========== XÓA NGÀY ========== */
-// Xử lý khi nhấn nút "Xóa ngày"
-deleteDayBtn.onclick = async () => {
-    if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
-    const [y, m] = selectedDate.split("-");
-    const w = getWeekNumber(selectedDate);
+/* ========== XÓA NGÀY / TUẦN / THÁNG ========== */
+// Xử lý dropdown xóa chính
+deleteSelectMain.onchange = async () => {
+    const type = deleteSelectMain.value;
+    deleteSelectMain.value = ""; // Reset dropdown
 
-    const cnt = await countTasksForDay(selectedDate);
-    if (cnt === 0) return alert("Không có công việc để xóa ở ngày này!");
-
-    const ok = await showCustomConfirm(`Xác nhận xóa ${cnt} công việc của ngày ${formatDisplayDate(selectedDate)}?`);
-    if (!ok) return;
+    if (!type) return;
 
     try {
-        await remove(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}`));
-        await showCustomAlert(`✅ Đã xóa ${cnt} công việc`);
-        taskTable.innerHTML = "";
-    } catch (error) {
-        console.error(error);
-        await showCustomAlert("❌ Có lỗi khi xóa ngày!");
-    }
-};
+        if (type === "day") {
+            // XÓA NGÀY - không cần loading vì nhanh
+            if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
+            const [y, m] = selectedDate.split("-");
+            const w = getWeekNumber(selectedDate);
 
-/* ========== XÓA TUẦN ========== */
-// Xử lý khi nhấn nút "Xóa tuần"
-deleteWeekBtn.onclick = async () => {
-    deleteWeekBtn.disabled = true;
-    try {
-        // Xác định tuần: ưu tiên weekSelect, fallback selectedDate
-        let y, m, w;
-        if (weekSelect && weekSelect.value) {
-            [y, m, w] = weekSelect.value.split("|");
-        } else if (selectedDate) {
-            [y, m] = selectedDate.split("-");
-            w = getWeekNumber(selectedDate);
-        } else {
-            await showCustomAlert("Vui lòng chọn ngày hoặc tuần trước!");
-            return;
+            const cnt = await countTasksForDay(selectedDate);
+            if (cnt === 0) return alert("Không có công việc để xóa ở ngày này!");
+
+            const ok = await showCustomConfirm(`Xác nhận xóa ${cnt} công việc của ngày ${formatDisplayDate(selectedDate)}?`);
+            if (!ok) return;
+
+            showLoading();
+            try {
+                await remove(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}`));
+                hideLoading();
+                await showCustomAlert(`✅ Đã xóa ${cnt} công việc`);
+                taskTable.innerHTML = "";
+            } catch (error) {
+                hideLoading();
+                throw error;
+            }
         }
+        else if (type === "week") {
+            // XÓA TUẦN - không cần loading
+            try {
+                // Xác định tuần: ưu tiên weekSelect, fallback selectedDate
+                let y, m, w;
+                if (weekSelect && weekSelect.value) {
+                    [y, m, w] = weekSelect.value.split("|");
+                } else if (selectedDate) {
+                    [y, m] = selectedDate.split("-");
+                    w = getWeekNumber(selectedDate);
+                } else {
+                    await showCustomAlert("Vui lòng chọn ngày hoặc tuần trước!");
+                    return;
+                }
 
-        // Luôn đọc từ database để đảm bảo đếm đúng tất cả 7 ngày
-        const stats = await countDaysAndTasksForWeekById(y, m, w);
+                // Luôn đọc từ database để đảm bảo đếm đúng tất cả 7 ngày
+                const stats = await countDaysAndTasksForWeekById(y, m, w);
 
-        if (!stats || stats.tasksCount === 0) {
-            await showCustomAlert("Không có công việc để xóa ở tuần này!");
-            return;
+                if (!stats || stats.tasksCount === 0) {
+                    await showCustomAlert("Không có công việc để xóa ở tuần này!");
+                    return;
+                }
+
+                // Xây dựng tin nhắn xác nhận
+                let msg = `Xác nhận xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc)?<br><br>Chi tiết:`;
+                const keys = Object.keys(stats.details).sort();
+                for (const k of keys) msg += `<br>- ${formatDisplayDate(k)}: ${stats.details[k]} công việc`;
+
+                const ok = await showCustomConfirm(msg);
+                if (!ok) return;
+
+                // Thực hiện xóa
+                showLoading();
+                try {
+                    await remove(ref(db, `tasks/${y}/${m}/${w}`));
+                    hideLoading();
+                    await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc)`);
+                    loadTasksForWeek(y, m, w);
+                } catch (error) {
+                    hideLoading();
+                    throw error;
+                }
+            } catch (error) {
+                console.error(error);
+                await showCustomAlert(`❌ Có lỗi khi xóa tuần: ${error && error.message ? error.message : String(error)}`);
+            }
         }
+        else if (type === "month") {
+            // XÓA THÁNG
+            try {
+                let y, m;
+                if (monthPicker && monthPicker.value) {
+                    [y, m] = monthPicker.value.split("-");
+                } else {
+                    if (!selectedDate) return alert("Vui lòng chọn ngày hoặc chọn tháng trước!");
+                    [y, m] = selectedDate.split("-");
+                }
 
-        // Xây dựng tin nhắn xác nhận
-        let msg = `Xác nhận xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc)?<br><br>Chi tiết:`;
-        const keys = Object.keys(stats.details).sort();
-        for (const k of keys) msg += `<br>- ${formatDisplayDate(k)}: ${stats.details[k]} công việc`;
+                const sampleDate = `${y}-${pad(m)}-01`;
+                const stats = await countDaysAndTasksForMonth(sampleDate);
+                if (stats.tasksCount === 0) return showCustomAlert("Không có công việc để xóa ở tháng này!");
 
-        const ok = await showCustomConfirm(msg);
-        if (!ok) return;
+                // Xây dựng tin nhắn xác nhận: số ngày + số công việc + chi tiết per-date
+                let msg = `Xác nhận xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc) của tháng ${m}/${y}?<br><br>Chi tiết:`;
+                const keys = Object.keys(stats.details).sort();
+                for (const k of keys) {
+                    msg += `<br>- ${formatDisplayDate(k)}: ${stats.details[k]} công việc`;
+                }
 
-        // Thực hiện xóa
-        await remove(ref(db, `tasks/${y}/${m}/${w}`));
-        await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc)`);
-        loadTasksForWeek(y, m, w);
+                const ok = await showCustomConfirm(msg);
+                if (!ok) return;
+
+                showLoading();
+                try {
+                    await remove(ref(db, `tasks/${y}/${m}`));
+                    hideLoading();
+                    await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc) của tháng ${m}/${y}`);
+                    taskTable.innerHTML = "";
+                } catch (error) {
+                    hideLoading();
+                    throw error;
+                }
+            } catch (error) {
+                console.error(error);
+                await showCustomAlert("❌ Có lỗi khi xóa tháng!");
+            }
+        }
     } catch (error) {
         console.error(error);
-        await showCustomAlert(`❌ Có lỗi khi xóa tuần: ${error && error.message ? error.message : String(error)}`);
-    } finally {
-        deleteWeekBtn.disabled = false;
-    }
-};
-
-/* ========== XÓA THÁNG ========== */
-// Xử lý khi nhấn nút "Xóa tháng"
-deleteMonthBtn.onclick = async () => {
-    // Allow user to pick a month via monthPicker (format YYYY-MM). Fallback to selectedDate's month.
-    let y, m;
-    if (monthPicker && monthPicker.value) {
-        [y, m] = monthPicker.value.split("-");
-    } else {
-        if (!selectedDate) return alert("Vui lòng chọn ngày hoặc chọn tháng trước!");
-        [y, m] = selectedDate.split("-");
-    }
-
-    const sampleDate = `${y}-${pad(m)}-01`;
-    const stats = await countDaysAndTasksForMonth(sampleDate);
-    if (stats.tasksCount === 0) return showCustomAlert("Không có công việc để xóa ở tháng này!");
-
-    // Xây dựng tin nhắn xác nhận: số ngày + số công việc + chi tiết per-date
-    let msg = `Xác nhận xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc) của tháng ${m}/${y}?<br><br>Chi tiết:`;
-    const keys = Object.keys(stats.details).sort();
-    for (const k of keys) {
-        msg += `<br>- ${formatDisplayDate(k)}: ${stats.details[k]} công việc`;
-    }
-
-    const ok = await showCustomConfirm(msg);
-    if (!ok) return;
-
-    try {
-        await remove(ref(db, `tasks/${y}/${m}`));
-        await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc) của tháng ${m}/${y}`);
-        taskTable.innerHTML = "";
-    } catch (error) {
-        console.error(error);
-        await showCustomAlert("❌ Có lỗi khi xóa tháng!");
+        await showCustomAlert(`❌ Có lỗi: ${error && error.message ? error.message : String(error)}`);
     }
 };
 
@@ -1094,26 +1151,39 @@ selectAllCheckbox.onchange = () => {
     });
 };
 
-// Xoá các công việc được chọn (checkbox)
-deleteSelectedBtn.onclick = async () => {
-    const selected = document.querySelectorAll(".task-checkbox:checked");
-    if (selected.length === 0) return alert("Vui lòng chọn ít nhất 1 công việc!");
+// Dropdown xóa đã chọn (trong header bảng)
+if (deleteSelect) {
+    deleteSelect.onchange = async () => {
+        const type = deleteSelect.value;
+        deleteSelect.value = ""; // Reset dropdown
 
-    if (!confirm(`Xác nhận xóa ${selected.length} công việc?`)) return;
+        if (!type) return;
 
-    try {
-        for (const cb of selected) {
-            const y = cb.dataset.year;
-            const m = cb.dataset.month;
-            const w = cb.dataset.week;
-            const d = cb.dataset.date;
-            const k = cb.dataset.key;
-            await remove(ref(db, `tasks/${y}/${m}/${w}/${d}/${k}`));
+        if (type === "selected") {
+            // XÓA ĐÃ CHỌN
+            const selected = document.querySelectorAll(".task-checkbox:checked");
+            if (selected.length === 0) return alert("Vui lòng chọn ít nhất 1 công việc!");
+
+            if (!await showCustomConfirm(`Xác nhận xóa ${selected.length} công việc?`)) return;
+
+            try {
+                showLoading();
+                for (const cb of selected) {
+                    const y = cb.dataset.year;
+                    const m = cb.dataset.month;
+                    const w = cb.dataset.week;
+                    const d = cb.dataset.date;
+                    const k = cb.dataset.key;
+                    await remove(ref(db, `tasks/${y}/${m}/${w}/${d}/${k}`));
+                }
+                await showCustomAlert(`✅ Đã xóa ${selected.length} công việc`);
+                selectAllCheckbox.checked = false;
+            } catch (error) {
+                console.error(error);
+                await showCustomAlert("❌ Có lỗi khi xóa!");
+            } finally {
+                hideLoading();
+            }
         }
-        alert(`✅ Đã xóa ${selected.length} công việc`);
-        selectAllCheckbox.checked = false;
-    } catch (error) {
-        console.error(error);
-        alert("❌ Có lỗi khi xóa!");
-    }
-};
+    };
+}

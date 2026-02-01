@@ -24,18 +24,25 @@
         <h2 id="selectedDateTitle">Chọn ngày để xem công việc</h2>
         <button id="openAddModal" class="btn-add">➕ Thêm công việc</button>
         <button id="duplicateDayBtn" class="btn-duplicate-day">📅 Nhân bản công việc</button>
-        <button id="deleteDayBtn" class="btn-delete-day">🗑️ Xóa ngày</button>
+        <!-- DROPDOWN XÓA -->
+        <select id="deleteSelectMain" style="padding:8px; margin-left:8px; margin-right:8px;">
+            <option value="">🗑️ Xóa...</option>
+            <option value="day">Xóa ngày</option>
+            <option value="week">Xóa tuần</option>
+            <option value="month">Xóa tháng</option>
+        </select>
         <label style="margin-left:8px">Chọn tuần:</label>
         <select id="weekSelect" style="margin-right:8px"></select>
-        <button id="deleteWeekBtn" class="btn-delete-week">🗑️ Xóa tuần</button>
         <label style="margin-left:8px">Chọn tháng:</label>
         <input type="month" id="monthPicker" style="margin-right:8px">
-        <button id="deleteMonthBtn" class="btn-delete-month">🗑️ Xóa tháng</button>
-        <button id="deleteSelectedBtn" class="btn-delete-selected">🗑️ Xóa đã chọn</button>
         <table>
             <thead>
                 <tr>
-                    <th>
+                    <th style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        <select id="deleteSelect" style="padding:2px 4px; width:auto; font-size:12px; height:20px;">
+                            <option value="">Xóa...</option>
+                            <option value="selected">Xóa đã chọn</option>
+                        </select>
                         <input type="checkbox" id="selectAllCheckbox">
                     </th>
                     <th>STT</th>
@@ -119,6 +126,10 @@
                     🔁 Xác nhận nhân bản
                 </button>
             </div>
+        </div>
+        <!-- LOADING INDICATOR -->
+        <div id="loadingIndicator" class="loading-overlay">
+            <div class="loading-spinner"></div>
         </div>
         <!-- CUSTOM ALERT / CONFIRM -->
         <div id="customAlertModal" class="modal" style="display:none;">
