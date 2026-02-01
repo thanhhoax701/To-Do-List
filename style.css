@@ -66,8 +66,51 @@ th {
     color: #fff;
 }
 
-td:nth-child(2) {
+/* Make 'Nội dung' column (3rd) left-aligned for readability */
+td:nth-child(3),
+th:nth-child(3) {
     text-align: left;
+}
+
+/* Ensure action buttons and confirm buttons center their text */
+.btn-add,
+.btn-edit,
+.btn-delete,
+.btn-duplicate {
+    justify-content: center;
+}
+
+/* Custom alert modal styling (image 1) */
+#customAlertModal .modal-content {
+    max-width: 520px;
+    padding: 14px 18px;
+    border-radius: 12px;
+}
+
+#customAlertBody {
+    background: linear-gradient(180deg, #f8fff5, #ffffff);
+    border-radius: 8px;
+    padding: 12px;
+    color: #0b2f1a;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    line-height: 1.4;
+}
+
+/* OK button - centered text and nicer look */
+#customAlertOk {
+    background: #28a745;
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+}
+
+#customAlertCancel {
+    background: #6c757d;
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
 }
 
 /* ===== BUTTONS ===== */

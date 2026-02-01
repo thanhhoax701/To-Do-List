@@ -24,9 +24,20 @@
         <h2 id="selectedDateTitle">Chọn ngày để xem công việc</h2>
         <button id="openAddModal" class="btn-add">➕ Thêm công việc</button>
         <button id="duplicateDayBtn" class="btn-duplicate-day">📅 Nhân bản công việc</button>
+        <button id="deleteDayBtn" class="btn-delete-day">🗑️ Xóa ngày</button>
+        <label style="margin-left:8px">Chọn tuần:</label>
+        <select id="weekSelect" style="margin-right:8px"></select>
+        <button id="deleteWeekBtn" class="btn-delete-week">🗑️ Xóa tuần</button>
+        <label style="margin-left:8px">Chọn tháng:</label>
+        <input type="month" id="monthPicker" style="margin-right:8px">
+        <button id="deleteMonthBtn" class="btn-delete-month">🗑️ Xóa tháng</button>
+        <button id="deleteSelectedBtn" class="btn-delete-selected">🗑️ Xóa đã chọn</button>
         <table>
             <thead>
                 <tr>
+                    <th>
+                        <input type="checkbox" id="selectAllCheckbox">
+                    </th>
                     <th>STT</th>
                     <th>Nội dung</th>
                     <th>Đơn vị</th>
@@ -70,7 +81,7 @@
         </div>
         <!-- MODAL NHÂN BẢN NÂNG CAO -->
         <div id="advancedDuplicateModal" class="modal">
-            <div class="modal-content" style="max-width:420px">
+            <div class="modal-content" style="max-width:500px">
                 <span class="close" id="closeAdvancedDuplicate">&times;</span>
                 <h3>Nhân bản công việc</h3>
                 <label>Chọn kiểu nhân bản</label>
@@ -79,15 +90,44 @@
                     <option value="week">Nhân bản cả tuần</option>
                     <option value="month">Nhân bản cả tháng</option>
                 </select>
-                <div id="multiDateBox" style="margin-top:10px">
-                    <label>Chọn nhiều ngày</label>
-                    <input type="date" id="multiDatePicker">
-                    <button id="addDateBtn">➕ Thêm ngày</button>
-                    <ul id="dateList"></ul>
+                <!-- Section nhân bản ngày -->
+                <div id="multiDateBox" style="margin-top:15px; display:block;">
+                    <label>
+                        <strong>Nhân bản sang các ngày</strong>
+                    </label>
+                    <input type="date" id="multiDatePicker" style="margin-right:5px;">
+                    <button id="addDateBtn" style="padding:5px 10px;">➕ Thêm ngày</button>
+                    <ul id="dateList" style="margin-top:10px;"></ul>
                 </div>
-                <button id="confirmAdvancedDuplicate" class="btn-add" style="margin-top:10px">
+                <!-- Section nhân bản tuần -->
+                <div id="weekBox" style="margin-top:15px; display:none;">
+                    <label>
+                        <strong>Chọn tuần đích để nhân bản</strong>
+                    </label>
+                    <select id="targetWeekSelect" style="width:100%; padding:8px; margin-top:10px;">
+                        <option value="">-- Chọn tuần --</option>
+                    </select>
+                </div>
+                <!-- Section nhân bản tháng -->
+                <div id="monthBox" style="margin-top:15px; display:none;">
+                    <label>
+                        <strong>Chọn tháng đích để nhân bản</strong>
+                    </label>
+                    <input type="month" id="targetMonthPicker" style="width:100%; padding:8px; margin-top:10px;">
+                </div>
+                <button id="confirmAdvancedDuplicate" class="btn-add" style="margin-top:15px; width:100%;">
                     🔁 Xác nhận nhân bản
                 </button>
+            </div>
+        </div>
+        <!-- CUSTOM ALERT / CONFIRM -->
+        <div id="customAlertModal" class="modal" style="display:none;">
+            <div class="modal-content" id="customAlertContent" style="max-width:480px">
+                <div id="customAlertBody" style="padding:12px 6px; font-size:15px; color:#222"></div>
+                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+                    <button id="customAlertCancel" class="btn-edit" style="display:none;">Cancel</button>
+                    <button id="customAlertOk" class="btn-add">OK</button>
+                </div>
             </div>
         </div>
         <script type="module" src="firebase.js"></script>
