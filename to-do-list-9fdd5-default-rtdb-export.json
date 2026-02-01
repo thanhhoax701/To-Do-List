@@ -837,6 +837,316 @@
             }
           }
         }
+      },
+      "03": {
+        "week1": {
+          "2026-03-01": {
+            "-OkMMbm7za4jas8Ocrvx": {
+              "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "duration": "08h00 mỗi ngày",
+              "note": "Xử lý hằng ngày",
+              "priority": "Thấp",
+              "startDate": "2026-03-01",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng"
+            },
+            "-OkMMbpIvY8EZHVchIoa": {
+              "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "duration": "08h00 mỗi ngày",
+              "note": "Xử lý hằng ngày",
+              "priority": "Trung bình",
+              "startDate": "2026-03-01",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng"
+            },
+            "-OkMMbuuSj06N0Fk0IfT": {
+              "content": "Hỗ trợ xử lý khi xuất hiện lỗi cuộc gọi ở CSKH, toàn bộ cửa hàng.",
+              "duration": "Khoảng 30p thực hiện",
+              "note": "Khi có yêu cầu",
+              "priority": "Thấp",
+              "startDate": "2026-03-01",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng và Cửa Hàng"
+            },
+            "-OkMMby4aTyaEvU2geY6": {
+              "content": "Hỗ trợ kết nối, sửa máy in ở Văn Phòng và Cửa Hàng.",
+              "duration": "Khoảng 30p thực hiện",
+              "note": "Khi có yêu cầu",
+              "priority": "Thấp",
+              "startDate": "2026-03-01",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng và Cửa Hàng"
+            }
+          }
+        },
+        "week3": {
+          "2026-03-09": {
+            "-OkMMdP9XedX5rsI4QIb": {
+              "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "duration": "08h00 mỗi ngày",
+              "note": "Xử lý hằng ngày",
+              "priority": "Thấp",
+              "startDate": "2026-03-09",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng"
+            },
+            "-OkMMdSKNz34RSdQj3VD": {
+              "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "duration": "08h00 mỗi ngày",
+              "note": "Xử lý hằng ngày",
+              "priority": "Trung bình",
+              "startDate": "2026-03-09",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng"
+            },
+            "-OkMMdVUPQShSQ3iAyA4": {
+              "content": "Hỗ trợ xử lý khi xuất hiện lỗi cuộc gọi ở CSKH, toàn bộ cửa hàng.",
+              "duration": "Khoảng 30p thực hiện",
+              "note": "Khi có yêu cầu",
+              "priority": "Thấp",
+              "startDate": "2026-03-09",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng và Cửa Hàng"
+            },
+            "-OkMMdYflhOozmv7HiE8": {
+              "content": "Hỗ trợ kết nối, sửa máy in ở Văn Phòng và Cửa Hàng.",
+              "duration": "Khoảng 30p thực hiện",
+              "note": "Khi có yêu cầu",
+              "priority": "Thấp",
+              "startDate": "2026-03-09",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng và Cửa Hàng"
+            }
+          },
+          "2026-03-10": {
+            "-OkMMdamOc4AUYsX8fgw": {
+              "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "duration": "08h00 mỗi ngày",
+              "note": "Xử lý hằng ngày",
+              "priority": "Thấp",
+              "startDate": "2026-03-10",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng"
+            },
+            "-OkMMddvOsgvm4NGdYuw": {
+              "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "duration": "08h00 mỗi ngày",
+              "note": "Xử lý hằng ngày",
+              "priority": "Trung bình",
+              "startDate": "2026-03-10",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng"
+            },
+            "-OkMMdh24r5LLez7cbOu": {
+              "content": "Hỗ trợ xử lý khi xuất hiện lỗi cuộc gọi ở CSKH, toàn bộ cửa hàng.",
+              "duration": "Khoảng 30p thực hiện",
+              "note": "Khi có yêu cầu",
+              "priority": "Thấp",
+              "startDate": "2026-03-10",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng và Cửa Hàng"
+            },
+            "-OkMMdkAv9wOGvu3Ywlv": {
+              "content": "Hỗ trợ kết nối, sửa máy in ở Văn Phòng và Cửa Hàng.",
+              "duration": "Khoảng 30p thực hiện",
+              "note": "Khi có yêu cầu",
+              "priority": "Thấp",
+              "startDate": "2026-03-10",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng và Cửa Hàng"
+            }
+          },
+          "2026-03-11": {
+            "-OkMMdnFLx8OBJij3pI4": {
+              "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "duration": "08h00 mỗi ngày",
+              "note": "Xử lý hằng ngày",
+              "priority": "Thấp",
+              "startDate": "2026-03-11",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng"
+            },
+            "-OkMMdqMPO_eCjigsSgG": {
+              "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "duration": "08h00 mỗi ngày",
+              "note": "Xử lý hằng ngày",
+              "priority": "Trung bình",
+              "startDate": "2026-03-11",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng"
+            },
+            "-OkMMdtRWk6NLjDAyjco": {
+              "content": "Hỗ trợ xử lý khi xuất hiện lỗi cuộc gọi ở CSKH, toàn bộ cửa hàng.",
+              "duration": "Khoảng 30p thực hiện",
+              "note": "Khi có yêu cầu",
+              "priority": "Thấp",
+              "startDate": "2026-03-11",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng và Cửa Hàng"
+            },
+            "-OkMMdwaW_psrAsz9EZN": {
+              "content": "Hỗ trợ kết nối, sửa máy in ở Văn Phòng và Cửa Hàng.",
+              "duration": "Khoảng 30p thực hiện",
+              "note": "Khi có yêu cầu",
+              "priority": "Thấp",
+              "startDate": "2026-03-11",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng và Cửa Hàng"
+            }
+          },
+          "2026-03-12": {
+            "-OkMMdziZP_mPGIed0I0": {
+              "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "duration": "08h00 mỗi ngày",
+              "note": "Xử lý hằng ngày",
+              "priority": "Thấp",
+              "startDate": "2026-03-12",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng"
+            },
+            "-OkMMe1t5sv-Uow8lBU4": {
+              "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "duration": "08h00 mỗi ngày",
+              "note": "Xử lý hằng ngày",
+              "priority": "Trung bình",
+              "startDate": "2026-03-12",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng"
+            },
+            "-OkMMe51EQR5PTLe2H3D": {
+              "content": "Hỗ trợ xử lý khi xuất hiện lỗi cuộc gọi ở CSKH, toàn bộ cửa hàng.",
+              "duration": "Khoảng 30p thực hiện",
+              "note": "Khi có yêu cầu",
+              "priority": "Thấp",
+              "startDate": "2026-03-12",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng và Cửa Hàng"
+            },
+            "-OkMMe8B4y3LCHTRgiac": {
+              "content": "Hỗ trợ kết nối, sửa máy in ở Văn Phòng và Cửa Hàng.",
+              "duration": "Khoảng 30p thực hiện",
+              "note": "Khi có yêu cầu",
+              "priority": "Thấp",
+              "startDate": "2026-03-12",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng và Cửa Hàng"
+            }
+          },
+          "2026-03-13": {
+            "-OkMMeBLv_2CaCfWPs8l": {
+              "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "duration": "08h00 mỗi ngày",
+              "note": "Xử lý hằng ngày",
+              "priority": "Thấp",
+              "startDate": "2026-03-13",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng"
+            },
+            "-OkMMeEV5Q6ieMZzo00I": {
+              "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "duration": "08h00 mỗi ngày",
+              "note": "Xử lý hằng ngày",
+              "priority": "Trung bình",
+              "startDate": "2026-03-13",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng"
+            },
+            "-OkMMeHf4eWnY4h2uqR6": {
+              "content": "Hỗ trợ xử lý khi xuất hiện lỗi cuộc gọi ở CSKH, toàn bộ cửa hàng.",
+              "duration": "Khoảng 30p thực hiện",
+              "note": "Khi có yêu cầu",
+              "priority": "Thấp",
+              "startDate": "2026-03-13",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng và Cửa Hàng"
+            },
+            "-OkMMeKqlinmcBp2phvu": {
+              "content": "Hỗ trợ kết nối, sửa máy in ở Văn Phòng và Cửa Hàng.",
+              "duration": "Khoảng 30p thực hiện",
+              "note": "Khi có yêu cầu",
+              "priority": "Thấp",
+              "startDate": "2026-03-13",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng và Cửa Hàng"
+            }
+          },
+          "2026-03-14": {
+            "-OkMMeO1t9Ke6vL4tT9W": {
+              "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "duration": "08h00 mỗi ngày",
+              "note": "Xử lý hằng ngày",
+              "priority": "Thấp",
+              "startDate": "2026-03-14",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng"
+            },
+            "-OkMMeRD_AfHBNqQEEqf": {
+              "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "duration": "08h00 mỗi ngày",
+              "note": "Xử lý hằng ngày",
+              "priority": "Trung bình",
+              "startDate": "2026-03-14",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng"
+            },
+            "-OkMMeUL5dfnL-6AhLK_": {
+              "content": "Hỗ trợ xử lý khi xuất hiện lỗi cuộc gọi ở CSKH, toàn bộ cửa hàng.",
+              "duration": "Khoảng 30p thực hiện",
+              "note": "Khi có yêu cầu",
+              "priority": "Thấp",
+              "startDate": "2026-03-14",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng và Cửa Hàng"
+            },
+            "-OkMMeXU8L8z77lSs0J6": {
+              "content": "Hỗ trợ kết nối, sửa máy in ở Văn Phòng và Cửa Hàng.",
+              "duration": "Khoảng 30p thực hiện",
+              "note": "Khi có yêu cầu",
+              "priority": "Thấp",
+              "startDate": "2026-03-14",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng và Cửa Hàng"
+            }
+          },
+          "2026-03-15": {
+            "-OkMMe_bjyWeqgPwIuL9": {
+              "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "duration": "08h00 mỗi ngày",
+              "note": "Xử lý hằng ngày",
+              "priority": "Thấp",
+              "startDate": "2026-03-15",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng"
+            },
+            "-OkMMed4zfxyD_LRwRxB": {
+              "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "duration": "08h00 mỗi ngày",
+              "note": "Xử lý hằng ngày",
+              "priority": "Trung bình",
+              "startDate": "2026-03-15",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng"
+            },
+            "-OkMMegDJajX7kc6lmmM": {
+              "content": "Hỗ trợ xử lý khi xuất hiện lỗi cuộc gọi ở CSKH, toàn bộ cửa hàng.",
+              "duration": "Khoảng 30p thực hiện",
+              "note": "Khi có yêu cầu",
+              "priority": "Thấp",
+              "startDate": "2026-03-15",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng và Cửa Hàng"
+            },
+            "-OkMMejN-P-UK3yG9AOF": {
+              "content": "Hỗ trợ kết nối, sửa máy in ở Văn Phòng và Cửa Hàng.",
+              "duration": "Khoảng 30p thực hiện",
+              "note": "Khi có yêu cầu",
+              "priority": "Thấp",
+              "startDate": "2026-03-15",
+              "status": "Đã xử lý",
+              "unit": "Văn Phòng và Cửa Hàng"
+            }
+          }
+        }
       }
     }
   }

@@ -1,34 +1,40 @@
 import { db } from "./firebase.js";
 import { ref, push, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-/* ===== DOM ===== */
+/* ========== DOM ELEMENTS ========== */
+// Phần tử lịch và tiêu đề tháng
 const calendarDiv = document.getElementById("calendar");
 const monthYear = document.getElementById("monthYear");
 const taskTable = document.getElementById("taskTable");
 const selectedDateTitle = document.getElementById("selectedDateTitle");
 
+// Nút chuyển tháng
 const prevBtn = document.getElementById("prevMonth");
 const nextBtn = document.getElementById("nextMonth");
 
+// Nút xóa (ngày, tuần, tháng, công việc được chọn)
 const deleteDayBtn = document.getElementById("deleteDayBtn");
 const deleteWeekBtn = document.getElementById("deleteWeekBtn");
 const deleteMonthBtn = document.getElementById("deleteMonthBtn");
 const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
 const selectAllCheckbox = document.getElementById("selectAllCheckbox");
-// const weekPicker = document.getElementById("weekPicker");
+
+// Dropdown chọn tuần và tháng
 const weekSelect = document.getElementById("weekSelect");
 const monthPicker = document.getElementById("monthPicker");
 
+// Modal thêm/sửa công việc
 const modal = document.getElementById("taskModal");
 const modalTitle = document.getElementById("modalTitle");
 const taskIdField = document.getElementById("taskId");
 
-// Custom alert/confirm elements
+// Modal xác nhận tùy chỉnh (đẹp hơn alert/confirm mặc định)
 const customAlertModal = document.getElementById('customAlertModal');
 const customAlertBody = document.getElementById('customAlertBody');
 const customAlertOk = document.getElementById('customAlertOk');
 const customAlertCancel = document.getElementById('customAlertCancel');
 
+// Input fields cho công việc
 const contentInput = document.getElementById("content");
 const unitInput = document.getElementById("unit");
 const durationInput = document.getElementById("duration");
@@ -37,12 +43,16 @@ const statusInput = document.getElementById("status");
 const noteInput = document.getElementById("note");
 const saveTaskBtn = document.getElementById("saveTaskBtn");
 
-/* ===== BIẾN TOÀN CỤC ===== */
+/* ========== BIẾN TOÀN CỤC ========== */
+// Ngày hiện tại đang hiển thị trên lịch
 let currentDate = new Date();
+// Ngày được chọn hiện tại (YYYY-MM-DD)
 let selectedDate = null;
+// Danh sách nhiều ngày được chọn (cho tính năng nhân bản liên tiếp)
 let multiDates = [];
 
-/* ===== CALENDAR ===== */
+/* ========== LỊCH ========== */
+// Vẽ lịch tháng và populate tuần dropdown
 function renderCalendar() {
     const y = currentDate.getFullYear();
     const m = currentDate.getMonth();
@@ -54,8 +64,10 @@ function renderCalendar() {
 
     calendarDiv.innerHTML = "";
 
+    // Thêm ô trống cho ngày của tháng trước
     for (let i = 0; i < first; i++) calendarDiv.innerHTML += "<div></div>";
 
+    // Thêm các ngày của tháng
     for (let d = 1; d <= last; d++) {
         const ds = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
         const div = document.createElement("div");
@@ -63,7 +75,7 @@ function renderCalendar() {
         div.innerHTML = `<div>${d}</div>`;
         div.onclick = () => selectDate(ds, div);
 
-        // ⭐ Đánh dấu hôm nay
+        // Đánh dấu hôm nay
         const today = new Date();
         if (d === today.getDate() && m === today.getMonth() && y === today.getFullYear()) {
             div.classList.add("today");
@@ -72,14 +84,14 @@ function renderCalendar() {
         calendarDiv.appendChild(div);
     }
 
-    // Update week dropdown to show weeks for the currently rendered month
+    // Cập nhật dropdown tuần để hiển thị các tuần của tháng hiện tại
     try {
         populateWeekSelect(`${y}-${pad(m + 1)}-01`);
     } catch (e) { console.error(e); }
 
-    // Auto-select a date after rendering:
-    // - If the rendered month is the current month, select today.
-    // - Otherwise select the first day of the rendered month.
+    // Tự động chọn một ngày sau khi vẽ:
+    // - Nếu tháng được vẽ là tháng hiện tại, chọn hôm nay
+    // - Ngược lại, chọn ngày 1 của tháng đó
     try {
         const now = new Date();
         const chooseDay = (y === now.getFullYear() && m === now.getMonth()) ? now.getDate() : 1;
@@ -93,39 +105,47 @@ function renderCalendar() {
     } catch (e) { console.error(e); }
 }
 
+// Chuyển số sang chuỗi có 2 chữ số (01, 02, ...)
 function pad(n) { return String(n).padStart(2, "0"); }
 
-// Local YYYY-MM-DD helpers to avoid timezone shifts
+// ========== HỖ TRỢ NGÀY THÁNG ==========
+// Chuyển Date object sang chuỗi YYYY-MM-DD (sử dụng giờ địa phương để tránh lệch múi giờ)
 function toYMDLocal(d) {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+// Chuyển chuỗi YYYY-MM-DD sang Date object (sử dụng giờ địa phương)
 function parseYMD(ds) {
     const [yy, mm, dd] = ds.split("-").map(s => parseInt(s, 10));
     return new Date(yy, mm - 1, dd);
 }
 
+// Lấy số tuần (week1, week2, week3, ...) của một ngày
+// - week1 = các ngày trước thứ 2 đầu tiên của tháng
+// - week2+ = bắt đầu từ thứ 2, chia theo lô 7 ngày
 function getWeekNumber(ds) {
     const dt = (typeof ds === 'string') ? parseYMD(ds) : new Date(ds);
     const year = dt.getFullYear();
     const month = dt.getMonth() + 1; // 1-based
     const firstDay = new Date(year, month - 1, 1);
-    const firstDayWeekday = firstDay.getDay(); // 0=Sun..6=Sat
-    const firstMondayDate = ((8 - firstDayWeekday) % 7) + 1; // first Monday on/after day 1
+    const firstDayWeekday = firstDay.getDay(); // 0=Chủ nhật..6=Thứ 7
+    const firstMondayDate = ((8 - firstDayWeekday) % 7) + 1; // Thứ 2 đầu tiên
 
-    // If date is before the first Monday, it's week1 (partial)
+    // Nếu ngày trước thứ 2 đầu tiên, là week1 (tuần lẻ)
+
     if (dt.getDate() < firstMondayDate) return "week1";
-    // Dates from firstMondayDate belong to week2, week3, ...
+    // Từ thứ 2 trở đi, chia thành week2, week3, ...
     const weekNum = Math.floor((dt.getDate() - firstMondayDate) / 7) + 2;
     return "week" + weekNum;
 }
 
-/* Tính ngày đầu tuần (thứ 2) và ngày cuối tuần (chủ nhật) */
+// Lấy ngày bắt đầu (thứ 2) và ngày kết thúc (Chủ nhật) của một tuần
 function getWeekStartEnd(year, month, weekNum) {
     const firstDay = new Date(year, month - 1, 1);
-    const firstDayWeekday = firstDay.getDay(); // 0=Sun..6=Sat
-    const firstMondayDate = ((8 - firstDayWeekday) % 7) + 1; // first Monday on/after day 1
+    const firstDayWeekday = firstDay.getDay(); // 0=Chủ nhật..6=Thứ 7
+    const firstMondayDate = ((8 - firstDayWeekday) % 7) + 1; // Thứ 2 đầu tiên
 
+    // Week1 = từ ngày 1 đến trước thứ 2 đầu tiên
     if (weekNum === 1) {
         const startDate = new Date(year, month - 1, 1);
         const endDate = new Date(year, month - 1, Math.max(firstMondayDate - 1, 1));
@@ -139,6 +159,7 @@ function getWeekStartEnd(year, month, weekNum) {
         };
     }
 
+    // Week2+ = bắt đầu từ thứ 2, kéo dài 7 ngày
     const startDay = firstMondayDate + (weekNum - 2) * 7;
     const startDate = new Date(year, month - 1, startDay);
     const endDate = new Date(startDate);
@@ -153,6 +174,7 @@ function getWeekStartEnd(year, month, weekNum) {
     };
 }
 
+// Populate dropdown chọn tuần với các tuần của tháng
 function populateWeekSelect(dateStr) {
     const d = dateStr || selectedDate || (() => {
         const t = new Date();
@@ -182,11 +204,13 @@ function populateWeekSelect(dateStr) {
     Object.keys(weeks).forEach(wk => {
         const opt = document.createElement('option');
         opt.value = `${year}|${pad(monthIndex + 1)}|${wk}`;
-        opt.textContent = `${wk} (${formatDisplayDate(weeks[wk].first)} → ${formatDisplayDate(weeks[wk].last)})`;
-        console.log('populateWeekSelect ->', wk, weeks[wk].first, weeks[wk].last);
+        // Chuyển "week1", "week2" thành "Tuần 1", "Tuần 2"
+        const weekNum = parseInt(wk.replace("week", ""));
+        opt.textContent = `Tuần ${weekNum} - ${pad(monthIndex + 1)}/${year} (${formatDisplayDate(weeks[wk].first)} - ${formatDisplayDate(weeks[wk].last)})`;
         weekSelect.appendChild(opt);
     });
 
+    // Tự động chọn tuần của ngày được truyền vào
     try {
         const currentWeek = getWeekNumber(d);
         const want = `${year}|${pad(monthIndex + 1)}|${currentWeek}`;
@@ -194,7 +218,9 @@ function populateWeekSelect(dateStr) {
         if (found) found.selected = true;
     } catch (e) { }
 }
-// Custom dialog helpers (return Promises)
+
+// ========== MODAL TÙYCHỈNH ==========
+// Ẩn modal xác nhận
 function hideCustomAlert() {
     if (!customAlertModal) return;
     customAlertModal.style.display = 'none';
@@ -202,6 +228,7 @@ function hideCustomAlert() {
     customAlertCancel.onclick = null;
 }
 
+// Hiển thị modal thông báo (chỉ có nút OK)
 function showCustomAlert(html) {
     return new Promise(resolve => {
         if (!customAlertModal) { alert(html); resolve(); return; }
@@ -213,6 +240,7 @@ function showCustomAlert(html) {
     });
 }
 
+// Hiển thị modal xác nhận (có nút OK và Hủy)
 function showCustomConfirm(html) {
     return new Promise(resolve => {
         if (!customAlertModal) { resolve(confirm(html)); return; }
@@ -224,6 +252,8 @@ function showCustomConfirm(html) {
         customAlertModal.style.display = 'flex';
     });
 }
+
+// Chuyển chuỗi YYYY-MM-DD sang định dạng DD-MM-YYYY
 function formatDisplayDate(ds) {
     if (!ds) return ds;
     const parts = ds.split("-");
@@ -232,6 +262,7 @@ function formatDisplayDate(ds) {
     return `${d}-${m}-${y}`;
 }
 
+// Xử lý khi người dùng chọn một ngày trên lịch
 function selectDate(ds, el) {
     document.querySelectorAll(".day").forEach(d => d.classList.remove("selected-day"));
     el.classList.add("selected-day");
@@ -240,31 +271,33 @@ function selectDate(ds, el) {
     selectedDateTitle.innerText = "Công việc ngày " + formatDisplayDate(ds);
 
     loadTasks(ds);
-    // ensure week dropdown stays in sync with the selected date's month
+    // Cập nhật dropdown tuần để đồng bộ với tháng của ngày được chọn
     try { populateWeekSelect(ds); } catch (e) { }
 }
 
-// Load công việc khi người dùng chọn tuần từ dropdown
+// Xử lý khi người dùng chọn một tuần từ dropdown
 if (weekSelect) {
     weekSelect.onchange = async () => {
         if (weekSelect.value) {
             const [y, m, w] = weekSelect.value.split("|");
-            selectedDateTitle.innerText = `Công việc của tuần ${w} (${m}/${y})`;
             loadTasksForWeek(y, m, w);
         }
     };
 }
 
-/* ===== CLASS MÀU ===== */
+/* ========== PHÂN LOẠI MÀU ========== */
+// Trả về class CSS cho mức độ ưu tiên
 const priorityClass = v =>
     v === "Thấp" ? "priority-low" :
         v === "Trung bình" ? "priority-medium" : "priority-high";
 
+// Trả về class CSS cho trạng thái công việc
 const statusClass = v =>
     v === "Chưa xử lý" ? "status-pending" :
         v === "Đang xử lý" ? "status-doing" : "status-done";
 
-/* ===== TẠO DROPDOWN MÀU ===== */
+/* ========== HELPER DROPDOWN MÀU ========== */
+// Tạo dropdown select với các tùy chọn và lớp CSS
 function createColorSelect(options, value, getClass, callback) {
     const select = document.createElement("select");
 
@@ -284,7 +317,8 @@ function createColorSelect(options, value, getClass, callback) {
     return select;
 }
 
-/* ===== LOAD TASKS ===== */
+/* ========== LOAD VÀ HIỂN THỊ CÔNG VIỆC ========== */
+// Load công việc của một ngày cụ thể
 function loadTasks(ds) {
     const [y, m] = ds.split("-");
     const w = getWeekNumber(ds);
@@ -299,8 +333,7 @@ function loadTasks(ds) {
             const k = ch.key;
             const row = document.createElement("tr");
 
-            // Debug: log each task key/content when rendering
-            console.log("Rendering task:", { date: ds, key: k, content: t.content });
+            // (debug logs removed)
 
             row.innerHTML = `
                 <td><input type="checkbox" class="task-checkbox" data-key="${k}" data-year="${y}" data-month="${m}" data-week="${w}" data-date="${ds}"></td>
@@ -339,6 +372,7 @@ function loadTasks(ds) {
                 const confirmDup = confirm("Bạn có muốn nhân bản công việc này không?");
                 if (!confirmDup) return;
 
+                // Sao chép thông tin công việc
                 const newTask = {
                     content: t.content,
                     unit: t.unit,
@@ -353,7 +387,7 @@ function loadTasks(ds) {
                 alert("🔁 Đã nhân bản công việc!");
             };
 
-
+            // Nút xóa công việc
             row.querySelector(".btn-delete").onclick = async () => {
                 const confirmDelete = confirm("Bạn có chắc muốn xóa công việc này không?");
 
@@ -368,7 +402,7 @@ function loadTasks(ds) {
                 }
             };
 
-
+            // Nút sửa công việc
             row.querySelector(".btn-edit").onclick = () =>
                 openModal("Chỉnh sửa công việc", k, t);
 
@@ -377,7 +411,8 @@ function loadTasks(ds) {
     });
 }
 
-/* ===== MODAL ===== */
+/* ========== MODAL THÊM/SỬA CÔNG VIỆC ========== */
+// Mở modal để thêm hoặc sửa công việc
 function openModal(title, id = "", t = {}) {
     modalTitle.innerText = title;
     taskIdField.value = id;
@@ -391,16 +426,21 @@ function openModal(title, id = "", t = {}) {
     modal.style.display = "flex";
 }
 
+// Đóng modal bằng nút X
 document.querySelector(".close").onclick = () => modal.style.display = "none";
+// Đóng modal khi click bên ngoài
 modal.addEventListener("click", e => { if (e.target === modal) modal.style.display = "none"; });
+// Đóng modal khi bấm phím Escape
 document.addEventListener("keydown", e => { if (e.key === "Escape") modal.style.display = "none"; });
 
+// Nút mở modal thêm công việc mới
 document.getElementById("openAddModal").onclick = () => {
     if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
     openModal("Thêm công việc");
 };
 
-/* ===== MODAL SAVE ===== */
+/* ========== LƯU CÔNG VIỆC ========== */
+// Xử lý khi nhấn nút lưu trong modal
 saveTaskBtn.onclick = async () => {
     if (!selectedDate) {
         alert("Vui lòng chọn ngày trước!");
@@ -410,6 +450,7 @@ saveTaskBtn.onclick = async () => {
     const [y, m] = selectedDate.split("-");
     const w = getWeekNumber(selectedDate);
 
+    // Chuẩn bị dữ liệu công việc
     const data = {
         content: contentInput.value,
         unit: unitInput.value,
@@ -422,9 +463,11 @@ saveTaskBtn.onclick = async () => {
 
     try {
         if (taskIdField.value) {
+            // Nếu có ID, là chỉnh sửa
             await update(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}/${taskIdField.value}`), data);
             alert("✅ Cập nhật công việc thành công!");
         } else {
+            // Nếu không có ID, là thêm mới
             await push(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}`), data);
             alert("✅ Thêm công việc mới thành công!");
         }
@@ -435,20 +478,14 @@ saveTaskBtn.onclick = async () => {
         alert("❌ Có lỗi xảy ra khi lưu công việc!");
     }
 };
-
-
-/* ===== FIX LỖI NHẢY 2 THÁNG ===== */
-prevBtn.addEventListener("click", () => {
-    currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-    renderCalendar();
-});
-
+// Nút chuyển tháng tiếp theo
 nextBtn.addEventListener("click", () => {
     currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
     renderCalendar();
 });
 
-/* ===== AUTO SELECT TODAY ===== */
+/* ========== TỰ ĐỘNG CHỌN HÔM NAY ========== */
+// Khi trang vừa load xong, vẽ lịch và chọn hôm nay
 window.addEventListener("load", () => {
     renderCalendar();
 
@@ -466,15 +503,13 @@ window.addEventListener("load", () => {
                 selectDate(dateStr, dayEl);
             }
         });
-        // Populate week select for initial month
+        // Populate dropdown tuần cho tháng hiện tại
         populateWeekSelect(dateStr);
     }, 100);
 });
 
-// When weekPicker is changed, update weekSelect options
-// weekSelect is populated on load; if you need to refresh, call populateWeekSelect(dateStr)
-
-/* ===== NÂNG CAO: NHÂN BẢN NHIỀU NGÀY / TUẦN / THÁNG ===== */
+/* ========== NHÂN BẢN NÂNG CAO ========== */
+// Nhân bản công việc sang nhiều ngày / tuần / tháng khác nhau
 const advModal = document.getElementById("advancedDuplicateModal");
 const closeAdvModal = document.getElementById("closeAdvancedDuplicate");
 const duplicateType = document.getElementById("duplicateType");
@@ -497,15 +532,16 @@ duplicateType.onchange = async () => {
     weekBox.style.display = "none";
     monthBox.style.display = "none";
 
+    // Hiển thị box tương ứng với loại nhân bản được chọn
     if (duplicateType.value === "multi") {
         multiDateBox.style.display = "block";
     } else if (duplicateType.value === "week") {
         weekBox.style.display = "block";
-        // Populate tuần kế tiếp và các tuần trong tháng
+        // Populate các tuần tiếp theo có thể chọn
         await populateTargetWeeks();
     } else if (duplicateType.value === "month") {
         monthBox.style.display = "block";
-        // Set tháng kế tiếp
+        // Đặt tháng tiếp theo là mặc định
         const nextMonth = new Date();
         nextMonth.setMonth(nextMonth.getMonth() + 1);
         const ym = `${nextMonth.getFullYear()}-${pad(nextMonth.getMonth() + 1)}`;
@@ -513,7 +549,7 @@ duplicateType.onchange = async () => {
     }
 };
 
-/* Populate các tuần tiếp theo để chọn */
+/* Populate các tuần tiếp theo để có thể chọn nhân bản vào */
 async function populateTargetWeeks() {
     if (!selectedDate) return;
 
@@ -527,15 +563,15 @@ async function populateTargetWeeks() {
     let month = parseInt(m);
     let weeks = [];
 
-    // Thêm tất cả các tuần của tháng hiện tại (bao gồm Tuần 2 nếu có)
+    // Thêm tất cả các tuần của tháng hiện tại
     const currentMonthDays = new Date(year, month, 0).getDate();
-    // tính firstMonday cho tháng hiện tại
+    // Tính thứ 2 đầu tiên của tháng
     const firstDayOfMonth = new Date(year, month - 1, 1);
     const firstMondayDate = ((8 - firstDayOfMonth.getDay()) % 7) + 1;
     const maxWeek = 1 + Math.ceil((currentMonthDays - firstMondayDate + 1) / 7);
     for (let w = 1; w <= maxWeek; w++) {
         const range = getWeekStartEnd(year, month, w);
-        const label = `Tuần ${w} - ${pad(month)}/${year}  (${range.startStr} - ${range.endStr})`;
+        const label = `Tuần ${w} - ${pad(month)}/${year} (${range.startStr} - ${range.endStr})`;
         weeks.push({ week: w, year, month, label });
     }
 
@@ -554,8 +590,7 @@ async function populateTargetWeeks() {
 
     // Add to select
     weeks.forEach(w => {
-        // debug: show computed week ranges
-        console.log("populateTargetWeeks -> week", w.week, w.label, w);
+        // (debug logs removed)
         const opt = document.createElement("option");
         opt.value = `${w.year}|${pad(w.month)}|week${w.week}`;
         opt.textContent = w.label;
@@ -715,30 +750,30 @@ confirmAdvBtn.onclick = async () => {
         }
 
         if (duplicateType.value === "week") {
-            // Nhân bản tuần: người dùng chọn tuần đích
+            // Nhân bản tuần: người dùng chọn tuần đích để nhân bản vào
             if (!targetWeekSelect.value) return alert("Vui lòng chọn tuần đích!");
             const [ty, tm, tw] = targetWeekSelect.value.split("|");
             const weekNum = parseInt(tw.replace("week", ""));
 
-            // Tính ngày đầu tuần nguồn
+            // Lấy ngày đầu tuần nguồn
             const sourceWeekNum = parseInt(getWeekNumber(selectedDate).replace("week", ""));
             const [sy, sm] = selectedDate.split("-");
             const sourceRange = getWeekStartEnd(parseInt(sy), parseInt(sm), sourceWeekNum);
 
-            // Tính ngày đầu tuần đích
+            // Lấy ngày đầu tuần đích
             const targetRange = getWeekStartEnd(parseInt(ty), parseInt(tm), weekNum);
 
             await duplicateTo(targetRange.startDate, sourceRange.startDate);
 
             // Hiển thị chi tiết số công việc của mỗi ngày trong tuần
-            let detailMsg = `✅ Nhân bản tuần ${weekNum} - ${pad(tm)}/${ty}\n`;
-            detailMsg += `   (${targetRange.startStr} - ${targetRange.endStr})\n`;
+            let detailMsg = `✅ Nhân bản tuần ${weekNum} - ${pad(tm)}/${ty}<br>`;
+            detailMsg += `   (${targetRange.startStr} - ${targetRange.endStr})<br>`;
             detailMsg += `   Tổng: ${sourceTaskCount} công việc trên ${Object.keys(allSourceTasks).length} ngày`;
-            await showCustomAlert(detailMsg.replace(/\n/g, '<br>'));
+            await showCustomAlert(detailMsg);
         }
 
         if (duplicateType.value === "month") {
-            // Nhân bản tháng: người dùng chọn tháng đích
+            // Nhân bản tháng: người dùng chọn tháng đích để nhân bản vào
             if (!targetMonthPicker.value) return alert("Vui lòng chọn tháng đích!");
             const [ty, tm] = targetMonthPicker.value.split("-");
             const [sy, sm] = selectedDate.split("-");
@@ -753,21 +788,24 @@ confirmAdvBtn.onclick = async () => {
     }
 };
 
-/* ===== LOAD CÔNG VIỆC CỦA TUẦN ===== */
+/* ========== LOAD CÔNG VIỆC CỦA TUẦN ========== */
+// Load và hiển thị tất cả công việc của một tuần
 function loadTasksForWeek(y, m, weekId) {
     const r = ref(db, `tasks/${y}/${m}/${weekId}`);
     onValue(r, snap => {
         taskTable.innerHTML = "";
         let i = 1;
         if (snap.exists()) {
-            // Sắp xếp các ngày theo thứ tự
+            // Sắp xếp các ngày theo thứ tự tăng dần
             const dates = [];
             snap.forEach(dateSnap => dates.push(dateSnap.key));
             dates.sort();
 
             for (const dateKey of dates) {
                 const dateSnap = snap.child(dateKey);
+                let dateTaskCount = 0;
                 dateSnap.forEach(ch => {
+                    dateTaskCount++;
                     const t = ch.val();
                     const k = ch.key;
                     const row = document.createElement("tr");
@@ -789,11 +827,14 @@ function loadTasksForWeek(y, m, weekId) {
                     taskTable.appendChild(row);
                 });
             }
+            // finished rendering week table
+        } else {
+            console.log('loadTasksForWeek snap.exists() = false');
         }
     });
 }
-
-/* ===== XÓA TOÀN BỘ NGÀY / TUẦN / THÁNG ===== */
+/* ========== ĐẾM CÔNG VIỆC - XÓA NGÀY/TUẦN/THÁNG ========== */
+// Đếm số công việc của một ngày cụ thể
 async function countTasksForDay(date) {
     const [y, m] = date.split("-");
     const w = getWeekNumber(date);
@@ -802,15 +843,14 @@ async function countTasksForDay(date) {
     let c = 0;
     if (snap.exists()) {
         snap.forEach(ch => {
-            console.log("CountTasksForDay found:", ch.key, ch.val());
             c++;
         });
     }
     return c;
 }
 
+// Đếm số công việc của một tuần (từ ngày bất kỳ trong tuần)
 async function countTasksForWeek(date) {
-    // date can be 'YYYY-MM-DD' or a date string; getWeekNumber handles a full date
     const [y, m] = date.split("-");
     const w = getWeekNumber(date);
     const r = ref(db, `tasks/${y}/${m}/${w}`);
@@ -824,6 +864,7 @@ async function countTasksForWeek(date) {
     return c;
 }
 
+// Đếm số công việc của một tuần cụ thể (theo year, month, weekId)
 async function countTasksForWeekById(y, m, weekId) {
     const r = ref(db, `tasks/${y}/${m}/${weekId}`);
     const snap = await get(r);
@@ -834,6 +875,7 @@ async function countTasksForWeekById(y, m, weekId) {
     return c;
 }
 
+// Đếm số công việc của toàn bộ một tháng
 async function countTasksForMonth(date) {
     const [y, m] = date.split("-");
     const r = ref(db, `tasks/${y}/${m}`);
@@ -849,36 +891,79 @@ async function countTasksForMonth(date) {
     return c;
 }
 
+// Đếm số ngày và số công việc của một tháng, cùng chi tiết per-date
 async function countDaysAndTasksForMonth(date) {
     const [y, m] = date.split("-");
     const r = ref(db, `tasks/${y}/${m}`);
     const snap = await get(r);
     let tasksCount = 0;
     const details = {};
+    // countDaysAndTasksForMonth: compute counts for month
+
     if (snap.exists()) {
+        // Lặp qua từng tuần
         snap.forEach(weekSnap => {
             const wk = weekSnap.key;
-            let wkTotal = 0;
             weekSnap.forEach(dateSnap => {
                 const dateKey = dateSnap.key;
                 let c = 0;
                 dateSnap.forEach(() => c++);
                 if (c > 0) {
-                    // Accumulate counts in case same date appears in multiple week nodes
+                    // Tích lũy count nếu cùng một ngày xuất hiện trong nhiều tuần
                     details[dateKey] = (details[dateKey] || 0) + c;
                     tasksCount += c;
-                    wkTotal += c;
-                    console.log('countDaysAndTasksForMonth - week', wk, 'date', dateKey, 'countInThisWeek:', c, 'accumulated:', details[dateKey]);
+                    // accumulating counts
                 }
             });
-            console.log('countDaysAndTasksForMonth - week', wk, 'totalTasksInWeek:', wkTotal);
         });
+    } else {
+        console.log('countDaysAndTasksForMonth snap.exists() = false');
     }
+
     const daysCount = Object.keys(details).length;
-    console.log('countDaysAndTasksForMonth ->', { date, daysCount, tasksCount, details });
     return { daysCount, tasksCount, details };
 }
 
+// Đếm số ngày và số công việc của một tuần cụ thể, cùng chi tiết per-date
+async function countDaysAndTasksForWeekById(y, m, weekId) {
+    const r = ref(db, `tasks/${y}/${m}/${weekId}`);
+    const snap = await get(r);
+    let tasksCount = 0;
+    const details = {};
+    // countDaysAndTasksForWeekById: compute counts for week
+
+    if (snap.exists()) {
+        const weekData = snap.val();
+
+        // Lặp qua từng ngày trong tuần
+        for (const dateKey in weekData) {
+            if (weekData.hasOwnProperty(dateKey)) {
+                const dayTasks = weekData[dateKey];
+                if (dayTasks && typeof dayTasks === 'object') {
+                    let taskCount = 0;
+                    for (const taskKey in dayTasks) {
+                        if (dayTasks.hasOwnProperty(taskKey)) {
+                            taskCount++;
+                        }
+                    }
+                    if (taskCount > 0) {
+                        details[dateKey] = taskCount;
+                        tasksCount += taskCount;
+                    }
+                }
+            }
+        }
+    } else {
+        console.log('countDaysAndTasksForWeekById snap.exists() = false');
+    }
+
+    const daysCount = Object.keys(details).length;
+    return { daysCount, tasksCount, details };
+
+}
+
+/* ========== XÓA NGÀY ========== */
+// Xử lý khi nhấn nút "Xóa ngày"
 deleteDayBtn.onclick = async () => {
     if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
     const [y, m] = selectedDate.split("-");
@@ -887,46 +972,66 @@ deleteDayBtn.onclick = async () => {
     const cnt = await countTasksForDay(selectedDate);
     if (cnt === 0) return alert("Không có công việc để xóa ở ngày này!");
 
-    if (!confirm(`Xác nhận xóa ${cnt} công việc của ngày ${formatDisplayDate(selectedDate)}?`)) return;
+    const ok = await showCustomConfirm(`Xác nhận xóa ${cnt} công việc của ngày ${formatDisplayDate(selectedDate)}?`);
+    if (!ok) return;
 
     try {
         await remove(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}`));
-        alert(`✅ Đã xóa ${cnt} công việc của ${formatDisplayDate(selectedDate)}`);
+        await showCustomAlert(`✅ Đã xóa ${cnt} công việc`);
         taskTable.innerHTML = "";
     } catch (error) {
         console.error(error);
-        alert("❌ Có lỗi khi xóa ngày!");
+        await showCustomAlert("❌ Có lỗi khi xóa ngày!");
     }
 };
 
+/* ========== XÓA TUẦN ========== */
+// Xử lý khi nhấn nút "Xóa tuần"
 deleteWeekBtn.onclick = async () => {
-    // Prefer explicit week selection from weekSelect; fallback to weekPicker or selectedDate
-    let y, m, w;
-    if (weekSelect && weekSelect.value) {
-        [y, m, w] = weekSelect.value.split("|");
-    } else {
-        const pick = weekPicker && weekPicker.value ? weekPicker.value : selectedDate;
-        if (!pick) return alert("Vui lòng chọn ngày (hoặc chọn ngày trong tuần) trước!");
-        [y, m] = pick.split("-");
-        w = getWeekNumber(pick);
-    }
-
-    const cnt = await countTasksForWeekById(y, m, w);
-    if (cnt === 0) return alert("Không có công việc để xóa ở tuần này!");
-
-    if (!confirm(`Xác nhận xóa ${cnt} công việc của tuần ${w} (${m}/${y})?`)) return;
-
+    deleteWeekBtn.disabled = true;
     try {
+        // Xác định tuần: ưu tiên weekSelect, fallback selectedDate
+        let y, m, w;
+        if (weekSelect && weekSelect.value) {
+            [y, m, w] = weekSelect.value.split("|");
+        } else if (selectedDate) {
+            [y, m] = selectedDate.split("-");
+            w = getWeekNumber(selectedDate);
+        } else {
+            await showCustomAlert("Vui lòng chọn ngày hoặc tuần trước!");
+            return;
+        }
+
+        // Luôn đọc từ database để đảm bảo đếm đúng tất cả 7 ngày
+        const stats = await countDaysAndTasksForWeekById(y, m, w);
+
+        if (!stats || stats.tasksCount === 0) {
+            await showCustomAlert("Không có công việc để xóa ở tuần này!");
+            return;
+        }
+
+        // Xây dựng tin nhắn xác nhận
+        let msg = `Xác nhận xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc)?<br><br>Chi tiết:`;
+        const keys = Object.keys(stats.details).sort();
+        for (const k of keys) msg += `<br>- ${formatDisplayDate(k)}: ${stats.details[k]} công việc`;
+
+        const ok = await showCustomConfirm(msg);
+        if (!ok) return;
+
+        // Thực hiện xóa
         await remove(ref(db, `tasks/${y}/${m}/${w}`));
-        alert(`✅ Đã xóa ${cnt} công việc của tuần ${w}`);
-        // Load toàn bộ công việc của tuần (sẽ rỗng sau khi xóa)
+        await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc)`);
         loadTasksForWeek(y, m, w);
     } catch (error) {
         console.error(error);
-        alert("❌ Có lỗi khi xóa tuần!");
+        await showCustomAlert(`❌ Có lỗi khi xóa tuần: ${error && error.message ? error.message : String(error)}`);
+    } finally {
+        deleteWeekBtn.disabled = false;
     }
 };
 
+/* ========== XÓA THÁNG ========== */
+// Xử lý khi nhấn nút "Xóa tháng"
 deleteMonthBtn.onclick = async () => {
     // Allow user to pick a month via monthPicker (format YYYY-MM). Fallback to selectedDate's month.
     let y, m;
@@ -941,11 +1046,11 @@ deleteMonthBtn.onclick = async () => {
     const stats = await countDaysAndTasksForMonth(sampleDate);
     if (stats.tasksCount === 0) return showCustomAlert("Không có công việc để xóa ở tháng này!");
 
-    // Build confirmation message: days + task totals + per-day details
-    let msg = `Xác nhận xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc) của tháng ${m}/${y}?\n\nChi tiết:`;
+    // Xây dựng tin nhắn xác nhận: số ngày + số công việc + chi tiết per-date
+    let msg = `Xác nhận xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc) của tháng ${m}/${y}?<br><br>Chi tiết:`;
     const keys = Object.keys(stats.details).sort();
     for (const k of keys) {
-        msg += `\n- ${formatDisplayDate(k)}: ${stats.details[k]} công việc`;
+        msg += `<br>- ${formatDisplayDate(k)}: ${stats.details[k]} công việc`;
     }
 
     const ok = await showCustomConfirm(msg);
@@ -960,13 +1065,16 @@ deleteMonthBtn.onclick = async () => {
         await showCustomAlert("❌ Có lỗi khi xóa tháng!");
     }
 };
-/* ===== XÓA CÔNG VIỆC ĐÃ CHỌN ===== */
+
+/* ========== XÓA CÔNG VIỆC ĐÃ CHỌN ========== */
+// Nút chọn tất cả / bỏ chọn tất cả
 selectAllCheckbox.onchange = () => {
     document.querySelectorAll(".task-checkbox").forEach(cb => {
         cb.checked = selectAllCheckbox.checked;
     });
 };
 
+// Xoá các công việc được chọn (checkbox)
 deleteSelectedBtn.onclick = async () => {
     const selected = document.querySelectorAll(".task-checkbox:checked");
     if (selected.length === 0) return alert("Vui lòng chọn ít nhất 1 công việc!");
