@@ -484,6 +484,12 @@ nextBtn.addEventListener("click", () => {
     renderCalendar();
 });
 
+// Nút chuyển tháng trước
+prevBtn.addEventListener("click", () => {
+    currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+    renderCalendar();
+});
+
 /* ========== TỰ ĐỘNG CHỌN HÔM NAY ========== */
 // Khi trang vừa load xong, vẽ lịch và chọn hôm nay
 window.addEventListener("load", () => {
