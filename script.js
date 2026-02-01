@@ -901,21 +901,35 @@ async function countDaysAndTasksForMonth(date) {
     // countDaysAndTasksForMonth: compute counts for month
 
     if (snap.exists()) {
-        // Lặp qua từng tuần
-        snap.forEach(weekSnap => {
-            const wk = weekSnap.key;
-            weekSnap.forEach(dateSnap => {
-                const dateKey = dateSnap.key;
-                let c = 0;
-                dateSnap.forEach(() => c++);
-                if (c > 0) {
-                    // Tích lũy count nếu cùng một ngày xuất hiện trong nhiều tuần
-                    details[dateKey] = (details[dateKey] || 0) + c;
-                    tasksCount += c;
-                    // accumulating counts
+        const monthData = snap.val();
+
+        // Lặp qua từng tuần trong tháng
+        for (const weekKey in monthData) {
+            if (monthData.hasOwnProperty(weekKey)) {
+                const weekData = monthData[weekKey];
+                if (weekData && typeof weekData === 'object') {
+                    // Lặp qua từng ngày trong tuần
+                    for (const dateKey in weekData) {
+                        if (weekData.hasOwnProperty(dateKey)) {
+                            const dayTasks = weekData[dateKey];
+                            if (dayTasks && typeof dayTasks === 'object') {
+                                let taskCount = 0;
+                                for (const taskKey in dayTasks) {
+                                    if (dayTasks.hasOwnProperty(taskKey)) {
+                                        taskCount++;
+                                    }
+                                }
+                                if (taskCount > 0) {
+                                    // Tích lũy count nếu cùng một ngày xuất hiện trong nhiều tuần
+                                    details[dateKey] = (details[dateKey] || 0) + taskCount;
+                                    tasksCount += taskCount;
+                                }
+                            }
+                        }
+                    }
                 }
-            });
-        });
+            }
+        }
     } else {
         console.log('countDaysAndTasksForMonth snap.exists() = false');
     }
