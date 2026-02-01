@@ -9,12 +9,12 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 20px;
+    gap: 15px;
     margin-bottom: 10px;
 }
 
 #monthYear {
-    font-size: 24px;
+    font-size: 18px;
     font-weight: bold;
 }
 
@@ -23,17 +23,19 @@ body {
 #calendar {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 6px;
+    gap: 3px;
+    margin: 0 auto;
 }
 
 .day {
     background: #fff;
     border: 1px solid #ddd;
-    height: 90px;
-    padding: 5px;
-    border-radius: 6px;
+    height: 80px;
+    padding: 3px;
+    border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s ease;
+    font-size: 20px;
 }
 
 .day:hover {
@@ -78,6 +80,14 @@ th:nth-child(3) {
 .btn-delete,
 .btn-duplicate {
     justify-content: center;
+}
+
+/* Action cell spacing */
+td:last-child {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
 }
 
 /* Custom alert modal styling (image 1) */
@@ -127,21 +137,26 @@ button {
 .btn-add {
     background: #28a745;
     color: #fff;
-    padding: 6px 12px;
+    padding: 8px 16px;
     border: none;
+    font-size: 14px;
 }
 
 .btn-edit {
     background: #ffc107;
+    color: #000;
     border: none;
-    padding: 4px 8px;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: 600;
 }
 
 .btn-delete {
     background: #dc3545;
     color: #fff;
     border: none;
-    padding: 4px 8px;
+    padding: 8px 14px;
+    font-size: 14px;
 }
 
 .btn-add:hover {
@@ -176,33 +191,33 @@ td select {
 
 /* Priority */
 .priority-low {
-    background: #28a745;
+    background: #1e40af;
     color: #fff;
 }
 
 .priority-medium {
-    background: #ffc107;
-    color: #000;
+    background: #b91c1c;
+    color: #fff;
 }
 
 .priority-high {
-    background: #dc3545;
+    background: #7c3aed;
     color: #fff;
 }
 
 /* Status */
 .status-pending {
-    background: #6c757d;
+    background: #0891b2;
     color: #fff;
 }
 
 .status-doing {
-    background: #17a2b8;
+    background: #ea580c;
     color: #fff;
 }
 
 .status-done {
-    background: #28a745;
+    background: #059669;
     color: #fff;
 }
 
@@ -324,13 +339,16 @@ td select {
     background: #6f42c1;
     color: white;
     border: none;
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
 }
 
 .btn-duplicate:hover {
     background: #5a32a3;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Duplicate day */
