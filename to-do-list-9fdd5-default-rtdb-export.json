@@ -626,24 +626,19 @@
       "pin": "1234",
       "role": "admin"
     },
-    "admin002": {
-      "name": "Admin 2",
-      "pin": "4321",
-      "role": "admin"
-    },
     "superadmin": {
-      "name": "Superadmin",
+      "name": "TRÙM",
       "pin": "9999",
       "role": "superadmin"
     },
     "user001": {
       "name": "Trần Thanh Hòa",
-      "pin": "1111",
-      "role": "member"
+      "pin": "1610",
+      "role": "admin"
     },
     "user002": {
       "name": "Nguyễn Ngọc Yến",
-      "pin": "1111",
+      "pin": "2004",
       "role": "member"
     }
   }

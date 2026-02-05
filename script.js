@@ -279,6 +279,9 @@ function formatDisplayDate(ds) {
 
 // Xử lý khi người dùng chọn một ngày trên lịch
 function selectDate(ds, el) {
+    // Member chỉ được xem ngày hôm nay
+    if (!checkMemberAccess(ds)) return;
+
     document.querySelectorAll(".day").forEach(d => d.classList.remove("selected-day"));
     el.classList.add("selected-day");
 
@@ -510,6 +513,7 @@ prevBtn.addEventListener("click", () => {
 // Start the app (render calendar and auto-select a date). Call this after successful login.
 function startApp() {
     renderCalendar();
+    applyRolePermissions(); // Áp dụng quyền dựa trên role
 
     const today = new Date();
     const y = today.getFullYear();
@@ -621,6 +625,7 @@ async function populateTargetWeeks() {
 
 /* Mở modal nhân bản nâng cao */
 document.getElementById("duplicateDayBtn").onclick = () => {
+    if (isMember()) return alert('👤 Thành viên không có quyền sử dụng tính năng này');
     if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
     advancedDates = [];
     dateList.innerHTML = "";
@@ -1026,6 +1031,11 @@ deleteSelectMain.onchange = async () => {
 
     if (!type) return;
 
+    if (isMember()) {
+        alert('👤 Thành viên không có quyền xóa công việc');
+        return;
+    }
+
     try {
         if (type === "day") {
             // XÓA NGÀY - không cần loading vì nhanh
@@ -1161,6 +1171,11 @@ if (deleteSelect) {
 
         if (type === "selected") {
             // XÓA ĐÃ CHỌN
+            if (isMember()) {
+                alert('👤 Thành viên không có quyền xóa công việc');
+                return;
+            }
+
             const selected = document.querySelectorAll(".task-checkbox:checked");
             if (selected.length === 0) return alert("Vui lòng chọn ít nhất 1 công việc!");
 
@@ -1286,6 +1301,69 @@ function updateUserDisplay() {
             if (userName) userName.innerText = u.name || 'User';
         } catch (e) { }
     }
+}
+
+// Lấy role của user đang đăng nhập
+function getLoggedInUserRole() {
+    const savedUser = sessionStorage.getItem('user');
+    if (savedUser) {
+        try {
+            const u = JSON.parse(savedUser);
+            return u.role || 'member';
+        } catch (e) { }
+    }
+    return null;
+}
+
+// Check role
+function isMember() { return getLoggedInUserRole() === 'member'; }
+function isAdmin() { const r = getLoggedInUserRole(); return r === 'admin' || r === 'superadmin'; }
+
+// Hôm nay
+function getTodayString() {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = today.getMonth();
+    const d = today.getDate();
+    return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+// Kiểm tra member chỉ được xem hôm nay
+function checkMemberAccess(dateStr) {
+    if (isMember() && dateStr !== getTodayString()) {
+        alert('👤 Thành viên chỉ được xem công việc của ngày hôm nay');
+        return false;
+    }
+    return true;
+}
+
+// Ẩn/Hiện UI dựa trên role khi app khởi động
+function applyRolePermissions() {
+    const isMemberRole = isMember();
+
+    // Ẩn nút nhân bản công việc cho member
+    const duplicateDayBtn = document.getElementById('duplicateDayBtn');
+    if (duplicateDayBtn) duplicateDayBtn.style.display = isMemberRole ? 'none' : 'inline-block';
+
+    // Ẩn dropdown xóa cho member
+    const deleteSelectMain = document.getElementById('deleteSelectMain');
+    if (deleteSelectMain) deleteSelectMain.style.display = isMemberRole ? 'none' : 'inline-block';
+
+    // Ẩn dropdown chọn tuần cho member
+    const weekSelect = document.getElementById('weekSelect');
+    if (weekSelect) weekSelect.style.display = isMemberRole ? 'none' : '';
+
+    // Ẩn label + select chọn tháng cho member
+    const monthPickerLabel = Array.from(document.querySelectorAll('label')).find(l => l.textContent.includes('Chọn tháng'));
+    const monthPicker = document.getElementById('monthPicker');
+    if (monthPickerLabel) monthPickerLabel.style.display = isMemberRole ? 'none' : '';
+    if (monthPicker) monthPicker.style.display = isMemberRole ? 'none' : '';
+
+    // Ẩn nút chuyển tháng cho member
+    const prevBtn = document.getElementById('prevMonth');
+    const nextBtn = document.getElementById('nextMonth');
+    if (prevBtn) prevBtn.style.display = isMemberRole ? 'none' : '';
+    if (nextBtn) nextBtn.style.display = isMemberRole ? 'none' : '';
 }
 
 // Đăng xuất
