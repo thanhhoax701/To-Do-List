@@ -383,6 +383,12 @@ function loadTasks(ds) {
                 v => update(ref(db, `tasks/${y}/${m}/${w}/${ds}/${k}`), { status: v })
             );
 
+            // Vô hiệu hóa select cho member
+            if (isMember()) {
+                prSelect.disabled = true;
+                stSelect.disabled = true;
+            }
+
             row.children[5].appendChild(prSelect);
             row.children[6].appendChild(stSelect);
 
