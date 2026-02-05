@@ -387,6 +387,11 @@ function loadTasks(ds) {
             row.children[6].appendChild(stSelect);
 
             row.querySelector(".btn-duplicate").onclick = async () => {
+                if (isMember()) {
+                    alert('👤 Thành viên không có quyền nhân bản công việc');
+                    return;
+                }
+
                 const confirmDup = confirm("Bạn có muốn nhân bản công việc này không?");
                 if (!confirmDup) return;
 
@@ -407,6 +412,11 @@ function loadTasks(ds) {
 
             // Nút xóa công việc
             row.querySelector(".btn-delete").onclick = async () => {
+                if (isMember()) {
+                    alert('👤 Thành viên không có quyền xóa công việc');
+                    return;
+                }
+
                 const confirmDelete = confirm("Bạn có chắc muốn xóa công việc này không?");
 
                 if (!confirmDelete) return;
@@ -421,8 +431,13 @@ function loadTasks(ds) {
             };
 
             // Nút sửa công việc
-            row.querySelector(".btn-edit").onclick = () =>
+            row.querySelector(".btn-edit").onclick = () => {
+                if (isMember()) {
+                    alert('👤 Thành viên không có quyền chỉnh sửa công việc');
+                    return;
+                }
                 openModal("Chỉnh sửa công việc", k, t);
+            };
 
             taskTable.appendChild(row);
         });
@@ -1366,6 +1381,13 @@ function applyRolePermissions() {
     const nextBtn = document.getElementById('nextMonth');
     if (prevBtn) prevBtn.style.display = isMemberRole ? 'none' : '';
     if (nextBtn) nextBtn.style.display = isMemberRole ? 'none' : '';
+
+    // Ẩn nút action trong bảng công việc cho member
+    if (isMemberRole) {
+        document.querySelectorAll('.btn-edit, .btn-duplicate, .btn-delete').forEach(btn => {
+            btn.style.display = 'none';
+        });
+    }
 }
 
 // Đăng xuất
