@@ -1349,8 +1349,10 @@ function applyRolePermissions() {
     const deleteSelectMain = document.getElementById('deleteSelectMain');
     if (deleteSelectMain) deleteSelectMain.style.display = isMemberRole ? 'none' : 'inline-block';
 
-    // Ẩn dropdown chọn tuần cho member
+    // Ẩn label + dropdown chọn tuần cho member
+    const weekLabel = Array.from(document.querySelectorAll('label')).find(l => l.textContent.includes('Chọn tuần'));
     const weekSelect = document.getElementById('weekSelect');
+    if (weekLabel) weekLabel.style.display = isMemberRole ? 'none' : '';
     if (weekSelect) weekSelect.style.display = isMemberRole ? 'none' : '';
 
     // Ẩn label + select chọn tháng cho member
