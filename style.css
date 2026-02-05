@@ -407,3 +407,133 @@ td select {
     border: 1px solid #ccc;
     font-size: 14px;
 }
+
+/* ===== LOGIN OVERLAY / KEYPAD ===== */
+.login-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999;
+}
+
+.login-box {
+    background: linear-gradient(180deg, #0b1220, #172031);
+    color: #fff;
+    width: 320px;
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.6);
+    text-align: center;
+}
+
+.login-box h2 {
+    margin: 6px 0 12px;
+    font-weight: 600;
+}
+
+.pin-dots {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.pin-dots .dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    background: transparent;
+}
+
+.pin-dots .dot.filled {
+    background: #4dd0e1;
+    border-color: #4dd0e1;
+}
+
+.keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.kp {
+    background: transparent;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 18px 0;
+    border-radius: 50%;
+    font-size: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60px;
+}
+
+.kp.small {
+    border-radius: 10px;
+    padding: 10px 0;
+}
+
+.kp:active {
+    transform: scale(.98);
+}
+
+.login-footer {
+    margin-top: 10px;
+    font-size: 13px;
+}
+
+.login-footer a {
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+}
+
+@media (max-width:420px) {
+    .login-box {
+        width: 92%;
+    }
+}
+
+.login-overlay.hidden {
+    display: none !important;
+}
+
+/* ===== USER INFO + LOGOUT ===== */
+.user-info {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.user-info #userName {
+    font-weight: 600;
+    color: #333;
+}
+
+.btn-logout {
+    background: #dc3545;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.btn-logout:hover {
+    background: #c82333;
+}

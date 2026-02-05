@@ -6,138 +6,174 @@
         <link rel="stylesheet" href="style.css">
     </head>
     <body>
-        <div class="calendar-header">
-            <button id="prevMonth">❮</button>
-            <h1 id="monthYear"></h1>
-            <button id="nextMonth">❯</button>
-        </div>
-        <div class="weekdays">
-            <div>Thứ hai</div>
-            <div>Thứ ba</div>
-            <div>Thứ tư</div>
-            <div>Thứ năm</div>
-            <div>Thứ sáu</div>
-            <div>Thứ bảy</div>
-            <div>Chủ nhật</div>
-        </div>
-        <div id="calendar"></div>
-        <h2 id="selectedDateTitle">Chọn ngày để xem công việc</h2>
-        <button id="openAddModal" class="btn-add">➕ Thêm công việc</button>
-        <button id="duplicateDayBtn" class="btn-duplicate-day">📅 Nhân bản công việc</button>
-        <!-- DROPDOWN XÓA -->
-        <select id="deleteSelectMain" style="padding:8px; margin-left:8px; margin-right:8px;">
-            <option value="">🗑️ Xóa...</option>
-            <option value="day">Xóa ngày</option>
-            <option value="week">Xóa tuần</option>
-            <option value="month">Xóa tháng</option>
-        </select>
-        <label style="margin-left:8px">Chọn tuần:</label>
-        <select id="weekSelect" style="margin-right:8px"></select>
-        <label style="margin-left:8px">Chọn tháng:</label>
-        <input type="month" id="monthPicker" style="margin-right:8px">
-        <table>
-            <thead>
-                <tr>
-                    <th style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-                        <select id="deleteSelect" style="padding:2px 4px; width:auto; font-size:12px; height:20px;">
-                            <option value="">Xóa...</option>
-                            <option value="selected">Xóa đã chọn</option>
-                        </select>
-                        <input type="checkbox" id="selectAllCheckbox">
-                    </th>
-                    <th>STT</th>
-                    <th>Nội dung</th>
-                    <th>Đơn vị</th>
-                    <th>Thời gian</th>
-                    <th>Mức độ</th>
-                    <th>Trạng thái</th>
-                    <th>Ghi chú</th>
-                    <th>Hành động</th>
-                </tr>
-            </thead>
-            <tbody id="taskTable"></tbody>
-        </table>
-        <!-- MODAL TASK -->
-        <div id="taskModal" class="modal">
-            <div class="modal-content">
-                <span class="close">&times;</span>
-                <h2 id="modalTitle">Thêm công việc</h2>
-                <input type="hidden" id="taskId">
-                <label>Nội dung công việc</label>
-                <textarea id="content"></textarea>
-                <label>Đơn vị thực hiện</label>
-                <input type="text" id="unit">
-                <label>Thời gian hoàn thành</label>
-                <input type="text" id="duration">
-                <label>Mức độ</label>
-                <select id="priority">
-                    <option>Thấp</option>
-                    <option>Trung bình</option>
-                    <option>Cao</option>
-                </select>
-                <label>Trạng thái</label>
-                <select id="status">
-                    <option>Chưa xử lý</option>
-                    <option>Đang xử lý</option>
-                    <option>Đã xử lý</option>
-                </select>
-                <label>Ghi chú</label>
-                <textarea id="note"></textarea>
-                <button id="saveTaskBtn" class="btn-add">💾 Lưu công việc</button>
+        <!-- LOGIN OVERLAY: yêu cầu nhập 4 chữ số PIN trước khi truy cập giao diện -->
+        <div id="loginOverlay" class="login-overlay">
+            <div class="login-box">
+                <h2>Nhập Mật khẩu</h2>
+                <div id="pinDots" class="pin-dots">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+                <div class="keypad">
+                    <button class="kp" data-key="1">1</button>
+                    <button class="kp" data-key="2">2</button>
+                    <button class="kp" data-key="3">3</button>
+                    <button class="kp" data-key="4">4</button>
+                    <button class="kp" data-key="5">5</button>
+                    <button class="kp" data-key="6">6</button>
+                    <button class="kp" data-key="7">7</button>
+                    <button class="kp" data-key="8">8</button>
+                    <button class="kp" data-key="9">9</button>
+                    <button id="kp-clear" class="kp small">C</button>
+                    <button class="kp" data-key="0">0</button>
+                    <button id="kp-back" class="kp small">⌫</button>
+                </div>
+                <div class="login-footer">
+                    <a href="admin.html">Quản trị</a>
+                </div>
             </div>
         </div>
-        <!-- MODAL NHÂN BẢN NÂNG CAO -->
-        <div id="advancedDuplicateModal" class="modal">
-            <div class="modal-content" style="max-width:500px">
-                <span class="close" id="closeAdvancedDuplicate">&times;</span>
-                <h3>Nhân bản công việc</h3>
-                <label>Chọn kiểu nhân bản</label>
-                <select id="duplicateType">
-                    <option value="multi">Nhân bản sang nhiều ngày</option>
-                    <option value="week">Nhân bản cả tuần</option>
-                    <option value="month">Nhân bản cả tháng</option>
-                </select>
-                <!-- Section nhân bản ngày -->
-                <div id="multiDateBox" style="margin-top:15px; display:block;">
-                    <label>
-                        <strong>Nhân bản sang các ngày</strong>
-                    </label>
-                    <input type="date" id="multiDatePicker" style="margin-right:5px;">
-                    <button id="addDateBtn" style="padding:5px 10px;">➕ Thêm ngày</button>
-                    <ul id="dateList" style="margin-top:10px;"></ul>
-                </div>
-                <!-- Section nhân bản tuần -->
-                <div id="weekBox" style="margin-top:15px; display:none;">
-                    <label>
-                        <strong>Chọn tuần đích để nhân bản</strong>
-                    </label>
-                    <select id="targetWeekSelect" style="width:100%; padding:8px; margin-top:10px;">
-                        <option value="">-- Chọn tuần --</option>
+        <div id="mainContent" style="display:none">
+            <!-- USER INFO + LOGOUT -->
+            <div id="userInfo" class="user-info">
+                <span id="userName">User</span>
+                <button id="logoutBtn" class="btn-logout">🚪 Đăng xuất</button>
+            </div>
+            <div class="calendar-header">
+                <button id="prevMonth">❮</button>
+                <h1 id="monthYear"></h1>
+                <button id="nextMonth">❯</button>
+            </div>
+            <div class="weekdays">
+                <div>Thứ hai</div>
+                <div>Thứ ba</div>
+                <div>Thứ tư</div>
+                <div>Thứ năm</div>
+                <div>Thứ sáu</div>
+                <div>Thứ bảy</div>
+                <div>Chủ nhật</div>
+            </div>
+            <div id="calendar"></div>
+            <h2 id="selectedDateTitle">Chọn ngày để xem công việc</h2>
+            <button id="openAddModal" class="btn-add">➕ Thêm công việc</button>
+            <button id="duplicateDayBtn" class="btn-duplicate-day">📅 Nhân bản công việc</button>
+            <!-- DROPDOWN XÓA -->
+            <select id="deleteSelectMain" style="padding:8px; margin-left:8px; margin-right:8px;">
+                <option value="">🗑️ Xóa...</option>
+                <option value="day">Xóa ngày</option>
+                <option value="week">Xóa tuần</option>
+                <option value="month">Xóa tháng</option>
+            </select>
+            <label style="margin-left:8px">Chọn tuần:</label>
+            <select id="weekSelect" style="margin-right:8px"></select>
+            <label style="margin-left:8px">Chọn tháng:</label>
+            <input type="month" id="monthPicker" style="margin-right:8px">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                            <select id="deleteSelect" style="padding:2px 4px; width:auto; font-size:12px; height:20px;">
+                                <option value="">Xóa...</option>
+                                <option value="selected">Xóa đã chọn</option>
+                            </select>
+                            <input type="checkbox" id="selectAllCheckbox">
+                        </th>
+                        <th>STT</th>
+                        <th>Nội dung</th>
+                        <th>Đơn vị</th>
+                        <th>Thời gian</th>
+                        <th>Mức độ</th>
+                        <th>Trạng thái</th>
+                        <th>Ghi chú</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="taskTable"></tbody>
+            </table>
+            <!-- MODAL TASK -->
+            <div id="taskModal" class="modal">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h2 id="modalTitle">Thêm công việc</h2>
+                    <input type="hidden" id="taskId">
+                    <label>Nội dung công việc</label>
+                    <textarea id="content"></textarea>
+                    <label>Đơn vị thực hiện</label>
+                    <input type="text" id="unit">
+                    <label>Thời gian hoàn thành</label>
+                    <input type="text" id="duration">
+                    <label>Mức độ</label>
+                    <select id="priority">
+                        <option>Thấp</option>
+                        <option>Trung bình</option>
+                        <option>Cao</option>
                     </select>
+                    <label>Trạng thái</label>
+                    <select id="status">
+                        <option>Chưa xử lý</option>
+                        <option>Đang xử lý</option>
+                        <option>Đã xử lý</option>
+                    </select>
+                    <label>Ghi chú</label>
+                    <textarea id="note"></textarea>
+                    <button id="saveTaskBtn" class="btn-add">💾 Lưu công việc</button>
                 </div>
-                <!-- Section nhân bản tháng -->
-                <div id="monthBox" style="margin-top:15px; display:none;">
-                    <label>
-                        <strong>Chọn tháng đích để nhân bản</strong>
-                    </label>
-                    <input type="month" id="targetMonthPicker" style="width:100%; padding:8px; margin-top:10px;">
-                </div>
-                <button id="confirmAdvancedDuplicate" class="btn-add" style="margin-top:15px; width:100%;">
-                    🔁 Xác nhận nhân bản
-                </button>
             </div>
-        </div>
-        <!-- LOADING INDICATOR -->
-        <div id="loadingIndicator" class="loading-overlay">
-            <div class="loading-spinner"></div>
-        </div>
-        <!-- CUSTOM ALERT / CONFIRM -->
-        <div id="customAlertModal" class="modal" style="display:none;">
-            <div class="modal-content" id="customAlertContent" style="max-width:480px">
-                <div id="customAlertBody" style="padding:12px 6px; font-size:15px; color:#222"></div>
-                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
-                    <button id="customAlertCancel" class="btn-edit" style="display:none;">Cancel</button>
-                    <button id="customAlertOk" class="btn-add">OK</button>
+            <!-- MODAL NHÂN BẢN NÂNG CAO -->
+            <div id="advancedDuplicateModal" class="modal">
+                <div class="modal-content" style="max-width:500px">
+                    <span class="close" id="closeAdvancedDuplicate">&times;</span>
+                    <h3>Nhân bản công việc</h3>
+                    <label>Chọn kiểu nhân bản</label>
+                    <select id="duplicateType">
+                        <option value="multi">Nhân bản sang nhiều ngày</option>
+                        <option value="week">Nhân bản cả tuần</option>
+                        <option value="month">Nhân bản cả tháng</option>
+                    </select>
+                    <!-- Section nhân bản ngày -->
+                    <div id="multiDateBox" style="margin-top:15px; display:block;">
+                        <label>
+                            <strong>Nhân bản sang các ngày</strong>
+                        </label>
+                        <input type="date" id="multiDatePicker" style="margin-right:5px;">
+                        <button id="addDateBtn" style="padding:5px 10px;">➕ Thêm ngày</button>
+                        <ul id="dateList" style="margin-top:10px;"></ul>
+                    </div>
+                    <!-- Section nhân bản tuần -->
+                    <div id="weekBox" style="margin-top:15px; display:none;">
+                        <label>
+                            <strong>Chọn tuần đích để nhân bản</strong>
+                        </label>
+                        <select id="targetWeekSelect" style="width:100%; padding:8px; margin-top:10px;">
+                            <option value="">-- Chọn tuần --</option>
+                        </select>
+                    </div>
+                    <!-- Section nhân bản tháng -->
+                    <div id="monthBox" style="margin-top:15px; display:none;">
+                        <label>
+                            <strong>Chọn tháng đích để nhân bản</strong>
+                        </label>
+                        <input type="month" id="targetMonthPicker" style="width:100%; padding:8px; margin-top:10px;">
+                    </div>
+                    <button id="confirmAdvancedDuplicate" class="btn-add" style="margin-top:15px; width:100%;">
+                        🔁 Xác nhận nhân bản
+                    </button>
+                </div>
+            </div>
+            <!-- LOADING INDICATOR -->
+            <div id="loadingIndicator" class="loading-overlay">
+                <div class="loading-spinner"></div>
+            </div>
+            <!-- CUSTOM ALERT / CONFIRM -->
+            <div id="customAlertModal" class="modal" style="display:none;">
+                <div class="modal-content" id="customAlertContent" style="max-width:480px">
+                    <div id="customAlertBody" style="padding:12px 6px; font-size:15px; color:#222"></div>
+                    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+                        <button id="customAlertCancel" class="btn-edit" style="display:none;">Cancel</button>
+                        <button id="customAlertOk" class="btn-add">OK</button>
+                    </div>
                 </div>
             </div>
         </div>

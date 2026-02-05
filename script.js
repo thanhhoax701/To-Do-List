@@ -507,7 +507,8 @@ prevBtn.addEventListener("click", () => {
 
 /* ========== TỰ ĐỘNG CHỌN HÔM NAY ========== */
 // Khi trang vừa load xong, vẽ lịch và chọn hôm nay
-window.addEventListener("load", () => {
+// Start the app (render calendar and auto-select a date). Call this after successful login.
+function startApp() {
     renderCalendar();
 
     const today = new Date();
@@ -524,10 +525,9 @@ window.addEventListener("load", () => {
                 selectDate(dateStr, dayEl);
             }
         });
-        // Populate dropdown tuần cho tháng hiện tại
         populateWeekSelect(dateStr);
     }, 100);
-});
+}
 
 /* ========== NHÂN BẢN NÂNG CAO ========== */
 // Nhân bản công việc sang nhiều ngày / tuần / tháng khác nhau
@@ -1186,4 +1186,131 @@ if (deleteSelect) {
             }
         }
     };
+}
+
+/* ========== LOGIN / PIN (4 chữ số) ========== */
+const loginOverlay = document.getElementById('loginOverlay');
+const pinDotsEl = document.getElementById('pinDots');
+const kpButtons = document.querySelectorAll('.kp');
+const kpClear = document.getElementById('kp-clear');
+const kpBack = document.getElementById('kp-back');
+
+let enteredPin = '';
+
+function updatePinDots() {
+    const dots = pinDotsEl.querySelectorAll('.dot');
+    dots.forEach((d, i) => d.classList.toggle('filled', i < enteredPin.length));
+}
+
+async function attemptLogin(pin) {
+    try {
+        showLoading();
+        const usersSnap = await get(ref(db, 'users'));
+        hideLoading();
+        if (!usersSnap.exists()) return onLoginFail();
+
+        let matched = null;
+        usersSnap.forEach(ch => {
+            const u = ch.val();
+            if (u && String(u.pin) === String(pin)) matched = { key: ch.key, ...u };
+        });
+
+        if (matched) {
+            sessionStorage.setItem('user', JSON.stringify(matched));
+            updateUserDisplay();
+            document.getElementById('mainContent').style.display = 'block';
+            loginOverlay.classList.add('hidden');
+            startApp();
+        } else {
+            onLoginFail();
+        }
+    } catch (err) {
+        hideLoading();
+        console.error(err);
+        onLoginFail();
+    }
+}
+
+function onLoginFail() {
+    // flash and clear
+    pinDotsEl.animate([{ transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'translateX(0)' }], { duration: 200 });
+    enteredPin = '';
+    updatePinDots();
+}
+
+kpButtons.forEach(b => {
+    b.addEventListener('click', () => {
+        const k = b.dataset.key;
+        if (!k) return;
+        if (enteredPin.length >= 4) return;
+        enteredPin += String(k);
+        updatePinDots();
+        if (enteredPin.length === 4) setTimeout(() => attemptLogin(enteredPin), 120);
+    });
+});
+
+// Keyboard input support
+document.addEventListener('keydown', (e) => {
+    const key = e.key;
+    if (!loginOverlay.classList.contains('hidden')) {
+        // Only when login overlay is visible
+        if (key >= '0' && key <= '9') {
+            if (enteredPin.length >= 4) return;
+            enteredPin += key;
+            updatePinDots();
+            if (enteredPin.length === 4) setTimeout(() => attemptLogin(enteredPin), 120);
+        } else if (key.toLowerCase() === 'c') {
+            enteredPin = '';
+            updatePinDots();
+        } else if (key === 'Backspace') {
+            e.preventDefault();
+            enteredPin = enteredPin.slice(0, -1);
+            updatePinDots();
+        } else if (key === 'Enter') {
+            e.preventDefault();
+            if (enteredPin.length === 4) attemptLogin(enteredPin);
+        }
+    }
+});
+
+if (kpClear) kpClear.onclick = () => { enteredPin = ''; updatePinDots(); };
+if (kpBack) kpBack.onclick = () => { enteredPin = enteredPin.slice(0, -1); updatePinDots(); };
+
+// Cập nhật hiển thị tên user
+function updateUserDisplay() {
+    const savedUser = sessionStorage.getItem('user');
+    if (savedUser) {
+        try {
+            const u = JSON.parse(savedUser);
+            const userName = document.getElementById('userName');
+            if (userName) userName.innerText = u.name || 'User';
+        } catch (e) { }
+    }
+}
+
+// Đăng xuất
+function logout() {
+    sessionStorage.removeItem('user');
+    enteredPin = '';
+    updatePinDots();
+    document.getElementById('mainContent').style.display = 'none';
+    loginOverlay.classList.remove('hidden');
+}
+
+// Bind nút logout
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) logoutBtn.onclick = logout;
+
+// If there's a session, auto-login
+const savedUser = sessionStorage.getItem('user');
+if (savedUser) {
+    try {
+        const u = JSON.parse(savedUser);
+        if (u && u.pin) {
+            updateUserDisplay();
+            document.getElementById('mainContent').style.display = 'block';
+            loginOverlay.classList.add('hidden');
+            startApp();
+        }
+    } catch (e) { }
 }

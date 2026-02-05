@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="vi">
+    <head>
+        <meta charset="utf-8">
+        <title>Admin - Quản lý người dùng</title>
+        <link rel="stylesheet" href="style.css">
+        <style>
+        body{padding:20px;background:#f4f6f9;font-family:Arial,sans-serif}
+        .admin-box{max-width:900px;margin:18px auto;background:#fff;padding:16px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+        .user-list{margin-top:12px}
+        .user-item{display:flex;justify-content:space-between;padding:12px;border-bottom:1px solid #eee;align-items:center}
+        .user-item .meta{display:flex;gap:16px;align-items:center;flex:1}
+        .admin-login{max-width:420px;margin:40px auto;text-align:center}
+        .login-box-admin{background:linear-gradient(180deg,#0b1220,#172031);color:#fff;border-radius:14px;padding:28px;box-shadow:0 18px 48px rgba(0,0,0,0.3)}
+        .login-box-admin h2{font-size:24px;margin:0 0 18px;font-weight:600}
+        .login-box-admin input{width:100%;padding:12px;font-size:18px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(255,255,255,0.1);color:#fff;margin-bottom:12px;box-sizing:border-box;transition:all 0.3s}
+        .login-box-admin input::placeholder{color:rgba(255,255,255,0.6)}
+        .login-box-admin input:focus{outline:none;background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.4);box-shadow:0 0 8px rgba(77,208,225,0.3)}
+        .login-actions{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:14px}
+        .login-actions button{flex:1;padding:10px;background:#28a745;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s}
+        .login-actions button:hover{background:#218838;transform:translateY(-1px)}
+        .login-actions a{flex:1;padding:10px;color:rgba(255,255,255,0.85);text-decoration:none;font-size:14px;background:rgba(255,255,255,0.1);border-radius:8px;transition:all 0.2s}
+        .login-actions a:hover{background:rgba(255,255,255,0.15)}
+        #adminLoginMsg{color:#ff6b6b;margin-top:12px;font-size:14px;min-height:18px}
+        </style>
+    </head>
+    <body>
+        <div id="adminLogin" class="admin-login">
+            <div class="login-box-admin">
+                <h2>Đăng nhập Admin</h2>
+                <input
+                    id="adminPin"
+                    type="password"
+                    placeholder="Nhập PIN admin (4 chữ số)"
+                    maxlength="4"
+                >
+                <div id="adminLoginMsg"></div>
+                <div class="login-actions">
+                    <button id="adminLoginBtn">🔓 Đăng nhập</button>
+                    <a href="index.html">← Về trang chính</a>
+                </div>
+            </div>
+        </div>
+        <div id="adminPanel" style="display:none">
+            <div class="admin-box">
+                <h2>📋 Quản lý người dùng</h2>
+                <input type="hidden" id="editingUserId">
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+                    <input id="newName" placeholder="Tên người dùng" style="padding:8px;flex:1;min-width:200px;border-radius:6px;border:1px solid #ddd">
+                    <input
+                        id="newPin"
+                        placeholder="PIN (4 chữ số)"
+                        maxlength="4"
+                        style="padding:8px;width:140px;border-radius:6px;border:1px solid #ddd"
+                    >
+                    <select id="newRole" style="padding:8px;border-radius:6px;border:1px solid #ddd">
+                        <option value="member">👤 Thành viên</option>
+                        <option value="admin">👨‍💼 Quản trị viên</option>
+                        <option value="superadmin">👑 Quản trị viên cấp cao</option>
+                    </select>
+                    <button id="addUserBtn" class="btn-add" style="white-space:nowrap">➕ Thêm</button>
+                    <button id="cancelEditBtn" class="btn-edit" style="white-space:nowrap;display:none">❌ Hủy</button>
+                </div>
+                <div class="user-list" id="userList"></div>
+            </div>
+        </div>
+        <script type="module" src="firebase.js"></script>
+        <script type="module" src="admin.js"></script>
+    </body>
+</html>
