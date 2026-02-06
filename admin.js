@@ -1,65 +1,98 @@
+// ========== IMPORT FIREBASE ==========
+// Nhập Firebase Database và các hàm thao tác dữ liệu
 import { db } from './firebase.js';
 import { ref, push, get, remove, onValue, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
-const adminLoginDiv = document.getElementById('adminLogin');
-const adminPanel = document.getElementById('adminPanel');
-const adminPinInput = document.getElementById('adminPin');
-const adminLoginBtn = document.getElementById('adminLoginBtn');
-const adminLoginMsg = document.getElementById('adminLoginMsg');
+// ========== DOM ELEMENTS - PHẦN ĐĂNG NHẬP ==========
+// Các element cho giao diện đăng nhập quản trị viên
+const adminLoginDiv = document.getElementById('adminLogin'); // Container đăng nhập
+const adminPanel = document.getElementById('adminPanel'); // Panel quản trị (hiện sau khi đăng nhập)
+const adminPinInput = document.getElementById('adminPin'); // Input nhập PIN
+const adminLoginBtn = document.getElementById('adminLoginBtn'); // Nút đăng nhập
+const adminLoginMsg = document.getElementById('adminLoginMsg'); // Hiển thị lỗi/thông báo
 
-const userListDiv = document.getElementById('userList');
-const addUserBtn = document.getElementById('addUserBtn');
-const cancelEditBtn = document.getElementById('cancelEditBtn');
-const editingUserIdField = document.getElementById('editingUserId');
-const newName = document.getElementById('newName');
-const newPin = document.getElementById('newPin');
-const newRole = document.getElementById('newRole');
+// ========== DOM ELEMENTS - DANH SÁCH VÀ FORM NGƯỜI DÙNG ==========
+// Các element cho quản lý danh sách người dùng
+const userListDiv = document.getElementById('userList'); // Container danh sách users
+const addUserBtn = document.getElementById('addUserBtn'); // Nút thêm hoặc cập nhật user
+const cancelEditBtn = document.getElementById('cancelEditBtn'); // Nút hủy chỉnh sửa
+const editingUserIdField = document.getElementById('editingUserId'); // Lưu ID user đang chỉnh sửa
+const newName = document.getElementById('newName'); // Input tên user
+const newPin = document.getElementById('newPin'); // Input PIN user
+const newRole = document.getElementById('newRole'); // Dropdown role user
 
-let editingUserId = null;
+// ========== BIẾN TOÀN CỤC ==========
+let editingUserId = null; // Lưu ID user đang chỉnh sửa (null = thêm mới)
 
+// ========== PHÂN LOẠI ROLE VÀ HIỂN THỊ ==========
+// Định nghĩa các role và icon/label tương ứng
 const roleDisplay = {
-    superadmin: { icon: '👑', label: 'Quản trị viên cấp cao' },
-    admin: { icon: '👨‍💼', label: 'Quản trị viên' },
-    member: { icon: '👤', label: 'Thành viên đăng ký' }
+    superadmin: { icon: '👑', label: 'Quản trị viên cấp cao' }, // Quyền cao nhất
+    admin: { icon: '👨‍💼', label: 'Quản trị viên' }, // Quyền quản lý thứ cấp
+    member: { icon: '👤', label: 'Thành viên đăng ký' } // Quyền thường
 };
 
+// ========== HÀM ĐĂNG NHẬP ==========
+// Kiểm tra PIN quản trị viên cấp cao (superadmin)
+// Chỉ superadmin mới có quyền truy cập giao diện quản trị
+
 async function checkAdminPin(pin) {
+    // Lấy danh sách tất cả users từ database
     const snap = await get(ref(db, 'users'));
-    if (!snap.exists()) return false;
+    if (!snap.exists()) return false; // Nếu không có users, trả về false
+
     let ok = false;
     snap.forEach(ch => {
         const u = ch.val();
+        // Kiểm tra: PIN trùng AND role = superadmin?
         if (u && u.pin && String(u.pin) === String(pin) && u.role === 'superadmin') ok = true;
     });
     return ok;
 }
 
+// Thực hiện đăng nhập quản trị viên
 async function performAdminLogin() {
-    const pin = adminPinInput.value.trim();
-    if (pin.length !== 4) { adminLoginMsg.innerText = 'PIN phải đủ 4 chữ số'; return; }
-    adminLoginMsg.innerText = '';
+    const pin = adminPinInput.value.trim(); // Lấy PIN từ input
+
+    // Kiểm tra PIN có đủ 4 chữ số không
+    if (pin.length !== 4) {
+        adminLoginMsg.innerText = 'PIN phải đủ 4 chữ số';
+        return;
+    }
+
+    adminLoginMsg.innerText = ''; // Xóa thông báo lỗi cũ
+
     try {
+        // Kiểm tra PIN có hợp lệ không
         const ok = await checkAdminPin(pin);
-        if (!ok) { adminLoginMsg.innerText = 'PIN không hợp lệ hoặc không phải quản trị viên cấp cao'; return; }
+        if (!ok) {
+            adminLoginMsg.innerText = 'PIN không hợp lệ hoặc không phải quản trị viên cấp cao';
+            return;
+        }
+
+        // Đăng nhập thành công: Ẩn form đăng nhập, hiển thị panel quản trị
         adminLoginDiv.style.display = 'none';
         adminPanel.style.display = 'block';
-        bindUsers();
+        bindUsers(); // Tải danh sách users
     } catch (e) {
         adminLoginMsg.innerText = 'Lỗi khi kiểm tra PIN';
         console.error(e);
     }
 }
 
+// Gán sự kiện click nút đăng nhập
 adminLoginBtn.onclick = performAdminLogin;
 
-// Support Enter key to login
+// Hỗ trợ phím Enter để đăng nhập (UX tốt hơn)
 adminPinInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         e.preventDefault();
         performAdminLogin();
     }
-});
+})
 
+// ========== HÀM QUẢN LÝ FORM ==========
+// Xóa sạch dữ liệu form (dùng khi cancele hoặc sau khi thêm/cập nhật)
 function clearForm() {
     newName.value = '';
     newPin.value = '';
@@ -68,36 +101,42 @@ function clearForm() {
     editingUserIdField.value = '';
 }
 
+// Đặt lại UI form về trạng thái "Thêm mới" (không phải chỉnh sửa)
 function resetFormUI() {
     addUserBtn.innerText = '➕ Thêm';
-    addUserBtn.style.background = '#28a745';
+    addUserBtn.style.background = '#28a745'; // Màu xanh
     cancelEditBtn.style.display = 'none';
     clearForm();
 }
 
+// Chuyển form sang chế độ chỉnh sửa
 function editUser(userId, userData) {
-    editingUserId = userId;
+    editingUserId = userId; // Lưu ID user đang chỉnh sửa
     editingUserIdField.value = userId;
     newName.value = userData.name || '';
     newPin.value = userData.pin || '';
     newRole.value = userData.role || 'member';
 
+    // Đổi text nút thành "Cập nhật" và đổi màu
     addUserBtn.innerText = '✏️ Cập nhật';
-    addUserBtn.style.background = '#ffc107';
-    cancelEditBtn.style.display = 'inline-block';
+    addUserBtn.style.background = '#ffc107'; // Màu vàng
+    cancelEditBtn.style.display = 'inline-block'; // Hiển thị nút hủy
 
-    newName.focus();
+    newName.focus(); // Auto focus tên
 }
 
+// Hiển thị danh sách users trên giao diện
 function renderUsers(usersObj) {
-    userListDiv.innerHTML = '';
+    userListDiv.innerHTML = ''; // Xóa danh sách cũ
     if (!usersObj) return;
 
-    // Group users by role
+    // Sắp xếp users theo role (superadmin → admin → member)
     const grouped = { superadmin: [], admin: [], member: [] };
     Object.entries(usersObj).forEach(([k, u]) => {
         const role = u.role || 'member';
         if (!grouped[role]) grouped[role] = [];
+
+
         grouped[role].push({ id: k, ...u });
     });
 

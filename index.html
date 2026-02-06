@@ -6,7 +6,8 @@
         <link rel="stylesheet" href="style.css">
     </head>
     <body>
-        <!-- LOGIN OVERLAY: yêu cầu nhập 4 chữ số PIN trước khi truy cập giao diện -->
+        <!-- ========== ĐĂNG NHẬP VÀ KEYPAD ========== -->
+        <!-- Overlay đăng nhập: Yêu cầu nhập 4 chữ số PIN trước khi truy cập giao diện chính -->
         <div id="loginOverlay" class="login-overlay">
             <div class="login-box">
                 <h2>Nhập Mật khẩu</h2>
@@ -36,16 +37,21 @@
             </div>
         </div>
         <div id="mainContent" style="display:none">
-            <!-- USER INFO + LOGOUT -->
+            <!-- ========== NỘI DUNG CHÍNH ========== -->
+            <!-- Hiển thị sau khi đăng nhập thành công -->
+            <!-- THÔNG TIN USER + ĐĂNG XUẤT -->
             <div id="userInfo" class="user-info">
                 <span id="userName">User</span>
                 <button id="logoutBtn" class="btn-logout">🚪 Đăng xuất</button>
             </div>
+            <!-- ========== LỊch ========== -->
+            <!-- Header lịch và các nút chuyển tháng -->
             <div class="calendar-header">
                 <button id="prevMonth">❮</button>
                 <h1 id="monthYear"></h1>
                 <button id="nextMonth">❯</button>
             </div>
+            <!-- Các ngày trong tuần (Mon-Sun) -->
             <div class="weekdays">
                 <div>Thứ hai</div>
                 <div>Thứ ba</div>
@@ -55,24 +61,35 @@
                 <div>Thứ bảy</div>
                 <div>Chủ nhật</div>
             </div>
+            <!-- Grid lịch - các ngày được render bởi JavaScript -->
             <div id="calendar"></div>
+            <!-- Tiêu đề ngày đang chọn -->
             <h2 id="selectedDateTitle">Chọn ngày để xem công việc</h2>
+            <!-- ========== NÚT HÀNH ĐỘNG ========== -->
+            <!-- Nút thêm công việc -->
             <button id="openAddModal" class="btn-add">➕ Thêm công việc</button>
+            <!-- Nút nhân bản công việc -->
             <button id="duplicateDayBtn" class="btn-duplicate-day">📅 Nhân bản công việc</button>
-            <!-- DROPDOWN XÓA -->
+            <!-- ========== DROPDOWN XÓA ========== -->
+            <!-- Dropdown thứ cấp chính: xóa ngày / tuần / tháng -->
             <select id="deleteSelectMain" style="padding:8px; margin-left:8px; margin-right:8px;">
                 <option value="">🗑️ Xóa...</option>
                 <option value="day">Xóa ngày</option>
                 <option value="week">Xóa tuần</option>
                 <option value="month">Xóa tháng</option>
             </select>
+            <!-- Dropdown chọn tuần -->
             <label style="margin-left:8px">Chọn tuần:</label>
             <select id="weekSelect" style="margin-right:8px"></select>
+            <!-- Input chọn tháng -->
             <label style="margin-left:8px">Chọn tháng:</label>
             <input type="month" id="monthPicker" style="margin-right:8px">
+            <!-- ========== BẢNG CÔNG VIỆC ========== -->
+            <!-- Hiển thị danh sách công việc của ngày được chọn -->
             <table>
                 <thead>
                     <tr>
+                        <!-- Cột chọn, chỗ để dropdown xóa và checkbox chọn tất cả -->
                         <th style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                             <select id="deleteSelect" style="padding:2px 4px; width:auto; font-size:12px; height:20px;">
                                 <option value="">Xóa...</option>
@@ -90,9 +107,11 @@
                         <th>Hành động</th>
                     </tr>
                 </thead>
+                <!-- Cùng cấp render bởi JavaScript -->
                 <tbody id="taskTable"></tbody>
             </table>
-            <!-- MODAL TASK -->
+            <!-- ========== MODAL ========== -->
+            <!-- Modal thêm / sửa công việc -->
             <div id="taskModal" class="modal">
                 <div class="modal-content">
                     <span class="close">&times;</span>
@@ -121,7 +140,7 @@
                     <button id="saveTaskBtn" class="btn-add">💾 Lưu công việc</button>
                 </div>
             </div>
-            <!-- MODAL NHÂN BẢN NÂNG CAO -->
+            <!-- Modal nhân bản nâng cao -->
             <div id="advancedDuplicateModal" class="modal">
                 <div class="modal-content" style="max-width:500px">
                     <span class="close" id="closeAdvancedDuplicate">&times;</span>
@@ -132,7 +151,7 @@
                         <option value="week">Nhân bản cả tuần</option>
                         <option value="month">Nhân bản cả tháng</option>
                     </select>
-                    <!-- Section nhân bản ngày -->
+                    <!-- Bộ phận nhân bản nâng cao - multiple dates -->
                     <div id="multiDateBox" style="margin-top:15px; display:block;">
                         <label>
                             <strong>Nhân bản sang các ngày</strong>
@@ -141,7 +160,7 @@
                         <button id="addDateBtn" style="padding:5px 10px;">➕ Thêm ngày</button>
                         <ul id="dateList" style="margin-top:10px;"></ul>
                     </div>
-                    <!-- Section nhân bản tuần -->
+                    <!-- Bộ phận nhân bản nâng cao - week -->
                     <div id="weekBox" style="margin-top:15px; display:none;">
                         <label>
                             <strong>Chọn tuần đích để nhân bản</strong>
@@ -150,7 +169,7 @@
                             <option value="">-- Chọn tuần --</option>
                         </select>
                     </div>
-                    <!-- Section nhân bản tháng -->
+                    <!-- Bộ phận nhân bản nâng cao - month -->
                     <div id="monthBox" style="margin-top:15px; display:none;">
                         <label>
                             <strong>Chọn tháng đích để nhân bản</strong>
@@ -162,11 +181,11 @@
                     </button>
                 </div>
             </div>
-            <!-- LOADING INDICATOR -->
+            <!-- Vòng xoay loading -->
             <div id="loadingIndicator" class="loading-overlay">
                 <div class="loading-spinner"></div>
             </div>
-            <!-- CUSTOM ALERT / CONFIRM -->
+            <!-- Modal thông báo / xác nhận tùy chỉnh -->
             <div id="customAlertModal" class="modal" style="display:none;">
                 <div class="modal-content" id="customAlertContent" style="max-width:480px">
                     <div id="customAlertBody" style="padding:12px 6px; font-size:15px; color:#222"></div>
@@ -177,7 +196,10 @@
                 </div>
             </div>
         </div>
+        <!-- ========== SCRIPT ========== -->
+        <!-- Firebase Realtime Database -->
         <script type="module" src="firebase.js"></script>
+        <!-- Logic chính của ứng dụng -->
         <script type="module" src="script.js"></script>
     </body>
 </html>

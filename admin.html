@@ -25,46 +25,65 @@
         </style>
     </head>
     <body>
+        <!-- ========== ĐĂNG NHẬP ADMIN ========== -->
+        <!-- Form đăng nhập - chỉ admin/superadmin mới vào được -->
         <div id="adminLogin" class="admin-login">
             <div class="login-box-admin">
                 <h2>Đăng nhập Admin</h2>
+                <!-- Input PIN 4 chữ số -->
                 <input
                     id="adminPin"
                     type="password"
                     placeholder="Nhập PIN admin (4 chữ số)"
                     maxlength="4"
                 >
+                <!-- Hiển thị lỗi đăng nhập -->
                 <div id="adminLoginMsg"></div>
+                <!-- Nút đăng nhập + liên kết về trang chính -->
                 <div class="login-actions">
                     <button id="adminLoginBtn">🔓 Đăng nhập</button>
                     <a href="index.html">← Về trang chính</a>
                 </div>
             </div>
         </div>
+        <!-- ========== PANEL QUẢN LÝ (SAU KHI ĐĂNG NHẬP) ========== -->
+        <!-- Hiển thị sau khi đăng nhập thành công -->
         <div id="adminPanel" style="display:none">
+            <!-- Hộp quản lý người dùng -->
             <div class="admin-box">
                 <h2>📋 Quản lý người dùng</h2>
+                <!-- Input Đang chỉnh sửa user ID (hidden) -->
                 <input type="hidden" id="editingUserId">
+                <!-- Form thêm/sửa user -->
                 <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+                    <!-- Input tên user -->
                     <input id="newName" placeholder="Tên người dùng" style="padding:8px;flex:1;min-width:200px;border-radius:6px;border:1px solid #ddd">
+                    <!-- Input PIN 4 chữ số -->
                     <input
                         id="newPin"
                         placeholder="PIN (4 chữ số)"
                         maxlength="4"
                         style="padding:8px;width:140px;border-radius:6px;border:1px solid #ddd"
                     >
+                    <!-- Dropdown chọn role -->
                     <select id="newRole" style="padding:8px;border-radius:6px;border:1px solid #ddd">
                         <option value="member">👤 Thành viên</option>
                         <option value="admin">👨‍💼 Quản trị viên</option>
                         <option value="superadmin">👑 Quản trị viên cấp cao</option>
                     </select>
+                    <!-- Nút thêm / cập nhật -->
                     <button id="addUserBtn" class="btn-add" style="white-space:nowrap">➕ Thêm</button>
+                    <!-- Nút hủy chỉnh sửa (hiện khi edit) -->
                     <button id="cancelEditBtn" class="btn-edit" style="white-space:nowrap;display:none">❌ Hủy</button>
                 </div>
+                <!-- Danh sách người dùng - render bởi JavaScript -->
                 <div class="user-list" id="userList"></div>
             </div>
         </div>
+        <!-- ========== SCRIPT ========== -->
+        <!-- Firebase Realtime Database -->
         <script type="module" src="firebase.js"></script>
+        <!-- Logic quản lý admin -->
         <script type="module" src="admin.js"></script>
     </body>
 </html>

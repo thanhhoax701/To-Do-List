@@ -1,3 +1,5 @@
+// ========== IMPORT FIREBASE ==========
+// Nhập Firebase Realtime Database và các hàm cần thiết để thao tác với database
 import { db } from "./firebase.js";
 import { ref, push, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
@@ -30,22 +32,22 @@ const modal = document.getElementById("taskModal");
 const modalTitle = document.getElementById("modalTitle");
 const taskIdField = document.getElementById("taskId");
 
-// Modal xác nhận tùy chỉnh (đẹp hơn alert/confirm mặc định)
+// Modal xác nhận tùy chỉnh (hiển thị thông báo, xác nhận với giao diện đẹp hơn alert/confirm mặc định)
 const customAlertModal = document.getElementById('customAlertModal');
-const customAlertBody = document.getElementById('customAlertBody');
-const customAlertOk = document.getElementById('customAlertOk');
-const customAlertCancel = document.getElementById('customAlertCancel');
+const customAlertBody = document.getElementById('customAlertBody'); // Nơi hiển thị nội dung thông báo
+const customAlertOk = document.getElementById('customAlertOk'); // Nút OK
+const customAlertCancel = document.getElementById('customAlertCancel'); // Nút Hủy
 
-// Input fields cho công việc
-const contentInput = document.getElementById("content");
-const unitInput = document.getElementById("unit");
-const durationInput = document.getElementById("duration");
-const priorityInput = document.getElementById("priority");
-const statusInput = document.getElementById("status");
-const noteInput = document.getElementById("note");
-const saveTaskBtn = document.getElementById("saveTaskBtn");
+// Input fields cho công việc trong modal thêm/sửa
+const contentInput = document.getElementById("content"); // Nội dung công việc
+const unitInput = document.getElementById("unit"); // Đơn vị thực hiện
+const durationInput = document.getElementById("duration"); // Thời gian hoàn thành
+const priorityInput = document.getElementById("priority"); // Mức độ ưu tiên
+const statusInput = document.getElementById("status"); // Trạng thái công việc
+const noteInput = document.getElementById("note"); // Ghi chú
+const saveTaskBtn = document.getElementById("saveTaskBtn"); // Nút lưu
 
-// Loading indicator
+// Chỉ báo loading (vòng xoay chờ đợi khi xử lý async)
 const loadingIndicator = document.getElementById("loadingIndicator");
 
 /* ========== BIẾN TOÀN CỤC ========== */
@@ -125,9 +127,11 @@ function parseYMD(ds) {
     return new Date(yy, mm - 1, dd);
 }
 
+// ===== HÀM TÍNH TUẦN =====
 // Lấy số tuần (week1, week2, week3, ...) của một ngày
-// - week1 = các ngày trước thứ 2 đầu tiên của tháng
-// - week2+ = bắt đầu từ thứ 2, chia theo lô 7 ngày
+// Ví dụ: ngày 3-8-2024 (là thứ 6) nằm ở week2 của tháng
+// - week1 = các ngày từ 1 đến trước thứ 2 đầu tiên của tháng (tuần lẻ)
+// - week2+ = bắt đầu từ thứ 2, mỗi lô 7 ngày (thứ 2-chủ nhật)
 function getWeekNumber(ds) {
     const dt = (typeof ds === 'string') ? parseYMD(ds) : new Date(ds);
     const year = dt.getFullYear();
@@ -136,10 +140,11 @@ function getWeekNumber(ds) {
     const firstDayWeekday = firstDay.getDay(); // 0=Chủ nhật..6=Thứ 7
     const firstMondayDate = ((8 - firstDayWeekday) % 7) + 1; // Thứ 2 đầu tiên
 
-    // Nếu ngày trước thứ 2 đầu tiên, là week1 (tuần lẻ)
-
+    // Nếu ngày nằm trước thứ 2 đầu tiên của tháng, là week1 (tuần lẻ của tháng)
     if (dt.getDate() < firstMondayDate) return "week1";
-    // Từ thứ 2 trở đi, chia thành week2, week3, ...
+
+    // Từ thứ 2 đầu tiên trở đi, chia thành week2, week3, ...
+    // Công thức: (số ngày từ thứ 2 đầu) / 7 + 2 = số tuần
     const weekNum = Math.floor((dt.getDate() - firstMondayDate) / 7) + 2;
     return "week" + weekNum;
 }
@@ -224,8 +229,8 @@ function populateWeekSelect(dateStr) {
     } catch (e) { }
 }
 
-// ========== MODAL TÙYCHỈNH ==========
-// Ẩn modal xác nhận
+// ========== MODAL TÙY CHỈNH ==========
+// Ẩn modal xác nhận/thông báo và khôi phục trạng thái ban đầu
 function hideCustomAlert() {
     if (!customAlertModal) return;
     customAlertModal.style.display = 'none';
@@ -233,42 +238,42 @@ function hideCustomAlert() {
     customAlertCancel.onclick = null;
 }
 
-// Hiển thị modal thông báo (chỉ có nút OK)
+// Hiển thị modal thông báo (chỉ có nút OK, người dùng chỉ xem thôi)
 function showCustomAlert(html) {
     return new Promise(resolve => {
-        if (!customAlertModal) { alert(html); resolve(); return; }
+        if (!customAlertModal) { alert(html); resolve(); return; } // Fallback nếu không có modal
         customAlertBody.innerHTML = html;
-        customAlertCancel.style.display = 'none';
+        customAlertCancel.style.display = 'none'; // Ẩn nút Hủy
         customAlertOk.innerText = 'OK';
         customAlertOk.onclick = () => { hideCustomAlert(); resolve(); };
         customAlertModal.style.display = 'flex';
     });
 }
 
-// Hiển thị modal xác nhận (có nút OK và Hủy)
+// Hiển thị modal xác nhận (có nút OK và Hủy, người dùng phải xác nhận)
 function showCustomConfirm(html) {
     return new Promise(resolve => {
-        if (!customAlertModal) { resolve(confirm(html)); return; }
-        customAlertBody.innerHTML = html.replace(/\n/g, '<br>');
-        customAlertCancel.style.display = 'inline-block';
+        if (!customAlertModal) { resolve(confirm(html)); return; } // Fallback
+        customAlertBody.innerHTML = html.replace(/\n/g, '<br>'); // Chuyển dòng thành HTML break
+        customAlertCancel.style.display = 'inline-block'; // Hiển thị nút Hủy
         customAlertOk.innerText = 'OK';
-        customAlertOk.onclick = () => { hideCustomAlert(); resolve(true); };
-        customAlertCancel.onclick = () => { hideCustomAlert(); resolve(false); };
+        customAlertOk.onclick = () => { hideCustomAlert(); resolve(true); }; // Nút OK = true
+        customAlertCancel.onclick = () => { hideCustomAlert(); resolve(false); }; // Nút Hủy = false
         customAlertModal.style.display = 'flex';
     });
 }
 
-// Hiển thị loading indicator
+// Hiển thị vòng xoay loading khi xử lý dữ liệu từ database
 function showLoading() {
     if (loadingIndicator) loadingIndicator.classList.add('active');
 }
 
-// Ẩn loading indicator
+// Ẩn vòng xoay loading
 function hideLoading() {
     if (loadingIndicator) loadingIndicator.classList.remove('active');
 }
 
-// Chuyển chuỗi YYYY-MM-DD sang định dạng DD-MM-YYYY
+// Chuyển chuỗi YYYY-MM-DD sang định dạng DD-MM-YYYY để hiển thị cho người dùng dễ đọc
 function formatDisplayDate(ds) {
     if (!ds) return ds;
     const parts = ds.split("-");
@@ -279,16 +284,18 @@ function formatDisplayDate(ds) {
 
 // Xử lý khi người dùng chọn một ngày trên lịch
 function selectDate(ds, el) {
-    // Member chỉ được xem ngày hôm nay
+    // Kiểm tra quyền: Thành viên chỉ được xem công việc hôm nay
     if (!checkMemberAccess(ds)) return;
 
+    // Bỏ class "selected-day" từ tất cả các ngày
     document.querySelectorAll(".day").forEach(d => d.classList.remove("selected-day"));
+    // Thêm class "selected-day" vào ngày được chọn (để highlight)
     el.classList.add("selected-day");
 
-    selectedDate = ds;
-    selectedDateTitle.innerText = "Công việc ngày " + formatDisplayDate(ds);
+    selectedDate = ds; // Lưu ngày được chọn
+    selectedDateTitle.innerText = "Công việc ngày " + formatDisplayDate(ds); // Cập nhật tiêu đề
 
-    loadTasks(ds);
+    loadTasks(ds); // Tải công việc của ngày này
     // Cập nhật dropdown tuần để đồng bộ với tháng của ngày được chọn
     try { populateWeekSelect(ds); } catch (e) { }
 }
@@ -298,61 +305,89 @@ if (weekSelect) {
     weekSelect.onchange = async () => {
         if (weekSelect.value) {
             const [y, m, w] = weekSelect.value.split("|");
-            loadTasksForWeek(y, m, w);
+            loadTasksForWeek(y, m, w); // Tải công việc của tuần đó
         }
     };
 }
 
-/* ========== PHÂN LOẠI MÀU ========== */
-// Trả về class CSS cho mức độ ưu tiên
+// ========== PHÂN LOẠI MÀU CHO MỨC ĐỘ VÀ TRẠNG THÁI ==========
+/**
+ * Trả về class CSS tương ứng với mức độ ưu tiên để quy định màu sắc
+ * @param {string} v - Mức độ ưu tiên ("Thấp", "Trung bình", "Cao")
+ * @returns {string} Class CSS ("priority-low", "priority-medium", "priority-high")
+ */
 const priorityClass = v =>
-    v === "Thấp" ? "priority-low" :
-        v === "Trung bình" ? "priority-medium" : "priority-high";
+    v === "Thấp" ? "priority-low" : // Màu xanh lá cho ưu tiên thấp
+        v === "Trung bình" ? "priority-medium" : // Màu vàng cho ưu tiên trung bình
+            "priority-high"; // Màu đỏ cho ưu tiên cao
 
-// Trả về class CSS cho trạng thái công việc
+/**
+ * Trả về class CSS tương ứng với trạng thái công việc để quy định màu sắc
+ * @param {string} v - Trạng thái công việc ("Chưa xử lý", "Đang xử lý", "Đã xử lý")
+ * @returns {string} Class CSS ("status-pending", "status-doing", "status-done")
+ */
 const statusClass = v =>
-    v === "Chưa xử lý" ? "status-pending" :
-        v === "Đang xử lý" ? "status-doing" : "status-done";
+    v === "Chưa xử lý" ? "status-pending" : // Màu xám (chưa bắt đầu)
+        v === "Đang xử lý" ? "status-doing" : // Màu cam (đang làm)
+            "status-done"; // Màu xanh (hoàn thành)
 
-/* ========== HELPER DROPDOWN MÀU ========== */
-// Tạo dropdown select với các tùy chọn và lớp CSS
+/**
+ * Tạo dropdown select với các tùy chọn và áp dụng class CSS năng động
+ * Khi người dùng thay đổi giá trị, màu sắc tự động cập nhật theo giá trị mới
+ * @param {array} options - Danh sách các tùy chọn để hiển thị
+ * @param {string} value - Giá trị được chọn ban đầu
+ * @param {function} getClass - Hàm để lấy class CSS dựa trên giá trị
+ * @param {function} callback - Hàm gọi khi người dùng thay đổi giá trị
+ * @returns {HTMLElement} Phần tử select đã được cấu hình
+ */
 function createColorSelect(options, value, getClass, callback) {
     const select = document.createElement("select");
 
+    // Thêm các option vào dropdown
     options.forEach(opt => {
         const o = document.createElement("option");
         o.value = o.textContent = opt;
-        if (opt === value) o.selected = true;
+        if (opt === value) o.selected = true; // Chọn giá trị hiện tại
         select.appendChild(o);
     });
 
+    // Áp dụng class CSS ban đầu dựa trên giá trị hiện tại
     select.className = getClass(value);
+
+    // Lắng nghe sự kiện thay đổi giá trị
     select.onchange = () => {
-        select.className = getClass(select.value);
-        callback(select.value);
+        select.className = getClass(select.value); // Cập nhật màu sắc CSS (priority/status color)
+        callback(select.value); // Gọi callback để lưu giá trị vào database
     };
 
     return select;
 }
 
-/* ========== LOAD VÀ HIỂN THỊ CÔNG VIỆC ========== */
-// Load công việc của một ngày cụ thể
+/* ========== TẢI VÀ HIỂN THỊ CÔNG VIỆC ========== */
+/**
+ * Tải và hiển thị tất cả công việc của một ngày cụ thể
+ * Hàm này sắp xếp các công việc thành bảng với các nút hành động (sửa, xóa, nhân bản)
+ * @param {string} ds - Ngày dưới dạng string (YYYY-MM-DD)
+ */
 function loadTasks(ds) {
     const [y, m] = ds.split("-");
     const w = getWeekNumber(ds);
     const r = ref(db, `tasks/${y}/${m}/${w}/${ds}`);
 
+    // Lắng nghe thay đổi dữ liệu từ Firebase Realtime Database
     onValue(r, snap => {
-        taskTable.innerHTML = "";
+        taskTable.innerHTML = ""; // Xóa bảng cũ
         let i = 1;
 
+        // Lặp qua từng công việc trong ngày
         snap.forEach(ch => {
-            const t = ch.val();
-            const k = ch.key;
+            const t = ch.val(); // Dữ liệu công việc
+            const k = ch.key; // ID của công việc
             const row = document.createElement("tr");
 
-            // (debug logs removed)
+            // (bỏ qua logs debug)
 
+            // Tạo hàng bảng với thông tin công việc
             row.innerHTML = `
                 <td><input type="checkbox" class="task-checkbox" data-key="${k}" data-year="${y}" data-month="${m}" data-week="${w}" data-date="${ds}"></td>
                 <td>${i++}</td>
@@ -369,6 +404,7 @@ function loadTasks(ds) {
                 </td>
             `;
 
+            // Tạo dropdown chọn mức độ ưu tiên với màu sắc
             const prSelect = createColorSelect(
                 ["Thấp", "Trung bình", "Cao"],
                 t.priority,
@@ -376,6 +412,7 @@ function loadTasks(ds) {
                 v => update(ref(db, `tasks/${y}/${m}/${w}/${ds}/${k}`), { priority: v })
             );
 
+            // Tạo dropdown chọn trạng thái công việc với màu sắc
             const stSelect = createColorSelect(
                 ["Chưa xử lý", "Đang xử lý", "Đã xử lý"],
                 t.status,
@@ -383,15 +420,17 @@ function loadTasks(ds) {
                 v => update(ref(db, `tasks/${y}/${m}/${w}/${ds}/${k}`), { status: v })
             );
 
-            // Vô hiệu hóa select cho member
+            // Vô hiệu hóa select cho member (họ không được phép sửa)
             if (isMember()) {
                 prSelect.disabled = true;
                 stSelect.disabled = true;
             }
 
+            // Thêm dropdown vào cột mức độ ưu tiên và trạng thái
             row.children[5].appendChild(prSelect);
             row.children[6].appendChild(stSelect);
 
+            // Nút nhân bản công việc
             row.querySelector(".btn-duplicate").onclick = async () => {
                 if (isMember()) {
                     alert('👤 Thành viên không có quyền nhân bản công việc');
@@ -401,7 +440,7 @@ function loadTasks(ds) {
                 const confirmDup = confirm("Bạn có muốn nhân bản công việc này không?");
                 if (!confirmDup) return;
 
-                // Sao chép thông tin công việc
+                // Sao chép thông tin công việc cần thiết
                 const newTask = {
                     content: t.content,
                     unit: t.unit,
@@ -450,11 +489,13 @@ function loadTasks(ds) {
     });
 }
 
-/* ========== MODAL THÊM/SỬA CÔNG VIỆC ========== */
-// Mở modal để thêm hoặc sửa công việc
+// ========== MODAL THÊM/SỎA CÔNG VIệC ========== 
+// Mở modal để thêm công việc mới hoặc sửa công việc có sẵn
 function openModal(title, id = "", t = {}) {
-    modalTitle.innerText = title;
-    taskIdField.value = id;
+    modalTitle.innerText = title; // Đậu Để modal: "Thêm công việc" hoặc "Chỉnh sửa công việc"
+    taskIdField.value = id; // Nếu có ID, tức là sửa; nếu trống là thêm mới
+
+    // Đập đặt giá trị đặn các input field nếu đang sửa
     contentInput.value = t.content || "";
     unitInput.value = t.unit || "";
     durationInput.value = t.duration || "";
@@ -462,23 +503,29 @@ function openModal(title, id = "", t = {}) {
     statusInput.value = t.status || "Chưa xử lý";
     noteInput.value = t.note || "";
 
-    modal.style.display = "flex";
+    modal.style.display = "flex"; // Hiển thị modal
 }
 
-// Đóng modal bằng nút X
-document.querySelector(".close").onclick = () => modal.style.display = "none";
-// Đóng modal khi click bên ngoài
+// Xóa modal bằng nút X
+if (document.querySelector(".close")) {
+    document.querySelector(".close").onclick = () => modal.style.display = "none";
+}
+
+// Xóa modal khi click bên ngoài (backdrop)
 modal.addEventListener("click", e => { if (e.target === modal) modal.style.display = "none"; });
-// Đóng modal khi bấm phím Escape
+
+// Xóa modal khi bấm phím Escape
 document.addEventListener("keydown", e => { if (e.key === "Escape") modal.style.display = "none"; });
 
 // Nút mở modal thêm công việc mới
-document.getElementById("openAddModal").onclick = () => {
-    if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
-    openModal("Thêm công việc");
-};
+if (document.getElementById("openAddModal")) {
+    document.getElementById("openAddModal").onclick = () => {
+        if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
+        openModal("Thêm công việc");
+    };
+}
 
-/* ========== LƯU CÔNG VIỆC ========== */
+// ========== LưU CÔNG VIệC ==========
 // Xử lý khi nhấn nút lưu trong modal
 saveTaskBtn.onclick = async () => {
     if (!selectedDate) {
@@ -489,7 +536,7 @@ saveTaskBtn.onclick = async () => {
     const [y, m] = selectedDate.split("-");
     const w = getWeekNumber(selectedDate);
 
-    // Chuẩn bị dữ liệu công việc
+    // Chuẩn bị dữ liệu công việc để lưu vào database
     const data = {
         content: contentInput.value,
         unit: unitInput.value,
@@ -502,19 +549,19 @@ saveTaskBtn.onclick = async () => {
 
     try {
         if (taskIdField.value) {
-            // Nếu có ID, là chỉnh sửa
+            // Nếu có ID, là chỉnh sửa công việc có sẵn
             await update(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}/${taskIdField.value}`), data);
             alert("✅ Cập nhật công việc thành công!");
         } else {
-            // Nếu không có ID, là thêm mới
+            // Nếu không có ID, là thêm công việc mới
             await push(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}`), data);
             alert("✅ Thêm công việc mới thành công!");
         }
 
-        modal.style.display = "none";
+        modal.style.display = "none"; // Đóng modal
     } catch (error) {
         console.error(error);
-        alert("❌ Có lỗi xảy ra khi lưu công việc!");
+        alert("\u274c Có lỗi xảy ra khi lưu công việc!");
     }
 };
 // Nút chuyển tháng tiếp theo
@@ -530,8 +577,10 @@ prevBtn.addEventListener("click", () => {
 });
 
 /* ========== TỰ ĐỘNG CHỌN HÔM NAY ========== */
-// Khi trang vừa load xong, vẽ lịch và chọn hôm nay
-// Start the app (render calendar and auto-select a date). Call this after successful login.
+/**
+ * Khởi động ứng dụng: Vẽ lịch, cấu hình quyền theo role, và tự động chọn hôm nay
+ * Hàm này được gọi sau khi người dùng đăng nhập thành công
+ */
 function startApp() {
     renderCalendar();
     applyRolePermissions(); // Áp dụng quyền dựa trên role
@@ -555,7 +604,10 @@ function startApp() {
 }
 
 /* ========== NHÂN BẢN NÂNG CAO ========== */
-// Nhân bản công việc sang nhiều ngày / tuần / tháng khác nhau
+/**
+ * Khởi tạo các biến và phần tử DOM cho tính năng nhân bản nâng cao
+ * Nhân bản công việc sang nhiều ngày / tuần / tháng khác nhau
+ */
 const advModal = document.getElementById("advancedDuplicateModal");
 const closeAdvModal = document.getElementById("closeAdvancedDuplicate");
 const duplicateType = document.getElementById("duplicateType");
@@ -570,9 +622,13 @@ const monthBox = document.getElementById("monthBox");
 const targetWeekSelect = document.getElementById("targetWeekSelect");
 const targetMonthPicker = document.getElementById("targetMonthPicker");
 
+// Danh sách các ngày được chọn để nhân bản vào
 let advancedDates = [];
 
-/* Toggle sections khi đổi loại nhân bản */
+/**
+ * Xử lý thay đổi loại nhân bản (ngày, tuần, tháng)
+ * Hiển thị/ẩn các box tương ứng với loại nhân bản được chọn
+ */
 duplicateType.onchange = async () => {
     multiDateBox.style.display = "none";
     weekBox.style.display = "none";
@@ -583,7 +639,7 @@ duplicateType.onchange = async () => {
         multiDateBox.style.display = "block";
     } else if (duplicateType.value === "week") {
         weekBox.style.display = "block";
-        // Populate các tuần tiếp theo có thể chọn
+        // Tải danh sách các tuần tiếp theo có thể chọn để nhân bản vào
         await populateTargetWeeks();
     } else if (duplicateType.value === "month") {
         monthBox.style.display = "block";
@@ -595,7 +651,10 @@ duplicateType.onchange = async () => {
     }
 };
 
-/* Populate các tuần tiếp theo để có thể chọn nhân bản vào */
+/**
+ * Tải danh sách các tuần tiếp theo để có thể chọn nhân bản vào
+ * Hiển thị tất cả các tuần của tháng hiện tại và tháng tiếp theo
+ */
 async function populateTargetWeeks() {
     if (!selectedDate) return;
 
@@ -634,9 +693,9 @@ async function populateTargetWeeks() {
         weeks.push({ week: w, year: nextYear, month: nextMonth, label });
     }
 
-    // Add to select
+    // Thêm các tuần vào dropdown
     weeks.forEach(w => {
-        // (debug logs removed)
+        // (bỏ qua logs debug)
         const opt = document.createElement("option");
         opt.value = `${w.year}|${pad(w.month)}|week${w.week}`;
         opt.textContent = w.label;
@@ -856,27 +915,37 @@ confirmAdvBtn.onclick = async () => {
     }
 };
 
-/* ========== LOAD CÔNG VIỆC CỦA TUẦN ========== */
-// Load và hiển thị tất cả công việc của một tuần
+/* ========== TẢI CÔNG VIỆC CỦA TUẦN ========== */
+/**
+ * Tải và hiển thị tất cả công việc của một tuần cụ thể
+ * Công việc được sắp xếp theo ngày tăng dần, mỗi ngày hiển thị các công việc của nó
+ * @param {string} y - Năm (YYYY)
+ * @param {string} m - Tháng (MM, 01-12)
+ * @param {string} weekId - ID của tuần (week1, week2, ...)
+ */
 function loadTasksForWeek(y, m, weekId) {
     const r = ref(db, `tasks/${y}/${m}/${weekId}`);
+    // Lắng nghe thay đổi dữ liệu từ Firebase Realtime Database
     onValue(r, snap => {
-        taskTable.innerHTML = "";
-        let i = 1;
+        taskTable.innerHTML = ""; // Xóa bảng công việc cũ
+        let i = 1; // Số thứ tự công việc
         if (snap.exists()) {
-            // Sắp xếp các ngày theo thứ tự tăng dần
+            // Lấy danh sách các ngày và sắp xếp theo thứ tự tăng dần
             const dates = [];
             snap.forEach(dateSnap => dates.push(dateSnap.key));
             dates.sort();
 
+            // Lặp qua từng ngày trong tuần
             for (const dateKey of dates) {
                 const dateSnap = snap.child(dateKey);
                 let dateTaskCount = 0;
+                // Lặp qua từng công việc trong ngày
                 dateSnap.forEach(ch => {
                     dateTaskCount++;
-                    const t = ch.val();
-                    const k = ch.key;
+                    const t = ch.val(); // Dữ liệu công việc
+                    const k = ch.key; // ID công việc
                     const row = document.createElement("tr");
+                    // Tạo hàng bảng với thông tin công việc (thêm cột ngày)
                     row.innerHTML = `
                         <td><input type="checkbox" class="task-checkbox" data-key="${k}" data-year="${y}" data-month="${m}" data-week="${weekId}" data-date="${dateKey}"></td>
                         <td>${i++}</td>
@@ -895,14 +964,18 @@ function loadTasksForWeek(y, m, weekId) {
                     taskTable.appendChild(row);
                 });
             }
-            // finished rendering week table
+            // Hoàn tất việc render bảng công việc của tuần
         } else {
-            console.log('loadTasksForWeek snap.exists() = false');
+            console.log('loadTasksForWeek: Không có dữ liệu cho tuần này');
         }
     });
 }
 /* ========== ĐẾM CÔNG VIỆC - XÓA NGÀY/TUẦN/THÁNG ========== */
-// Đếm số công việc của một ngày cụ thể
+/**
+ * Đếm số lượng công việc của một ngày cụ thể
+ * @param {string} date - Ngày dưới dạng string (YYYY-MM-DD)
+ * @returns {number} Số lượng công việc của ngày đó
+ */
 async function countTasksForDay(date) {
     const [y, m] = date.split("-");
     const w = getWeekNumber(date);
@@ -910,6 +983,7 @@ async function countTasksForDay(date) {
     const snap = await get(r);
     let c = 0;
     if (snap.exists()) {
+        // Lặp qua từng công việc để đếm
         snap.forEach(ch => {
             c++;
         });
@@ -917,7 +991,11 @@ async function countTasksForDay(date) {
     return c;
 }
 
-// Đếm số công việc của một tuần (từ ngày bất kỳ trong tuần)
+/**
+ * Đếm số lượng công việc của một tuần (từ ngày bất kỳ trong tuần)
+ * @param {string} date - Một ngày bất kỳ trong tuần dưới dạng string (YYYY-MM-DD)
+ * @returns {number} Số lượng công việc của tuần đó
+ */
 async function countTasksForWeek(date) {
     const [y, m] = date.split("-");
     const w = getWeekNumber(date);
@@ -925,6 +1003,7 @@ async function countTasksForWeek(date) {
     const snap = await get(r);
     let c = 0;
     if (snap.exists()) {
+        // Lặp qua từng ngày trong tuần, rồi lặp qua từng công việc
         snap.forEach(dateSnap => {
             dateSnap.forEach(() => c++);
         });
@@ -932,24 +1011,36 @@ async function countTasksForWeek(date) {
     return c;
 }
 
-// Đếm số công việc của một tuần cụ thể (theo year, month, weekId)
+/**
+ * Đếm số lượng công việc của một tuần cụ thể (được xác định bởi year, month, weekId)
+ * @param {string} y - Năm (YYYY)
+ * @param {string} m - Tháng (MM, 01-12)
+ * @param {string} weekId - ID của tuần (week1, week2, ...)
+ * @returns {number} Số lượng công việc của tuần đó
+ */
 async function countTasksForWeekById(y, m, weekId) {
     const r = ref(db, `tasks/${y}/${m}/${weekId}`);
     const snap = await get(r);
     let c = 0;
     if (snap.exists()) {
+        // Lặp qua từng ngày trong tuần, rồi lặp qua từng công việc
         snap.forEach(dateSnap => dateSnap.forEach(() => c++));
     }
     return c;
 }
 
-// Đếm số công việc của toàn bộ một tháng
+/**
+ * Đếm số lượng công việc của toàn bộ một tháng
+ * @param {string} date - Một ngày bất kỳ trong tháng dưới dạng string (YYYY-MM-DD)
+ * @returns {number} Số lượng công việc của tháng đó
+ */
 async function countTasksForMonth(date) {
     const [y, m] = date.split("-");
     const r = ref(db, `tasks/${y}/${m}`);
     const snap = await get(r);
     let c = 0;
     if (snap.exists()) {
+        // Lặp qua từng tuần, rồi lặp qua từng ngày, rồi lặp qua từng công việc
         snap.forEach(weekSnap => {
             weekSnap.forEach(dateSnap => {
                 dateSnap.forEach(() => c++);
@@ -959,14 +1050,20 @@ async function countTasksForMonth(date) {
     return c;
 }
 
-// Đếm số ngày và số công việc của một tháng, cùng chi tiết per-date
+/**
+ * Đếm số ngày có công việc và số lượng công việc của một tháng (kèm chi tiết từng ngày)
+ * @param {string} date - Một ngày bất kỳ trong tháng dưới dạng string (YYYY-MM-DD)
+ * @returns {object} Đối tượng chứa {daysCount, tasksCount, details} 
+ *          - daysCount: số ngày có công việc
+ *          - tasksCount: tổng số công việc
+ *          - details: object chứa số công việc từng ngày {YYYY-MM-DD: count, ...}
+ */
 async function countDaysAndTasksForMonth(date) {
     const [y, m] = date.split("-");
     const r = ref(db, `tasks/${y}/${m}`);
     const snap = await get(r);
     let tasksCount = 0;
-    const details = {};
-    // countDaysAndTasksForMonth: compute counts for month
+    const details = {}; // Lưu chi tiết công việc từng ngày {ngày: số công việc}
 
     if (snap.exists()) {
         const monthData = snap.val();
@@ -982,6 +1079,7 @@ async function countDaysAndTasksForMonth(date) {
                             const dayTasks = weekData[dateKey];
                             if (dayTasks && typeof dayTasks === 'object') {
                                 let taskCount = 0;
+                                // Đếm công việc của ngày này
                                 for (const taskKey in dayTasks) {
                                     if (dayTasks.hasOwnProperty(taskKey)) {
                                         taskCount++;
@@ -999,20 +1097,28 @@ async function countDaysAndTasksForMonth(date) {
             }
         }
     } else {
-        console.log('countDaysAndTasksForMonth snap.exists() = false');
+        console.log('countDaysAndTasksForMonth: Không có dữ liệu cho tháng này');
     }
 
     const daysCount = Object.keys(details).length;
     return { daysCount, tasksCount, details };
 }
 
-// Đếm số ngày và số công việc của một tuần cụ thể, cùng chi tiết per-date
+/**
+ * Đếm số ngày có công việc và số lượng công việc của một tuần cụ thể (kèm chi tiết từng ngày)
+ * @param {string} y - Năm (YYYY)
+ * @param {string} m - Tháng (MM, 01-12)
+ * @param {string} weekId - ID của tuần (week1, week2, ...)
+ * @returns {object} Đối tượng chứa {daysCount, tasksCount, details}
+ *          - daysCount: số ngày có công việc
+ *          - tasksCount: tổng số công việc
+ *          - details: object chứa số công việc từng ngày {YYYY-MM-DD: count, ...}
+ */
 async function countDaysAndTasksForWeekById(y, m, weekId) {
     const r = ref(db, `tasks/${y}/${m}/${weekId}`);
     const snap = await get(r);
     let tasksCount = 0;
-    const details = {};
-    // countDaysAndTasksForWeekById: compute counts for week
+    const details = {}; // Lưu chi tiết công việc từng ngày {ngày: số công việc}
 
     if (snap.exists()) {
         const weekData = snap.val();
@@ -1023,6 +1129,7 @@ async function countDaysAndTasksForWeekById(y, m, weekId) {
                 const dayTasks = weekData[dateKey];
                 if (dayTasks && typeof dayTasks === 'object') {
                     let taskCount = 0;
+                    // Đếm công việc của ngày này
                     for (const taskKey in dayTasks) {
                         if (dayTasks.hasOwnProperty(taskKey)) {
                             taskCount++;
@@ -1036,22 +1143,24 @@ async function countDaysAndTasksForWeekById(y, m, weekId) {
             }
         }
     } else {
-        console.log('countDaysAndTasksForWeekById snap.exists() = false');
+        console.log('countDaysAndTasksForWeekById: Không có dữ liệu cho tuần này');
     }
 
     const daysCount = Object.keys(details).length;
     return { daysCount, tasksCount, details };
-
 }
 
 /* ========== XÓA NGÀY / TUẦN / THÁNG ========== */
-// Xử lý dropdown xóa chính
+/**
+ * Xử lý sự kiện thay đổi dropdown xóa chính (xóa ngày, tuần, hoặc tháng toàn bộ)
+ */
 deleteSelectMain.onchange = async () => {
     const type = deleteSelectMain.value;
     deleteSelectMain.value = ""; // Reset dropdown
 
     if (!type) return;
 
+    // Kiểm tra quyền: Chỉ admin mới có quyền xóa
     if (isMember()) {
         alert('👤 Thành viên không có quyền xóa công việc');
         return;
@@ -1059,14 +1168,17 @@ deleteSelectMain.onchange = async () => {
 
     try {
         if (type === "day") {
-            // XÓA NGÀY - không cần loading vì nhanh
+            // ========== XÓA NGÀY ==========
+            // Xóa tất cả công việc của một ngày cụ thể
             if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
             const [y, m] = selectedDate.split("-");
             const w = getWeekNumber(selectedDate);
 
+            // Đếm số công việc cần xóa
             const cnt = await countTasksForDay(selectedDate);
             if (cnt === 0) return alert("Không có công việc để xóa ở ngày này!");
 
+            // Xác nhận trước khi xóa
             const ok = await showCustomConfirm(`Xác nhận xóa ${cnt} công việc của ngày ${formatDisplayDate(selectedDate)}?`);
             if (!ok) return;
 
@@ -1075,14 +1187,15 @@ deleteSelectMain.onchange = async () => {
                 await remove(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}`));
                 hideLoading();
                 await showCustomAlert(`✅ Đã xóa ${cnt} công việc`);
-                taskTable.innerHTML = "";
+                taskTable.innerHTML = ""; // Xóa bảng hiển thị
             } catch (error) {
                 hideLoading();
                 throw error;
             }
         }
         else if (type === "week") {
-            // XÓA TUẦN - không cần loading
+            // ========== XÓA TUẦN ==========
+            // Xóa tất cả công việc của một tuần cụ thể
             try {
                 // Xác định tuần: ưu tiên weekSelect, fallback selectedDate
                 let y, m, w;
@@ -1104,11 +1217,12 @@ deleteSelectMain.onchange = async () => {
                     return;
                 }
 
-                // Xây dựng tin nhắn xác nhận
+                // Xây dựng tin nhắn xác nhận với chi tiết từng ngày
                 let msg = `Xác nhận xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc)?<br><br>Chi tiết:`;
                 const keys = Object.keys(stats.details).sort();
                 for (const k of keys) msg += `<br>- ${formatDisplayDate(k)}: ${stats.details[k]} công việc`;
 
+                // Xác nhận trước khi xóa
                 const ok = await showCustomConfirm(msg);
                 if (!ok) return;
 
@@ -1129,8 +1243,10 @@ deleteSelectMain.onchange = async () => {
             }
         }
         else if (type === "month") {
-            // XÓA THÁNG
+            // ========== XÓA THÁNG ==========
+            // Xóa tất cả công việc của một tháng cụ thể
             try {
+                // Xác định tháng: ưu tiên monthPicker, fallback selectedDate
                 let y, m;
                 if (monthPicker && monthPicker.value) {
                     [y, m] = monthPicker.value.split("-");
@@ -1150,6 +1266,7 @@ deleteSelectMain.onchange = async () => {
                     msg += `<br>- ${formatDisplayDate(k)}: ${stats.details[k]} công việc`;
                 }
 
+                // Xác nhận trước khi xóa
                 const ok = await showCustomConfirm(msg);
                 if (!ok) return;
 
@@ -1158,7 +1275,7 @@ deleteSelectMain.onchange = async () => {
                     await remove(ref(db, `tasks/${y}/${m}`));
                     hideLoading();
                     await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc) của tháng ${m}/${y}`);
-                    taskTable.innerHTML = "";
+                    taskTable.innerHTML = ""; // Xóa bảng hiển thị
                 } catch (error) {
                     hideLoading();
                     throw error;
@@ -1175,14 +1292,20 @@ deleteSelectMain.onchange = async () => {
 };
 
 /* ========== XÓA CÔNG VIỆC ĐÃ CHỌN ========== */
-// Nút chọn tất cả / bỏ chọn tất cả
+/**
+ * Xử lý checkbox "chọn tất cả" - chọn/bỏ chọn toàn bộ công việc trong bảng
+ */
 selectAllCheckbox.onchange = () => {
+    // Lặp qua tất cả checkbox trong bảng công việc
     document.querySelectorAll(".task-checkbox").forEach(cb => {
         cb.checked = selectAllCheckbox.checked;
     });
 };
 
-// Dropdown xóa đã chọn (trong header bảng)
+/**
+ * Xử lý dropdown xóa công việc đã chọn
+ * Cho phép người dùng xóa nhiều công việc cùng lúc
+ */
 if (deleteSelect) {
     deleteSelect.onchange = async () => {
         const type = deleteSelect.value;
@@ -1191,19 +1314,23 @@ if (deleteSelect) {
         if (!type) return;
 
         if (type === "selected") {
-            // XÓA ĐÃ CHỌN
+            // ========== XÓA CÔNG VIỆC ĐÃ CHỌN ==========
+            // Kiểm tra quyền: Chỉ admin mới có quyền xóa
             if (isMember()) {
                 alert('👤 Thành viên không có quyền xóa công việc');
                 return;
             }
 
+            // Lấy tất cả checkbox đã được chọn
             const selected = document.querySelectorAll(".task-checkbox:checked");
             if (selected.length === 0) return alert("Vui lòng chọn ít nhất 1 công việc!");
 
+            // Xác nhận trước khi xóa
             if (!await showCustomConfirm(`Xác nhận xóa ${selected.length} công việc?`)) return;
 
+            showLoading();
             try {
-                showLoading();
+                // Lặp qua từng công việc được chọn và xóa
                 for (const cb of selected) {
                     const y = cb.dataset.year;
                     const m = cb.dataset.month;
@@ -1212,14 +1339,11 @@ if (deleteSelect) {
                     const k = cb.dataset.key;
                     await remove(ref(db, `tasks/${y}/${m}/${w}/${d}/${k}`));
                 }
-                await showCustomAlert(`✅ Đã xóa ${selected.length} công việc`);
-                selectAllCheckbox.checked = false;
-            } catch (error) {
-                console.error(error);
-                await showCustomAlert("❌ Có lỗi khi xóa!");
             } finally {
                 hideLoading();
             }
+            await showCustomAlert(`✅ Đã xóa ${selected.length} công việc`);
+            selectAllCheckbox.checked = false; // Bỏ chọn checkbox "chọn tất cả"
         }
     };
 }
@@ -1267,6 +1391,7 @@ async function attemptLogin(pin) {
     }
 }
 
+// Xử lý đăng nhập thất bại: Hiển hiệu ứng râm lắc và xoá PIN
 function onLoginFail() {
     // flash and clear
     pinDotsEl.animate([{ transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'translateX(0)' }], { duration: 200 });
@@ -1312,7 +1437,7 @@ document.addEventListener('keydown', (e) => {
 if (kpClear) kpClear.onclick = () => { enteredPin = ''; updatePinDots(); };
 if (kpBack) kpBack.onclick = () => { enteredPin = enteredPin.slice(0, -1); updatePinDots(); };
 
-// Cập nhật hiển thị tên user
+// Cập nhập hiển thị tên user đăng nhập
 function updateUserDisplay() {
     const savedUser = sessionStorage.getItem('user');
     if (savedUser) {
@@ -1324,7 +1449,7 @@ function updateUserDisplay() {
     }
 }
 
-// Lấy role của user đang đăng nhập
+// Lấy role của user đang đăng nhập (admin, superadmin, hoặc member)
 function getLoggedInUserRole() {
     const savedUser = sessionStorage.getItem('user');
     if (savedUser) {
@@ -1336,11 +1461,11 @@ function getLoggedInUserRole() {
     return null;
 }
 
-// Check role
+// Kiểm trá và trả về true/false dựa trên role
 function isMember() { return getLoggedInUserRole() === 'member'; }
 function isAdmin() { const r = getLoggedInUserRole(); return r === 'admin' || r === 'superadmin'; }
 
-// Hôm nay
+// Lấy chuỗi ngày hôm nay (YYYY-MM-DD)
 function getTodayString() {
     const today = new Date();
     const y = today.getFullYear();
@@ -1349,7 +1474,7 @@ function getTodayString() {
     return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-// Kiểm tra member chỉ được xem hôm nay
+// Kiểm trá quyền: Thành viên chỉ được xem công việc hôm nay
 function checkMemberAccess(dateStr) {
     if (isMember() && dateStr !== getTodayString()) {
         alert('👤 Thành viên chỉ được xem công việc của ngày hôm nay');
@@ -1396,7 +1521,7 @@ function applyRolePermissions() {
     }
 }
 
-// Đăng xuất
+// Đăng xuất: Xóa session và quảy lại trang đăng nhập
 function logout() {
     sessionStorage.removeItem('user');
     enteredPin = '';
