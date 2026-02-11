@@ -21,6 +21,7 @@ body {
 #monthYear {
     font-size: 18px;
     font-weight: bold;
+    text-align: center;
 }
 
 /* ===== LỊCH NGÀY ===== */
@@ -31,6 +32,7 @@ body {
     grid-template-columns: repeat(7, 1fr);
     /* 7 cột cho 7 ngày trong tuần */
     gap: 3px;
+    text-align: center;
     margin: 0 auto;
 }
 
@@ -44,6 +46,10 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     font-size: 20px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Khi di chuột vào ngày */
@@ -143,6 +149,7 @@ button {
     transition: all .2s ease;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     font-weight: bold;
     border-radius: 6px;
@@ -157,13 +164,19 @@ button {
     font-size: 14px;
 }
 
+.btn-add.hidden {
+    display: none !important;
+}
+
 /* Nút kiểm tra NB - cam */
 .btn-check-nb {
     background: #fd7e14;
     color: #fff;
-    padding: 8px 16px;
+    padding: 10px 16px;
     border: none;
     font-size: 14px;
+    width: 100%;
+    text-align: center;
 }
 
 /* Nút sửa - vàng */
@@ -322,6 +335,7 @@ td select {
 .modal-content h2 {
     margin: 0 0 10px;
     font-size: 22px;
+    text-align: center;
 }
 
 .modal-content label {
@@ -409,9 +423,11 @@ td select {
     background: #17a2b8;
     color: white;
     border: none;
-    padding: 6px 12px;
+    padding: 10px 16px;
     border-radius: 6px;
-    margin-left: 10px;
+    font-size: 14px;
+    width: 100%;
+    text-align: center;
 }
 
 .btn-duplicate-day:hover {
@@ -625,6 +641,7 @@ td select {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    text-align: center;
     border-bottom: 2px solid #004085;
     position: sticky;
     top: 0;
