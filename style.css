@@ -157,6 +157,15 @@ button {
     font-size: 14px;
 }
 
+/* Nút kiểm tra NB - cam */
+.btn-check-nb {
+    background: #fd7e14;
+    color: #fff;
+    padding: 8px 16px;
+    border: none;
+    font-size: 14px;
+}
+
 /* Nút sửa - vàng */
 .btn-edit {
     background: #ffc107;
@@ -179,6 +188,11 @@ button {
 /* Hover effects */
 .btn-add:hover {
     background: #218838;
+    transform: translateY(-1px);
+}
+
+.btn-check-nb:hover {
+    background: #e76a0a;
     transform: translateY(-1px);
 }
 
@@ -281,6 +295,14 @@ td select {
     display: flex;
     flex-direction: column;
     max-height: 90vh;
+}
+
+/* Modal NB - Calendar */
+.nb-modal-content {
+    max-width: 580px;
+    padding: 24px;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 /* Animation hiện modal */
@@ -551,4 +573,196 @@ td select {
 
 .btn-logout:hover {
     background: #c82333;
+}
+
+/* ===== SIDEBAR MENU ===== */
+/* Nút toggle menu - góc trái trên */
+.menu-toggle-btn {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    padding: 8px 14px;
+    background: #0056b3;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 999;
+}
+
+.menu-toggle-btn:hover {
+    background: #004085;
+    transform: scale(1.05);
+}
+
+/* Sidebar panel */
+.side-menu-panel {
+    position: fixed;
+    top: 0;
+    left: -340px;
+    width: 340px;
+    height: 100vh;
+    background: #fff;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+    z-index: 999;
+    transition: left 0.3s ease;
+    overflow-y: auto;
+    padding-top: 0;
+}
+
+.side-menu-panel.show {
+    left: 0;
+}
+
+/* Header của sidebar */
+.side-menu-header {
+    background: #0056b3;
+    color: white;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #004085;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.side-menu-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Nút đóng menu */
+.menu-close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.menu-close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Nội dung sidebar */
+.side-menu-content {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Menu section */
+.menu-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Title của section */
+.menu-section-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #0056b3;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #0056b3;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Button trong menu */
+.menu-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.menu-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Form label trong menu */
+.menu-form-label {
+    display: block;
+    margin-bottom: 8px;
+    margin-top: 0;
+    font-weight: 600;
+    color: #333;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+/* Form input trong menu */
+.menu-form-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.5;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+    color: #333;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+/* Các section xóa công việc */
+#deleteDay,
+#deleteWeek,
+#deleteMonth {
+    margin-top: 12px;
+}
+
+.menu-form-input:hover {
+    border-color: #0056b3;
+    box-shadow: 0 2px 8px rgba(0, 86, 179, 0.1);
+}
+
+.menu-form-input:focus {
+    outline: none;
+    border-color: #0056b3;
+    box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
+}
+
+/* Lớp phủ khi menu mở */
+.menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 998;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.menu-overlay.show {
+    opacity: 1;
+    visibility: visible;
 }

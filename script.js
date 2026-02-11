@@ -1,7 +1,7 @@
 // ========== IMPORT FIREBASE ==========
 // Nhập Firebase Realtime Database và các hàm cần thiết để thao tác với database
 import { db } from "./firebase.js";
-import { ref, push, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { ref, push, onValue, remove, update, get, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 /* ========== DOM ELEMENTS ========== */
 // Phần tử lịch và tiêu đề tháng
@@ -50,6 +50,31 @@ const saveTaskBtn = document.getElementById("saveTaskBtn"); // Nút lưu
 // Chỉ báo loading (vòng xoay chờ đợi khi xử lý async)
 const loadingIndicator = document.getElementById("loadingIndicator");
 
+// Menu sidebar
+const menuToggleBtn = document.getElementById("menuToggleBtn");
+const menuCloseBtn = document.getElementById("menuCloseBtn");
+const sideMenuPanel = document.getElementById("sideMenuPanel");
+
+// Modal lựa chọn ngày NB
+const nbSelectModal = document.getElementById("nbSelectModal");
+const closeNbSelectModal = document.getElementById("closeNbSelectModal");
+const nbYearSelect = document.getElementById("nbYearSelect");
+const nbMonthList = document.getElementById("nbMonthList");
+const monthSelectSection = document.getElementById("monthSelectSection");
+const calendarSelectSection = document.getElementById("calendarSelectSection");
+const nbCalendarDays = document.getElementById("nbCalendarDays");
+const nbCalendarTitle = document.getElementById("nbCalendarTitle");
+const nbCalendarBack = document.getElementById("nbCalendarBack");
+const nbConfirmButton = document.getElementById("nbConfirmButton");
+const nbSelectedDatesList = document.getElementById("nbSelectedDatesList");
+const nbNoDatesMsg = document.getElementById("nbNoDatesMsg");
+const selectNbDayBtn = document.getElementById("selectNbDayBtn");
+
+// Biến để track selected dates trong modal
+let nbTempSelectedDates = []; // Danh sách ngày tạm thời được chọn
+let nbSelectedYear = null;
+let nbSelectedMonth = null;
+
 /* ========== BIẾN TOÀN CỤC ========== */
 // Ngày hiện tại đang hiển thị trên lịch
 let currentDate = new Date();
@@ -57,8 +82,64 @@ let currentDate = new Date();
 let selectedDate = null;
 // Danh sách nhiều ngày được chọn (cho tính năng nhân bản liên tiếp)
 let multiDates = [];
+// Lưu danh sách các ngày NB (Nghỉ Bù)
+let nbDays = {}; // Format: {"YYYY-MM-DD": true}
 
 /* ========== LỊCH ========== */
+// Tải danh sách các ngày NB từ Firebase (cấu trúc: nbDays/YYYY/MM/DD)
+async function loadNbDays() {
+    try {
+        const r = ref(db, 'nbDays');
+        const snap = await get(r);
+        nbDays = {};
+        if (snap.exists()) {
+            snap.forEach(yearSnap => {
+                const year = yearSnap.key;
+                yearSnap.forEach(monthSnap => {
+                    const month = monthSnap.key;
+                    monthSnap.forEach(daySnap => {
+                        if (daySnap.val() === true) {
+                            const dateStr = `${year}-${month}-${daySnap.key}`;
+                            nbDays[dateStr] = true;
+                        }
+                    });
+                });
+            });
+        }
+    } catch (e) {
+        console.error('Lỗi tải ngày NB:', e);
+    }
+}
+
+// Đánh dấu/Bỏ đánh dấu một ngày là NB (cấu trúc: nbDays/YYYY/MM/DD)
+async function toggleNbDay(dateStr) {
+    try {
+        const [year, month, day] = dateStr.split('-');
+        const r = ref(db, `nbDays/${year}/${month}/${day}`);
+        const snap = await get(r);
+        if (snap.exists() && snap.val() === true) {
+            // Bỏ đánh dấu NB
+            await remove(r);
+            delete nbDays[dateStr];
+            return false;
+        } else {
+            // Đánh dấu NB
+            await set(r, true);
+            nbDays[dateStr] = true;
+            return true;
+        }
+    } catch (e) {
+        console.error('Lỗi cập nhật ngày NB:', e);
+        return false;
+    }
+}
+
+// Kiểm tra một ngày có phải là NB không
+function isNbDay(dateStr) {
+    return nbDays[dateStr] === true;
+}
+
+// ========== LỊCH ========== 
 // Vẽ lịch tháng và populate tuần dropdown
 function renderCalendar() {
     const y = currentDate.getFullYear();
@@ -293,7 +374,13 @@ function selectDate(ds, el) {
     el.classList.add("selected-day");
 
     selectedDate = ds; // Lưu ngày được chọn
-    selectedDateTitle.innerText = "Công việc ngày " + formatDisplayDate(ds); // Cập nhật tiêu đề
+
+    // Cập nhật tiêu đề và hiển thị thông báo NB nếu cần
+    if (isNbDay(ds)) {
+        selectedDateTitle.innerHTML = `<span style="color: #ff6b6b; font-weight: bold;">🏷️ ${formatDisplayDate(ds)} - NGÀY NGHỈ BÙ (NB)</span>`;
+    } else {
+        selectedDateTitle.innerText = "Công việc ngày " + formatDisplayDate(ds);
+    }
 
     loadTasks(ds); // Tải công việc của ngày này
     // Cập nhật dropdown tuần để đồng bộ với tháng của ngày được chọn
@@ -366,10 +453,27 @@ function createColorSelect(options, value, getClass, callback) {
 /* ========== TẢI VÀ HIỂN THỊ CÔNG VIỆC ========== */
 /**
  * Tải và hiển thị tất cả công việc của một ngày cụ thể
- * Hàm này sắp xếp các công việc thành bảng với các nút hành động (sửa, xóa, nhân bản)
+ * Nếu ngày là NB, hiển thị thông báo thay vì bảng công việc
  * @param {string} ds - Ngày dưới dạng string (YYYY-MM-DD)
  */
 function loadTasks(ds) {
+    // Kiểm tra nếu ngày NB, ẩn bảng và hiển thị thông báo
+    if (isNbDay(ds)) {
+        document.querySelector('table').style.display = 'none';
+        taskTable.innerHTML = `<tr><td colspan="100" style="text-align: center; padding: 20px; background: #fff3cd; border: 2px solid #ffc107;"><strong style="font-size: 18px; color: #856404;">🏷️ Hôm nay là ngày Nghỉ Bù (NB)</strong></td></tr>`;
+
+        // Ẩn nút menu toggle cho ngày NB
+        if (menuToggleBtn) menuToggleBtn.style.display = 'none';
+
+        return;
+    } else {
+        document.querySelector('table').style.display = 'table';
+
+        // Hiện lại nút menu toggle
+        const isMemberRole = isMember();
+        if (menuToggleBtn) menuToggleBtn.style.display = isMemberRole ? 'none' : 'inline-block';
+    }
+
     const [y, m] = ds.split("-");
     const w = getWeekNumber(ds);
     const r = ref(db, `tasks/${y}/${m}/${w}/${ds}`);
@@ -582,25 +686,28 @@ prevBtn.addEventListener("click", () => {
  * Hàm này được gọi sau khi người dùng đăng nhập thành công
  */
 function startApp() {
-    renderCalendar();
-    applyRolePermissions(); // Áp dụng quyền dựa trên role
+    // Tải danh sách các ngày NB từ Firebase trước
+    loadNbDays().then(() => {
+        renderCalendar();
+        applyRolePermissions(); // Áp dụng quyền dựa trên role
 
-    const today = new Date();
-    const y = today.getFullYear();
-    const m = today.getMonth();
-    const d = today.getDate();
+        const today = new Date();
+        const y = today.getFullYear();
+        const m = today.getMonth();
+        const d = today.getDate();
 
-    const dateStr = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const dateStr = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
-    setTimeout(() => {
-        const days = document.querySelectorAll(".day");
-        days.forEach(dayEl => {
-            if (dayEl.innerText.trim() == d) {
-                selectDate(dateStr, dayEl);
-            }
-        });
-        populateWeekSelect(dateStr);
-    }, 100);
+        setTimeout(() => {
+            const days = document.querySelectorAll(".day");
+            days.forEach(dayEl => {
+                if (dayEl.innerText.trim() == d) {
+                    selectDate(dateStr, dayEl);
+                }
+            });
+            populateWeekSelect(dateStr);
+        }, 100);
+    });
 }
 
 /* ========== NHÂN BẢN NÂNG CAO ========== */
@@ -703,15 +810,257 @@ async function populateTargetWeeks() {
     });
 }
 
+/* ========== NB SELECT MODAL ========== */
+// Render lịch trong modal NB
+/* ========== NB SELECT MODAL FUNCTIONS ========== */
+
+// Populate năm vào select
+function populateYearSelect() {
+    nbYearSelect.innerHTML = "";
+    const currentYear = new Date().getFullYear();
+    for (let y = currentYear - 1; y <= currentYear + 5; y++) {
+        const opt = document.createElement("option");
+        opt.value = y;
+        opt.textContent = y;
+        if (y === currentYear) opt.selected = true;
+        nbYearSelect.appendChild(opt);
+    }
+}
+
+// Populate tháng vào list
+function populateMonthList() {
+    const year = parseInt(nbYearSelect.value);
+    nbMonthList.innerHTML = "";
+
+    for (let m = 1; m <= 12; m++) {
+        const monthDiv = document.createElement("div");
+        monthDiv.style.padding = "12px";
+        monthDiv.style.background = "#e7f3ff";
+        monthDiv.style.border = "1px solid #b3d9ff";
+        monthDiv.style.borderRadius = "6px";
+        monthDiv.style.cursor = "pointer";
+        monthDiv.style.textAlign = "center";
+        monthDiv.style.fontWeight = "600";
+        monthDiv.style.color = "#0056b3";
+        monthDiv.style.transition = "all 0.2s";
+        monthDiv.innerHTML = `Tháng ${m}`;
+
+        monthDiv.onmouseover = () => {
+            monthDiv.style.background = "#0056b3";
+            monthDiv.style.color = "#fff";
+            monthDiv.style.transform = "scale(1.05)";
+        };
+        monthDiv.onmouseout = () => {
+            monthDiv.style.background = "#e7f3ff";
+            monthDiv.style.color = "#0056b3";
+            monthDiv.style.transform = "scale(1)";
+        };
+
+        monthDiv.onclick = () => {
+            nbSelectedYear = year;
+            nbSelectedMonth = m;
+            renderCalendarForMonth(year, m);
+        };
+
+        nbMonthList.appendChild(monthDiv);
+    }
+}
+
+// Render lịch cho tháng được chọn
+function renderCalendarForMonth(year, month) {
+    monthSelectSection.style.display = "none";
+    calendarSelectSection.style.display = "block";
+
+    nbCalendarTitle.innerText = `Tháng ${month} - ${year}`;
+
+    const first = (new Date(year, month - 1, 1).getDay() + 6) % 7;
+    const last = new Date(year, month, 0).getDate();
+
+    nbCalendarDays.innerHTML = "";
+
+    // Thêm ô trống
+    for (let i = 0; i < first; i++) {
+        const emptyDiv = document.createElement("div");
+        emptyDiv.style.background = "#f9f9f9";
+        emptyDiv.style.height = "60px";
+        emptyDiv.style.borderRadius = "6px";
+        nbCalendarDays.appendChild(emptyDiv);
+    }
+
+    // Thêm các ngày
+    for (let d = 1; d <= last; d++) {
+        const ds = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const dayDiv = document.createElement("div");
+        dayDiv.style.background = "#fff";
+        dayDiv.style.border = "1px solid #ddd";
+        dayDiv.style.padding = "8px";
+        dayDiv.style.borderRadius = "6px";
+        dayDiv.style.cursor = "pointer";
+        dayDiv.style.height = "60px";
+        dayDiv.style.display = "flex";
+        dayDiv.style.alignItems = "center";
+        dayDiv.style.justifyContent = "center";
+        dayDiv.style.fontWeight = "600";
+        dayDiv.style.fontSize = "16px";
+        dayDiv.style.transition = "all 0.2s";
+        dayDiv.innerHTML = `${d}`;
+
+        // Check nếu ngày đã được chọn trong temp list
+        const isSelected = nbTempSelectedDates.includes(ds);
+        if (isSelected) {
+            dayDiv.style.background = "#28a745";
+            dayDiv.style.borderColor = "#28a745";
+            dayDiv.style.color = "#fff";
+        }
+
+        // Hover effect
+        dayDiv.onmouseover = () => {
+            if (!isSelected) {
+                dayDiv.style.background = "#e8f4f8";
+            }
+            dayDiv.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
+            dayDiv.style.transform = "scale(1.05)";
+        };
+        dayDiv.onmouseout = () => {
+            dayDiv.style.background = isSelected ? "#28a745" : "#fff";
+            dayDiv.style.boxShadow = "none";
+            dayDiv.style.transform = "scale(1)";
+        };
+
+        // Click để toggle selection
+        dayDiv.onclick = () => {
+            if (nbTempSelectedDates.includes(ds)) {
+                nbTempSelectedDates = nbTempSelectedDates.filter(d => d !== ds);
+            } else {
+                nbTempSelectedDates.push(ds);
+            }
+            updateSelectedDatesList();
+            renderCalendarForMonth(year, month);
+        };
+
+        nbCalendarDays.appendChild(dayDiv);
+    }
+}
+
+// Update danh sách ngày được chọn
+function updateSelectedDatesList() {
+    nbSelectedDatesList.innerHTML = "";
+    if (nbTempSelectedDates.length === 0) {
+        nbNoDatesMsg.style.display = "block";
+    } else {
+        nbNoDatesMsg.style.display = "none";
+        nbTempSelectedDates.sort().forEach(ds => {
+            const badge = document.createElement("span");
+            badge.style.background = "#28a745";
+            badge.style.color = "#fff";
+            badge.style.padding = "6px 10px";
+            badge.style.borderRadius = "12px";
+            badge.style.fontSize = "13px";
+            badge.style.fontWeight = "600";
+            badge.innerHTML = formatDisplayDate(ds);
+            nbSelectedDatesList.appendChild(badge);
+        });
+    }
+}
+
+// Mở modal lựa chọn ngày NB
+if (selectNbDayBtn) {
+    selectNbDayBtn.onclick = () => {
+        // Reset state
+        nbTempSelectedDates = [];
+        nbSelectedYear = new Date().getFullYear();
+        nbSelectedMonth = null;
+
+        // Reset to month selection view
+        monthSelectSection.style.display = 'block';
+        calendarSelectSection.style.display = 'none';
+
+        // Populate year dropdown
+        populateYearSelect();
+
+        // Populate month list immediately
+        populateMonthList();
+
+        // Show modal
+        nbSelectModal.style.display = 'flex';
+    };
+}
+
+// Đóng modal
+if (closeNbSelectModal) {
+    closeNbSelectModal.onclick = () => nbSelectModal.style.display = 'none';
+}
+
+// Click ngoài modal để đóng
+if (nbSelectModal) {
+    nbSelectModal.onclick = (e) => {
+        if (e.target === nbSelectModal) nbSelectModal.style.display = 'none';
+    };
+}
+
+// Khi chọn năm mới
+if (nbYearSelect) {
+    nbYearSelect.onchange = () => {
+        nbSelectedYear = parseInt(nbYearSelect.value);
+        populateMonthList();
+    };
+}
+
+// Quay lại từ lịch về chọn tháng
+if (nbCalendarBack) {
+    nbCalendarBack.onclick = () => {
+        monthSelectSection.style.display = 'block';
+        calendarSelectSection.style.display = 'none';
+    };
+}
+
+// Xác nhận lựa chọn ngày NB
+if (nbConfirmButton) {
+    nbConfirmButton.onclick = async () => {
+        if (nbTempSelectedDates.length === 0) {
+            alert('Vui lòng chọn ít nhất một ngày!');
+            return;
+        }
+
+        try {
+            // Lưu tất cả ngày được chọn vào Firebase (cấu trúc: nbDays/YYYY/MM/DD)
+            for (const dateStr of nbTempSelectedDates) {
+                const [year, month, day] = dateStr.split('-');
+                const r = ref(db, `nbDays/${year}/${month}/${day}`);
+                await set(r, true);
+                nbDays[dateStr] = true;
+            }
+
+            // Thông báo thành công
+            alert('✔️ Đã lựa chọn ' + nbTempSelectedDates.length + ' ngày NB thành công!');
+
+            // Đóng modal
+            nbSelectModal.style.display = 'none';
+
+            // Tải lại lịch để cập nhật
+            if (selectedDate) {
+                loadTasks(selectedDate);
+            }
+            renderCalendar();
+        } catch (e) {
+            console.error('Lỗi lưu ngày NB:', e);
+            alert('❌ Lỗi khi lưu ngày NB');
+        }
+    };
+}
+
 /* Mở modal nhân bản nâng cao */
-document.getElementById("duplicateDayBtn").onclick = () => {
-    if (isMember()) return alert('👤 Thành viên không có quyền sử dụng tính năng này');
-    if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
-    advancedDates = [];
-    dateList.innerHTML = "";
-    multiDatePicker.value = "";
-    advModal.style.display = "flex";
-};
+const duplicateDayBtn = document.getElementById("duplicateDayBtn");
+if (duplicateDayBtn) {
+    duplicateDayBtn.onclick = () => {
+        if (isMember()) return alert('👤 Thành viên không có quyền sử dụng tính năng này');
+        if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
+        advancedDates = [];
+        dateList.innerHTML = "";
+        multiDatePicker.value = "";
+        advModal.style.display = "flex";
+    };
+}
 
 /* Đóng modal */
 closeAdvModal.onclick = () => advModal.style.display = "none";
@@ -1152,144 +1501,174 @@ async function countDaysAndTasksForWeekById(y, m, weekId) {
 
 /* ========== XÓA NGÀY / TUẦN / THÁNG ========== */
 /**
- * Xử lý sự kiện thay đổi dropdown xóa chính (xóa ngày, tuần, hoặc tháng toàn bộ)
+ * Xử lý sự kiện thay đổi dropdown xóa chính - hiển thị/ẩn các section tương ứng
  */
-deleteSelectMain.onchange = async () => {
+deleteSelectMain.onchange = () => {
     const type = deleteSelectMain.value;
-    deleteSelectMain.value = ""; // Reset dropdown
 
-    if (!type) return;
+    // Ẩn tất cả các section xóa
+    document.getElementById('deleteDay').style.display = 'none';
+    document.getElementById('deleteWeek').style.display = 'none';
+    document.getElementById('deleteMonth').style.display = 'none';
 
-    // Kiểm tra quyền: Chỉ admin mới có quyền xóa
-    if (isMember()) {
-        alert('👤 Thành viên không có quyền xóa công việc');
-        return;
+    // Hiển thị section tương ứng với loại xóa được chọn
+    if (type === 'day') {
+        document.getElementById('deleteDay').style.display = 'block';
+    } else if (type === 'week') {
+        document.getElementById('deleteWeek').style.display = 'block';
+    } else if (type === 'month') {
+        document.getElementById('deleteMonth').style.display = 'block';
     }
+};
 
-    try {
-        if (type === "day") {
-            // ========== XÓA NGÀY ==========
-            // Xóa tất cả công việc của một ngày cụ thể
-            if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
-            const [y, m] = selectedDate.split("-");
-            const w = getWeekNumber(selectedDate);
+/**
+ * Xóa tất cả công việc của một ngày cụ thể
+ */
+if (document.getElementById('deleteDayBtn')) {
+    document.getElementById('deleteDayBtn').onclick = async () => {
+        // Kiểm tra quyền: Chỉ admin mới có quyền xóa
+        if (isMember()) {
+            alert('👤 Thành viên không có quyền xóa công việc');
+            return;
+        }
 
-            // Đếm số công việc cần xóa
-            const cnt = await countTasksForDay(selectedDate);
-            if (cnt === 0) return alert("Không có công việc để xóa ở ngày này!");
+        if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
+        const [y, m] = selectedDate.split("-");
+        const w = getWeekNumber(selectedDate);
+
+        // Đếm số công việc cần xóa
+        const cnt = await countTasksForDay(selectedDate);
+        if (cnt === 0) return alert("Không có công việc để xóa ở ngày này!");
+
+        // Xác nhận trước khi xóa
+        const ok = await showCustomConfirm(`Xác nhận xóa ${cnt} công việc của ngày ${formatDisplayDate(selectedDate)}?`);
+        if (!ok) return;
+
+        showLoading();
+        try {
+            await remove(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}`));
+            hideLoading();
+            await showCustomAlert(`✅ Đã xóa ${cnt} công việc`);
+            taskTable.innerHTML = ""; // Xóa bảng hiển thị
+        } catch (error) {
+            hideLoading();
+            console.error(error);
+            await showCustomAlert(`❌ Có lỗi khi xóa ngày: ${error && error.message ? error.message : String(error)}`);
+        }
+    };
+}
+
+/**
+ * Xóa tất cả công việc của một tuần cụ thể
+ */
+if (document.getElementById('deleteWeekBtn')) {
+    document.getElementById('deleteWeekBtn').onclick = async () => {
+        // Kiểm tra quyền: Chỉ admin mới có quyền xóa
+        if (isMember()) {
+            alert('👤 Thành viên không có quyền xóa công việc');
+            return;
+        }
+
+        try {
+            // Xác định tuần: ưu tiên weekSelect, fallback selectedDate
+            let y, m, w;
+            if (weekSelect && weekSelect.value) {
+                [y, m, w] = weekSelect.value.split("|");
+            } else if (selectedDate) {
+                [y, m] = selectedDate.split("-");
+                w = getWeekNumber(selectedDate);
+            } else {
+                await showCustomAlert("Vui lòng chọn ngày hoặc tuần trước!");
+                return;
+            }
+
+            // Luôn đọc từ database để đảm bảo đếm đúng tất cả 7 ngày
+            const stats = await countDaysAndTasksForWeekById(y, m, w);
+
+            if (!stats || stats.tasksCount === 0) {
+                await showCustomAlert("Không có công việc để xóa ở tuần này!");
+                return;
+            }
+
+            // Xây dựng tin nhắn xác nhận với chi tiết từng ngày
+            let msg = `Xác nhận xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc)?<br><br>Chi tiết:`;
+            const keys = Object.keys(stats.details).sort();
+            for (const k of keys) msg += `<br>- ${formatDisplayDate(k)}: ${stats.details[k]} công việc`;
 
             // Xác nhận trước khi xóa
-            const ok = await showCustomConfirm(`Xác nhận xóa ${cnt} công việc của ngày ${formatDisplayDate(selectedDate)}?`);
+            const ok = await showCustomConfirm(msg);
+            if (!ok) return;
+
+            // Thực hiện xóa
+            showLoading();
+            try {
+                await remove(ref(db, `tasks/${y}/${m}/${w}`));
+                hideLoading();
+                await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc)`);
+                loadTasksForWeek(y, m, w);
+            } catch (error) {
+                hideLoading();
+                throw error;
+            }
+        } catch (error) {
+            console.error(error);
+            await showCustomAlert(`❌ Có lỗi khi xóa tuần: ${error && error.message ? error.message : String(error)}`);
+        }
+    };
+}
+
+/**
+ * Xóa tất cả công việc của một tháng cụ thể
+ */
+if (document.getElementById('deleteMonthBtn')) {
+    document.getElementById('deleteMonthBtn').onclick = async () => {
+        // Kiểm tra quyền: Chỉ admin mới có quyền xóa
+        if (isMember()) {
+            alert('👤 Thành viên không có quyền xóa công việc');
+            return;
+        }
+
+        try {
+            // Xác định tháng: ưu tiên monthPicker, fallback selectedDate
+            let y, m;
+            if (monthPicker && monthPicker.value) {
+                [y, m] = monthPicker.value.split("-");
+            } else {
+                if (!selectedDate) return alert("Vui lòng chọn ngày hoặc chọn tháng trước!");
+                [y, m] = selectedDate.split("-");
+            }
+
+            const sampleDate = `${y}-${pad(m)}-01`;
+            const stats = await countDaysAndTasksForMonth(sampleDate);
+            if (stats.tasksCount === 0) return showCustomAlert("Không có công việc để xóa ở tháng này!");
+
+            // Xây dựng tin nhắn xác nhận: số ngày + số công việc + chi tiết per-date
+            let msg = `Xác nhận xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc) của tháng ${m}/${y}?<br><br>Chi tiết:`;
+            const keys = Object.keys(stats.details).sort();
+            for (const k of keys) {
+                msg += `<br>- ${formatDisplayDate(k)}: ${stats.details[k]} công việc`;
+            }
+
+            // Xác nhận trước khi xóa
+            const ok = await showCustomConfirm(msg);
             if (!ok) return;
 
             showLoading();
             try {
-                await remove(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}`));
+                await remove(ref(db, `tasks/${y}/${m}`));
                 hideLoading();
-                await showCustomAlert(`✅ Đã xóa ${cnt} công việc`);
+                await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc) của tháng ${m}/${y}`);
                 taskTable.innerHTML = ""; // Xóa bảng hiển thị
             } catch (error) {
                 hideLoading();
                 throw error;
             }
+        } catch (error) {
+            console.error(error);
+            await showCustomAlert("❌ Có lỗi khi xóa tháng!");
         }
-        else if (type === "week") {
-            // ========== XÓA TUẦN ==========
-            // Xóa tất cả công việc của một tuần cụ thể
-            try {
-                // Xác định tuần: ưu tiên weekSelect, fallback selectedDate
-                let y, m, w;
-                if (weekSelect && weekSelect.value) {
-                    [y, m, w] = weekSelect.value.split("|");
-                } else if (selectedDate) {
-                    [y, m] = selectedDate.split("-");
-                    w = getWeekNumber(selectedDate);
-                } else {
-                    await showCustomAlert("Vui lòng chọn ngày hoặc tuần trước!");
-                    return;
-                }
-
-                // Luôn đọc từ database để đảm bảo đếm đúng tất cả 7 ngày
-                const stats = await countDaysAndTasksForWeekById(y, m, w);
-
-                if (!stats || stats.tasksCount === 0) {
-                    await showCustomAlert("Không có công việc để xóa ở tuần này!");
-                    return;
-                }
-
-                // Xây dựng tin nhắn xác nhận với chi tiết từng ngày
-                let msg = `Xác nhận xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc)?<br><br>Chi tiết:`;
-                const keys = Object.keys(stats.details).sort();
-                for (const k of keys) msg += `<br>- ${formatDisplayDate(k)}: ${stats.details[k]} công việc`;
-
-                // Xác nhận trước khi xóa
-                const ok = await showCustomConfirm(msg);
-                if (!ok) return;
-
-                // Thực hiện xóa
-                showLoading();
-                try {
-                    await remove(ref(db, `tasks/${y}/${m}/${w}`));
-                    hideLoading();
-                    await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc)`);
-                    loadTasksForWeek(y, m, w);
-                } catch (error) {
-                    hideLoading();
-                    throw error;
-                }
-            } catch (error) {
-                console.error(error);
-                await showCustomAlert(`❌ Có lỗi khi xóa tuần: ${error && error.message ? error.message : String(error)}`);
-            }
-        }
-        else if (type === "month") {
-            // ========== XÓA THÁNG ==========
-            // Xóa tất cả công việc của một tháng cụ thể
-            try {
-                // Xác định tháng: ưu tiên monthPicker, fallback selectedDate
-                let y, m;
-                if (monthPicker && monthPicker.value) {
-                    [y, m] = monthPicker.value.split("-");
-                } else {
-                    if (!selectedDate) return alert("Vui lòng chọn ngày hoặc chọn tháng trước!");
-                    [y, m] = selectedDate.split("-");
-                }
-
-                const sampleDate = `${y}-${pad(m)}-01`;
-                const stats = await countDaysAndTasksForMonth(sampleDate);
-                if (stats.tasksCount === 0) return showCustomAlert("Không có công việc để xóa ở tháng này!");
-
-                // Xây dựng tin nhắn xác nhận: số ngày + số công việc + chi tiết per-date
-                let msg = `Xác nhận xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc) của tháng ${m}/${y}?<br><br>Chi tiết:`;
-                const keys = Object.keys(stats.details).sort();
-                for (const k of keys) {
-                    msg += `<br>- ${formatDisplayDate(k)}: ${stats.details[k]} công việc`;
-                }
-
-                // Xác nhận trước khi xóa
-                const ok = await showCustomConfirm(msg);
-                if (!ok) return;
-
-                showLoading();
-                try {
-                    await remove(ref(db, `tasks/${y}/${m}`));
-                    hideLoading();
-                    await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc) của tháng ${m}/${y}`);
-                    taskTable.innerHTML = ""; // Xóa bảng hiển thị
-                } catch (error) {
-                    hideLoading();
-                    throw error;
-                }
-            } catch (error) {
-                console.error(error);
-                await showCustomAlert("❌ Có lỗi khi xóa tháng!");
-            }
-        }
-    } catch (error) {
-        console.error(error);
-        await showCustomAlert(`❌ Có lỗi: ${error && error.message ? error.message : String(error)}`);
-    }
-};
+    };
+}
 
 /* ========== XÓA CÔNG VIỆC ĐÃ CHỌN ========== */
 /**
@@ -1487,6 +1866,12 @@ function checkMemberAccess(dateStr) {
 function applyRolePermissions() {
     const isMemberRole = isMember();
 
+    // Ẩn nút toggle menu cho member
+    if (menuToggleBtn) menuToggleBtn.style.display = isMemberRole ? 'none' : 'inline-block';
+
+    // Ẩn nút lựa chọn NB cho member
+    if (selectNbDayBtn) selectNbDayBtn.style.display = isMemberRole ? 'none' : 'inline-block';
+
     // Ẩn nút nhân bản công việc cho member
     const duplicateDayBtn = document.getElementById('duplicateDayBtn');
     if (duplicateDayBtn) duplicateDayBtn.style.display = isMemberRole ? 'none' : 'inline-block';
@@ -1534,6 +1919,39 @@ function logout() {
 const logoutBtn = document.getElementById('logoutBtn');
 if (logoutBtn) logoutBtn.onclick = logout;
 
+// ========== MENU SIDEBAR ==========
+// Toggle menu
+if (menuToggleBtn) {
+    menuToggleBtn.onclick = () => {
+        sideMenuPanel.classList.add('show');
+    };
+}
+
+// Đóng menu
+if (menuCloseBtn) {
+    menuCloseBtn.onclick = () => {
+        sideMenuPanel.classList.remove('show');
+    };
+}
+
+// Đóng menu khi click vào nút trong menu
+if (sideMenuPanel) {
+    Array.from(sideMenuPanel.querySelectorAll('.menu-btn')).forEach(btn => {
+        btn.addEventListener('click', () => {
+            sideMenuPanel.classList.remove('show');
+        });
+    });
+}
+
+// Đóng menu khi click ngoài (click vào lược đồ bên ngoài)
+document.addEventListener('click', (e) => {
+    if (sideMenuPanel && sideMenuPanel.classList.contains('show')) {
+        if (!sideMenuPanel.contains(e.target) && e.target !== menuToggleBtn) {
+            sideMenuPanel.classList.remove('show');
+        }
+    }
+});
+
 // If there's a session, auto-login
 const savedUser = sessionStorage.getItem('user');
 if (savedUser) {
@@ -1547,3 +1965,12 @@ if (savedUser) {
         }
     } catch (e) { }
 }
+
+// Keyboard shortcut to close modals
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        if (nbSelectModal && nbSelectModal.style.display === 'flex') {
+            nbSelectModal.style.display = 'none';
+        }
+    }
+});
