@@ -1,7 +1,7 @@
 // ========== IMPORT FIREBASE ==========
 // Nhập Firebase Database và các hàm thao tác dữ liệu
 import { db } from './firebase.js';
-import { ref, push, get, remove, onValue, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { ref, push, get, remove, onValue, update, set } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
 // ========== DOM ELEMENTS - PHẦN ĐĂNG NHẬP ==========
 // Các element cho giao diện đăng nhập quản trị viên
@@ -186,11 +186,30 @@ function renderUsers(usersObj) {
     });
 }
 
+function normalizeUsers(obj) {
+    // After importing JSON, Firebase sometimes wraps the real users
+    // under a generated push-id. Detect and unwrap that layer so the
+    // admin UI shows the correct entries instead of the random key.
+    if (obj && typeof obj === 'object') {
+        const keys = Object.keys(obj);
+        if (keys.length === 1) {
+            const inner = obj[keys[0]];
+            if (inner && typeof inner === 'object') {
+                const allHavePin = Object.values(inner).every(u => u && u.pin !== undefined);
+                if (allHavePin) return inner;
+            }
+        }
+    }
+    return obj;
+}
+
 function bindUsers() {
     const r = ref(db, 'users');
     onValue(r, snap => {
-        if (snap.exists()) renderUsers(snap.val());
-        else userListDiv.innerHTML = '<em>Chưa có người dùng nào</em>';
+        if (snap.exists()) {
+            const data = normalizeUsers(snap.val());
+            renderUsers(data);
+        } else userListDiv.innerHTML = '<em>Chưa có người dùng nào</em>';
     });
 }
 
@@ -210,9 +229,34 @@ addUserBtn.onclick = async () => {
             await update(ref(db, `users/${editingUserId}`), userData);
             alert('✅ Cập nhật người dùng thành công');
         } else {
-            // Add new user
-            await push(ref(db, 'users'), userData);
-            alert('✅ Thêm người dùng mới thành công');
+            // Add new user: create sequential id like "userNNN" instead of random push key
+            const usersSnap = await get(ref(db, 'users'));
+            let nextId = 'user001';
+            if (usersSnap.exists()) {
+                let usersObj = usersSnap.val();
+                // unwrap possible wrapper
+                if (usersObj && typeof usersObj === 'object') {
+                    const keys = Object.keys(usersObj);
+                    if (keys.length === 1 && usersObj[keys[0]] && typeof usersObj[keys[0]] === 'object' &&
+                        Object.values(usersObj[keys[0]]).every(u => u && u.pin !== undefined)) {
+                        usersObj = usersObj[keys[0]];
+                    }
+                }
+                // find numeric suffixes
+                const nums = Object.keys(usersObj)
+                    .map(k => {
+                        const m = k.match(/^user(\d+)$/);
+                        return m ? parseInt(m[1], 10) : null;
+                    })
+                    .filter(n => n !== null);
+                if (nums.length > 0) {
+                    const max = Math.max(...nums);
+                    const next = max + 1;
+                    nextId = 'user' + String(next).padStart(3, '0');
+                }
+            }
+            await set(ref(db, `users/${nextId}`), userData);
+            alert(`✅ Thêm người dùng mới thành công (${nextId})`);
         }
         resetFormUI();
     } catch (e) {

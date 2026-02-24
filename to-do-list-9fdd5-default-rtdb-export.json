@@ -19,6 +19,13 @@
           "07": true
         }
       }
+    },
+    "user003": {
+      "2026": {
+        "02": {
+          "03": true
+        }
+      }
     }
   },
   "nlDays": {
@@ -41,6 +48,13 @@
           "18": true,
           "19": true,
           "20": true
+        }
+      }
+    },
+    "user003": {
+      "2026": {
+        "02": {
+          "16": true
         }
       }
     }
@@ -1150,14 +1164,28 @@
           }
         }
       }
+    },
+    "user003": {
+      "2026": {
+        "02": {
+          "week5": {
+            "2026-02-24": {
+              "-OmDjoX4m5YrAgk_WvcZ": {
+                "content": "Demo",
+                "duration": "",
+                "note": "",
+                "priority": "Thấp",
+                "startDate": "2026-02-24",
+                "status": "Chưa xử lý",
+                "unit": ""
+              }
+            }
+          }
+        }
+      }
     }
   },
   "users": {
-    "-OmDgJBHsP1fPxMxRd61": {
-      "name": "Phan Văn Thanh",
-      "pin": "1633",
-      "role": "admin"
-    },
     "superadmin": {
       "name": "TRÙM",
       "pin": "9999",
@@ -1171,6 +1199,11 @@
     "user002": {
       "name": "Nguyễn Ngọc Yến",
       "pin": "1701",
+      "role": "admin"
+    },
+    "user003": {
+      "name": "Nguyễn Văn A",
+      "pin": "1111",
       "role": "admin"
     }
   }

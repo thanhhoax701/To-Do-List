@@ -2676,11 +2676,28 @@ async function attemptLogin(pin) {
         hideLoading();
         if (!usersSnap.exists()) return onLoginFail();
 
+        // normalize structure in case data was imported under a push-id
+        let usersObj = usersSnap.val();
+        if (usersObj && typeof usersObj === 'object') {
+            const keys = Object.keys(usersObj);
+            if (keys.length === 1) {
+                const inner = usersObj[keys[0]];
+                if (inner && typeof inner === 'object') {
+                    const allHavePin = Object.values(inner).every(u => u && u.pin !== undefined);
+                    if (allHavePin) usersObj = inner;
+                }
+            }
+        }
+
         let matched = null;
-        usersSnap.forEach(ch => {
-            const u = ch.val();
-            if (u && String(u.pin) === String(pin)) matched = { key: ch.key, ...u };
-        });
+        for (const k in usersObj) {
+            if (!usersObj.hasOwnProperty(k)) continue;
+            const u = usersObj[k];
+            if (u && String(u.pin) === String(pin)) {
+                matched = { key: k, ...u };
+                break;
+            }
+        }
 
         if (matched) {
             sessionStorage.setItem('user', JSON.stringify(matched));
