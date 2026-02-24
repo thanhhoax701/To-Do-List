@@ -179,6 +179,17 @@ button {
     text-align: center;
 }
 
+/* Nút kiểm tra NL - xanh dương */
+.btn-check-nl {
+    background: #007bff;
+    color: #fff;
+    padding: 10px 16px;
+    border: none;
+    font-size: 14px;
+    width: 100%;
+    text-align: center;
+}
+
 /* Nút sửa - vàng */
 .btn-edit {
     background: #ffc107;
@@ -316,6 +327,27 @@ td select {
     padding: 24px;
     max-height: 90vh;
     overflow-y: auto;
+}
+
+/* Modal NL - Calendar (reuse NB style but can differentiate if needed) */
+.nl-modal-content {
+    max-width: 580px;
+    padding: 24px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* Highlight NB/NL days in main calendar */
+.day.nb-day {
+    background: #ffe5cc;
+    /* warmer orange for NB */
+    border: 2px solid #fd7e14;
+}
+
+.day.nl-day {
+    background: #cce5ff;
+    /* cooler blue for NL */
+    border: 2px solid #1d4ed8;
 }
 
 /* Animation hiện modal */

@@ -70,10 +70,29 @@ const nbSelectedDatesList = document.getElementById("nbSelectedDatesList");
 const nbNoDatesMsg = document.getElementById("nbNoDatesMsg");
 const selectNbDayBtn = document.getElementById("selectNbDayBtn");
 
+// Modal lựa chọn ngày NL (new)
+const nlSelectModal = document.getElementById("nlSelectModal");
+const closeNlSelectModal = document.getElementById("closeNlSelectModal");
+const nlYearSelect = document.getElementById("nlYearSelect");
+const nlMonthList = document.getElementById("nlMonthList");
+const nlMonthSelectSection = document.getElementById("nlMonthSelectSection");
+const nlCalendarSelectSection = document.getElementById("nlCalendarSelectSection");
+const nlCalendarDays = document.getElementById("nlCalendarDays");
+const nlCalendarTitle = document.getElementById("nlCalendarTitle");
+const nlCalendarBack = document.getElementById("nlCalendarBack");
+const nlConfirmButton = document.getElementById("nlConfirmButton");
+const nlSelectedDatesList = document.getElementById("nlSelectedDatesList");
+const nlNoDatesMsg = document.getElementById("nlNoDatesMsg");
+const selectNlDayBtn = document.getElementById("selectNlDayBtn");
+
 // Biến để track selected dates trong modal
 let nbTempSelectedDates = []; // Danh sách ngày tạm thời được chọn
 let nbSelectedYear = null;
 let nbSelectedMonth = null;
+
+let nlTempSelectedDates = []; // Danh sách ngày NL tạm thời
+let nlSelectedYear = null;
+let nlSelectedMonth = null;
 
 /* ========== BIẾN TOÀN CỤC ========== */
 // Ngày hiện tại đang hiển thị trên lịch
@@ -84,6 +103,7 @@ let selectedDate = null;
 let multiDates = [];
 // Lưu danh sách các ngày NB (Nghỉ Bù)
 let nbDays = {}; // Format: {"YYYY-MM-DD": true}
+let nlDays = {}; // Format: {"YYYY-MM-DD": true}  -- ngày Nghỉ lễ
 
 /* ========== LỊCH ========== */
 // Tải danh sách các ngày NB từ Firebase (cấu trúc: nbDays/YYYY/MM/DD)
@@ -108,6 +128,31 @@ async function loadNbDays() {
         }
     } catch (e) {
         console.error('Lỗi tải ngày NB:', e);
+    }
+}
+
+// Tải danh sách các ngày NL từ Firebase (cấu trúc: nlDays/YYYY/MM/DD)
+async function loadNlDays() {
+    try {
+        const r = ref(db, 'nlDays');
+        const snap = await get(r);
+        nlDays = {};
+        if (snap.exists()) {
+            snap.forEach(yearSnap => {
+                const year = yearSnap.key;
+                yearSnap.forEach(monthSnap => {
+                    const month = monthSnap.key;
+                    monthSnap.forEach(daySnap => {
+                        if (daySnap.val() === true) {
+                            const dateStr = `${year}-${month}-${daySnap.key}`;
+                            nlDays[dateStr] = true;
+                        }
+                    });
+                });
+            });
+        }
+    } catch (e) {
+        console.error('Lỗi tải ngày NL:', e);
     }
 }
 
@@ -139,6 +184,34 @@ function isNbDay(dateStr) {
     return nbDays[dateStr] === true;
 }
 
+// Đánh dấu/Bỏ đánh dấu một ngày là NL (cấu trúc: nlDays/YYYY/MM/DD)
+async function toggleNlDay(dateStr) {
+    try {
+        const [year, month, day] = dateStr.split('-');
+        const r = ref(db, `nlDays/${year}/${month}/${day}`);
+        const snap = await get(r);
+        if (snap.exists() && snap.val() === true) {
+            // Bỏ đánh dấu NL
+            await remove(r);
+            delete nlDays[dateStr];
+            return false;
+        } else {
+            // Đánh dấu NL
+            await set(r, true);
+            nlDays[dateStr] = true;
+            return true;
+        }
+    } catch (e) {
+        console.error('Lỗi cập nhật ngày NL:', e);
+        return false;
+    }
+}
+
+// Kiểm tra một ngày có phải là NL không
+function isNlDay(dateStr) {
+    return nlDays[dateStr] === true;
+}
+
 // ========== LỊCH ========== 
 // Vẽ lịch tháng và populate tuần dropdown
 function renderCalendar() {
@@ -162,6 +235,14 @@ function renderCalendar() {
         div.className = "day";
         div.innerHTML = `<div>${d}</div>`;
         div.onclick = () => selectDate(ds, div);
+
+        // đánh dấu NB / NL bằng màu sắc nền và viền (không hiển thị chữ)
+        if (isNbDay(ds)) {
+            div.classList.add('nb-day');
+        }
+        if (isNlDay(ds)) {
+            div.classList.add('nl-day');
+        }
 
         // Đánh dấu hôm nay
         const today = new Date();
@@ -197,9 +278,429 @@ function renderCalendar() {
 function pad(n) { return String(n).padStart(2, "0"); }
 
 // ========== HỖ TRỢ NGÀY THÁNG ==========
-// Chuyển Date object sang chuỗi YYYY-MM-DD (sử dụng giờ địa phương để tránh lệch múi giờ)
-function toYMDLocal(d) {
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+// ========== XUẤT XLSX ==========
+// Các cột có thể xuất (theo thứ tự trình bày trong bảng)
+const ALL_EXPORT_COLUMNS = ["STT", "Nội dung", "Đơn vị", "Thời gian", "Mức độ", "Trạng thái", "Ghi chú"];
+
+/**
+ * Viết một mảng dữ liệu (array of arrays) thành file xlsx và tải xuống.
+ * `header` là mảng tiêu đề cột, `rows` là mảng hàng tương ứng.
+ */
+function writeDataToXLSX(header, rows) {
+    const data = [header, ...rows];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Tasks');
+    const now = new Date();
+    const filename = `tasks_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}.xlsx`;
+    XLSX.writeFile(wb, filename);
+}
+
+// ==== IMPORT XLSX FUNCTIONS ====
+// Nhận 1 chuỗi ngày từ sheet name hoặc cell, cố parse thành YYYY-MM-DD
+function normalizeDateString(s) {
+    if (!s && s !== 0) return null;
+    s = String(s).trim();
+    // nếu đã ở dạng YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    // dạng DD-MM-YYYY
+    const dmy = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    if (dmy) {
+        const dd = pad(Number(dmy[1]));
+        const mm = pad(Number(dmy[2]));
+        const yy = dmy[3];
+        return `${yy}-${mm}-${dd}`;
+    }
+    // dạng DD/MM/YYYY
+    const dmy2 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (dmy2) {
+        const dd = pad(Number(dmy2[1]));
+        const mm = pad(Number(dmy2[2]));
+        const yy = dmy2[3];
+        return `${yy}-${mm}-${dd}`;
+    }
+    // dạng Excel serial (number) — best-effort
+    if (!isNaN(Number(s))) {
+        try {
+            const v = Number(s);
+            const date = new Date((v - 25569) * 86400 * 1000);
+            return toYMDLocal(date);
+        } catch (e) { }
+    }
+    return null;
+}
+
+// Parse date from sheet name like '24-02-2026' or '2026-02-24'
+function parseDateFromSheetName(name) {
+    if (!name) return null;
+    const n = name.trim();
+    // try dd-mm-yyyy
+    const d = normalizeDateString(n);
+    return d;
+}
+
+// Import workbook (ArrayBuffer) and push tasks to Firebase
+async function importWorkbookArrayBuffer(ab, filename, importType, importValue) {
+    if (!isAdmin()) { alert('Chỉ admin mới có quyền nhập công việc'); return; }
+    showLoading();
+    try {
+        const wb = XLSX.read(ab, { type: 'array' });
+        let total = 0;
+        // iterate sheets
+        for (const sheetName of wb.SheetNames) {
+            const ws = wb.Sheets[sheetName];
+            // get rows as arrays
+            const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+            if (!aoa || aoa.length < 2) continue; // no data
+            const header = aoa[0].map(h => String(h).trim());
+            const idxMap = {};
+            header.forEach((h, i) => { idxMap[h] = i; });
+
+            // determine date for this sheet if possible
+            let sheetDate = parseDateFromSheetName(sheetName);
+            // if not parseable and only one sheet, try infer from filename (tasks_YYYYMMDD)
+            if (!sheetDate && wb.SheetNames.length === 1 && filename) {
+                const m = filename.match(/(\d{4})(\d{2})(\d{2})/);
+                if (m) sheetDate = `${m[1]}-${m[2]}-${m[3]}`;
+            }
+
+            // If importType defines a default date (week/month/range) and no per-row date,
+            // use importValue to compute a default date for rows without 'Ngày'
+            let importDefaultDate = null;
+            if (!sheetDate && importType) {
+                if (importType === 'week' && importValue) {
+                    // importValue expected as 'YYYY|MM|weekN'
+                    const parts = importValue.split('|');
+                    if (parts.length === 3) {
+                        const yy = Number(parts[0]);
+                        const mm = Number(parts[1]);
+                        const wkPart = parts[2];
+                        // wkPart may be 'week1' or a number like '1'
+                        let wkNum = 1;
+                        const m = wkPart.match(/\d+/);
+                        if (m) wkNum = Number(m[0]);
+                        const we = getWeekStartEnd(yy, mm, wkNum);
+                        importDefaultDate = we.startDate;
+                    }
+                } else if (importType === 'month' && importValue) {
+                    // importValue expected as 'YYYY-MM'
+                    const [yy, mm] = importValue.split('-');
+                    if (yy && mm) importDefaultDate = `${yy}-${mm}-01`;
+                } else if (importType === 'range' && importValue) {
+                    // importValue expected as 'START|END'
+                    const parts2 = importValue.split('|');
+                    if (parts2.length === 2) importDefaultDate = parts2[0];
+                }
+            }
+
+            for (let r = 1; r < aoa.length; r++) {
+                const row = aoa[r];
+                // skip empty rows
+                if (!row || row.every(c => (c === null || c === undefined || String(c).trim() === ''))) continue;
+                // determine date for this row: prefer 'Ngày' column
+                let dateVal = null;
+                if (idxMap['Ngày'] !== undefined) dateVal = normalizeDateString(row[idxMap['Ngày']]);
+                if (!dateVal && sheetDate) dateVal = sheetDate;
+                if (!dateVal && importDefaultDate) dateVal = importDefaultDate;
+                if (!dateVal) {
+                    // skip rows without date
+                    continue;
+                }
+
+                const task = {
+                    content: '', unit: '', duration: '', priority: '', status: '', note: '', startDate: dateVal
+                };
+                if (idxMap['Nội dung'] !== undefined) task.content = String(row[idxMap['Nội dung']] || '').trim();
+                if (idxMap['Đơn vị'] !== undefined) task.unit = String(row[idxMap['Đơn vị']] || '').trim();
+                if (idxMap['Thời gian'] !== undefined) task.duration = String(row[idxMap['Thời gian']] || '').trim();
+                if (idxMap['Mức độ'] !== undefined) task.priority = String(row[idxMap['Mức độ']] || '').trim();
+                if (idxMap['Trạng thái'] !== undefined) task.status = String(row[idxMap['Trạng thái']] || '').trim();
+                if (idxMap['Ghi chú'] !== undefined) task.note = String(row[idxMap['Ghi chú']] || '').trim();
+
+                // push to firebase
+                const [y, m] = dateVal.split('-');
+                const w = getWeekNumber(dateVal);
+                await push(ref(db, `tasks/${y}/${m}/${w}/${dateVal}`), task);
+                total++;
+            }
+        }
+        hideLoading();
+        await showCustomAlert(`✅ Đã nhập ${total} công việc từ file`);
+    } catch (e) {
+        hideLoading();
+        console.error(e);
+        await showCustomAlert(`❌ Lỗi khi nhập file: ${e && e.message ? e.message : String(e)}`);
+    }
+}
+
+// Handler cho nút import
+if (document.getElementById('importConfirmBtn')) {
+    document.getElementById('importConfirmBtn').onclick = () => {
+        if (!isAdmin()) { alert('Chỉ admin mới có quyền nhập công việc'); return; }
+        const fi = document.getElementById('importFile');
+        if (!fi || !fi.files || fi.files.length === 0) return alert('Vui lòng chọn file .xlsx');
+        const importTypeEl = document.getElementById('importType');
+        const importType = importTypeEl ? importTypeEl.value : 'auto';
+
+        // build importValue according to type
+        let importValue = '';
+        if (importType === 'week') {
+            const sel = document.getElementById('importWeekSelect');
+            if (!sel || !sel.value) return alert('Vui lòng chọn tuần để import!');
+            importValue = sel.value; // format: YYYY|MM|weekN
+        } else if (importType === 'month') {
+            const mp = document.getElementById('importMonthPicker');
+            if (!mp || !mp.value) return alert('Vui lòng chọn tháng để import!');
+            importValue = mp.value; // format: YYYY-MM
+        } else if (importType === 'range') {
+            const s = document.getElementById('importRangeStart').value;
+            const e = document.getElementById('importRangeEnd').value;
+            if (!s || !e) return alert('Vui lòng chọn cả ngày bắt đầu và kết thúc cho import range!');
+            importValue = `${s}|${e}`; // START|END
+        }
+
+        const f = fi.files[0];
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+            const ab = ev.target.result;
+            await importWorkbookArrayBuffer(ab, f.name, importType, importValue);
+        };
+        reader.readAsArrayBuffer(f);
+    };
+}
+
+// (Optional) Preview button - just shows a quick summary of sheets and rows
+if (document.getElementById('importPreviewBtn')) {
+    document.getElementById('importPreviewBtn').onclick = () => {
+        const fi = document.getElementById('importFile');
+        if (!fi || !fi.files || fi.files.length === 0) return alert('Vui lòng chọn file .xlsx');
+        const f = fi.files[0];
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                const ab = ev.target.result;
+                const wb = XLSX.read(ab, { type: 'array' });
+                let msg = '';
+                wb.SheetNames.forEach(sn => {
+                    const ws = wb.Sheets[sn];
+                    const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+                    msg += `${sn}: ${Math.max(0, aoa.length - 1)} dòng` + '\n';
+                });
+                showCustomAlert(msg.replace(/\n/g, '<br>'));
+            } catch (e) {
+                showCustomAlert('Không đọc được file này');
+            }
+        };
+        reader.readAsArrayBuffer(f);
+    };
+}
+
+// Lấy danh sách cột được chọn bởi người dùng
+function getSelectedColumns() {
+    const nodes = document.querySelectorAll('#columnDropdown input[type=checkbox]');
+    if (!nodes || nodes.length === 0) {
+        // no UI present (moved to sidebar) -> default to all columns
+        return ALL_EXPORT_COLUMNS.slice();
+    }
+    return Array.from(nodes).filter(n => n.checked).map(inp => inp.value);
+}
+
+// Xuất công việc của 1 ngày dựa trên DOM
+function exportTasksForDay() {
+    const selectedCols = getSelectedColumns();
+    if (selectedCols.length === 0) {
+        alert('Vui lòng chọn ít nhất một cột để xuất.');
+        return;
+    }
+    const colIndices = ALL_EXPORT_COLUMNS.map((c, i) => selectedCols.includes(c) ? i : -1).filter(i => i >= 0);
+    const rows = [];
+    document.querySelectorAll('#taskTable tr').forEach(tr => {
+        const cells = tr.querySelectorAll('td');
+        if (!cells || cells.length === 0) return;
+        const rowCells = [];
+        for (let i = 1; i < cells.length - 1; i++) {
+            const cell = cells[i];
+            const sel = cell.querySelector('select');
+            if (sel) rowCells.push(sel.value);
+            else rowCells.push(cell.innerText.replace(/\r?\n/g, ' ').trim());
+        }
+        rows.push(rowCells.filter((_, idx) => colIndices.includes(idx)));
+    });
+    if (rows.length === 0) {
+        alert('Không có công việc để xuất.');
+        return;
+    }
+    writeDataToXLSX(selectedCols, rows);
+}
+
+// ===========================
+// Các hàm lấy dữ liệu từ Firebase cho tuần/tháng/khoảng
+async function fetchTasksForWeek(y, m, w) {
+    const result = [];
+    const snap = await get(ref(db, `tasks/${y}/${m}/${w}`));
+    if (snap.exists()) {
+        snap.forEach(dateSnap => {
+            const date = dateSnap.key;
+            dateSnap.forEach(taskSnap => {
+                const t = taskSnap.val();
+                result.push({ date, task: t });
+            });
+        });
+    }
+    return result;
+}
+
+async function fetchTasksForMonth(y, m) {
+    const result = [];
+    const snap = await get(ref(db, `tasks/${y}/${m}`));
+    if (snap.exists()) {
+        snap.forEach(weekSnap => {
+            weekSnap.forEach(dateSnap => {
+                const date = dateSnap.key;
+                dateSnap.forEach(taskSnap => {
+                    result.push({ date, task: taskSnap.val() });
+                });
+            });
+        });
+    }
+    return result;
+}
+
+async function fetchTasksForRange(startDate, endDate) {
+    const result = [];
+    let cur = parseYMD(startDate);
+    const end = parseYMD(endDate);
+    while (cur <= end) {
+        const ds = toYMDLocal(cur);
+        const [yy, mm] = ds.split('-');
+        const w = getWeekNumber(ds);
+        const snap = await get(ref(db, `tasks/${yy}/${mm}/${w}/${ds}`));
+        if (snap.exists()) {
+            snap.forEach(taskSnap => {
+                result.push({ date: ds, task: taskSnap.val() });
+            });
+        }
+        cur.setDate(cur.getDate() + 1);
+    }
+    return result;
+}
+
+async function exportTasksForCollection(taskList, includeDate) {
+    const selectedCols = getSelectedColumns();
+    if (selectedCols.length === 0) {
+        alert('Vui lòng chọn ít nhất một cột để xuất.');
+        return;
+    }
+    let header = [];
+    if (selectedCols.includes('STT')) header.push('STT');
+    if (includeDate) header.push('Ngày');
+    header.push(...selectedCols.filter(c => c !== 'STT'));
+
+    const rows = [];
+    let idx = 1;
+    for (const { date, task } of taskList) {
+        const row = [];
+        if (selectedCols.includes('STT')) row.push(idx++);
+        if (includeDate) row.push(date);
+        for (const c of selectedCols) {
+            if (c === 'STT') continue;
+            const map = {
+                'Nội dung': task.content || '',
+                'Đơn vị': task.unit || '',
+                'Thời gian': task.duration || '',
+                'Mức độ': task.priority || '',
+                'Trạng thái': task.status || '',
+                'Ghi chú': task.note || ''
+            };
+            row.push(map[c] || '');
+        }
+        rows.push(row);
+    }
+    if (rows.length === 0) {
+        alert('Không có công việc để xuất.');
+        return;
+    }
+    // Nếu có nhiều ngày (ví dụ xuất tuần/tháng/khoảng), tách từng ngày ra 1 sheet
+    const grouped = {};
+    for (const { date, task } of taskList) {
+        if (!grouped[date]) grouped[date] = [];
+        grouped[date].push(task);
+    }
+    const dates = Object.keys(grouped).sort();
+
+    if (dates.length <= 1) {
+        // chỉ 1 ngày - giữ hành vi cũ (có cột Ngày nếu includeDate true)
+        writeDataToXLSX(header, rows);
+        return;
+    }
+
+    // nhiều ngày: tạo workbook với mỗi sheet là 1 ngày
+    const wb = XLSX.utils.book_new();
+    for (const d of dates) {
+        const tasksOfDay = grouped[d];
+        const sheetHeader = [];
+        if (selectedCols.includes('STT')) sheetHeader.push('STT');
+        // Khi tách theo sheet, không cần cột 'Ngày' vì tên sheet đã là ngày
+        sheetHeader.push(...selectedCols.filter(c => c !== 'STT' && c !== 'Ngày'));
+
+        const sheetRows = [];
+        let i = 1;
+        for (const task of tasksOfDay) {
+            const row = [];
+            if (selectedCols.includes('STT')) row.push(i++);
+            for (const c of selectedCols) {
+                if (c === 'STT' || c === 'Ngày') continue;
+                const map = {
+                    'Nội dung': task.content || '',
+                    'Đơn vị': task.unit || '',
+                    'Thời gian': task.duration || '',
+                    'Mức độ': task.priority || '',
+                    'Trạng thái': task.status || '',
+                    'Ghi chú': task.note || ''
+                };
+                row.push(map[c] || '');
+            }
+            sheetRows.push(row);
+        }
+
+        const ws = XLSX.utils.aoa_to_sheet([sheetHeader, ...sheetRows]);
+        // Sheet name: format DD-MM-YYYY (safe and short)
+        let sheetName = formatDisplayDate(d);
+        // ensure sheet name <=31 chars and remove illegal characters
+        sheetName = sheetName.replace(/[\\/*?:\[\]]/g, '_').slice(0, 31);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    }
+
+    const now = new Date();
+    const filename = `tasks_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}.xlsx`;
+    XLSX.writeFile(wb, filename);
+}
+
+// Hàm chính gọi theo loại
+async function performExport(type) {
+    if (type === 'day') {
+        exportTasksForDay();
+    } else if (type === 'week') {
+        const sel = document.getElementById('exportWeekSelect');
+        if (!sel || !sel.value) return alert('Vui lòng chọn tuần!');
+        const [y, m, w] = sel.value.split('|');
+        const tasks = await fetchTasksForWeek(y, m, w);
+        await exportTasksForCollection(tasks, true);
+    } else if (type === 'month') {
+        const mp = document.getElementById('exportMonthPicker');
+        if (!mp || !mp.value) return alert('Vui lòng chọn tháng!');
+        const [y, m] = mp.value.split('-');
+        const tasks = await fetchTasksForMonth(y, m);
+        await exportTasksForCollection(tasks, true);
+    } else if (type === 'range') {
+        const s = document.getElementById('exportRangeStart').value;
+        const e = document.getElementById('exportRangeEnd').value;
+        if (!s || !e) return alert('Vui lòng chọn cả ngày bắt đầu và kết thúc!');
+        if (s > e) return alert('Ngày bắt đầu phải <= ngày kết thúc');
+        const tasks = await fetchTasksForRange(s, e);
+        await exportTasksForCollection(tasks, true);
+    }
 }
 
 // Chuyển chuỗi YYYY-MM-DD sang Date object (sử dụng giờ địa phương)
@@ -375,8 +876,11 @@ function selectDate(ds, el) {
 
     selectedDate = ds; // Lưu ngày được chọn
 
-    // Cập nhật tiêu đề và hiển thị thông báo NB nếu cần
-    if (isNbDay(ds)) {
+    // Cập nhật tiêu đề và hiển thị thông báo nếu ngày đặc biệt
+    if (isNlDay(ds)) {
+        // NL có độ ưu tiên hiển thị cao hơn NB nếu trùng
+        selectedDateTitle.innerHTML = `<span style="color: #4e73df; font-weight: bold;">🎉 ${formatDisplayDate(ds)} - NGÀY NGHỈ LỄ (NL)</span>`;
+    } else if (isNbDay(ds)) {
         selectedDateTitle.innerHTML = `<span style="color: #ff6b6b; font-weight: bold;">🏷️ ${formatDisplayDate(ds)} - NGÀY NGHỈ BÙ (NB)</span>`;
     } else {
         selectedDateTitle.innerText = "Công việc ngày " + formatDisplayDate(ds);
@@ -393,6 +897,7 @@ if (weekSelect) {
         if (weekSelect.value) {
             const [y, m, w] = weekSelect.value.split("|");
             loadTasksForWeek(y, m, w); // Tải công việc của tuần đó
+            updateExportWeekOptions(weekSelect); // đồng bộ với phần export
         }
     };
 }
@@ -457,21 +962,27 @@ function createColorSelect(options, value, getClass, callback) {
  * @param {string} ds - Ngày dưới dạng string (YYYY-MM-DD)
  */
 function loadTasks(ds) {
-    // Kiểm tra nếu ngày NB, ẩn bảng và hiển thị thông báo
-    if (isNbDay(ds)) {
+    // Kiểm tra nếu ngày đặc biệt: NL trước, NB tiếp theo
+    const addBtn = document.getElementById('openAddModal');
+    const expBtn = document.getElementById('exportBtn');
+    if (isNlDay(ds)) {
+        document.querySelector('table').style.display = 'none';
+        taskTable.innerHTML = `<tr><td colspan="100" style="text-align: center; padding: 20px; background: #dceeff; border: 2px solid #6f42c1;"><strong style="font-size: 18px; color: #2e59d9;">🎉 Hôm nay là ngày Nghỉ Lễ (NL)</strong></td></tr>`;
+        if (addBtn) addBtn.style.display = 'none';
+        if (expBtn) expBtn.style.display = 'none';
+        return;
+    } else if (isNbDay(ds)) {
         document.querySelector('table').style.display = 'none';
         taskTable.innerHTML = `<tr><td colspan="100" style="text-align: center; padding: 20px; background: #fff3cd; border: 2px solid #ffc107;"><strong style="font-size: 18px; color: #856404;">🏷️ Hôm nay là ngày Nghỉ Bù (NB)</strong></td></tr>`;
-
-        // Ẩn nút menu toggle cho ngày NB
-        if (menuToggleBtn) menuToggleBtn.style.display = 'none';
-
+        if (addBtn) addBtn.style.display = 'none';
+        if (expBtn) expBtn.style.display = 'none';
         return;
     } else {
         document.querySelector('table').style.display = 'table';
-
-        // Hiện lại nút menu toggle
         const isMemberRole = isMember();
         if (menuToggleBtn) menuToggleBtn.style.display = isMemberRole ? 'none' : 'inline-block';
+        if (addBtn) addBtn.style.display = isMemberRole ? 'none' : 'inline-block';
+        if (expBtn) expBtn.style.display = 'inline-block';
     }
 
     const [y, m] = ds.split("-");
@@ -629,45 +1140,123 @@ if (document.getElementById("openAddModal")) {
     };
 }
 
-// ========== LưU CÔNG VIệC ==========
-// Xử lý khi nhấn nút lưu trong modal
-saveTaskBtn.onclick = async () => {
-    if (!selectedDate) {
-        alert("Vui lòng chọn ngày trước!");
-        return;
-    }
-
-    const [y, m] = selectedDate.split("-");
-    const w = getWeekNumber(selectedDate);
-
-    // Chuẩn bị dữ liệu công việc để lưu vào database
-    const data = {
-        content: contentInput.value,
-        unit: unitInput.value,
-        duration: durationInput.value,
-        priority: priorityInput.value,
-        status: statusInput.value,
-        note: noteInput.value,
-        startDate: selectedDate
-    };
-
-    try {
-        if (taskIdField.value) {
-            // Nếu có ID, là chỉnh sửa công việc có sẵn
-            await update(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}/${taskIdField.value}`), data);
-            alert("✅ Cập nhật công việc thành công!");
-        } else {
-            // Nếu không có ID, là thêm công việc mới
-            await push(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}`), data);
-            alert("✅ Thêm công việc mới thành công!");
+// Nút lưu trong modal thêm/sửa
+if (saveTaskBtn) {
+    saveTaskBtn.onclick = async () => {
+        if (!selectedDate) {
+            alert("Vui lòng chọn ngày trước!");
+            return;
         }
+        const [y, m] = selectedDate.split("-");
+        const w = getWeekNumber(selectedDate);
+        const data = {
+            content: contentInput.value,
+            unit: unitInput.value,
+            duration: durationInput.value,
+            priority: priorityInput.value,
+            status: statusInput.value,
+            note: noteInput.value,
+            startDate: selectedDate
+        };
+        try {
+            if (taskIdField.value) {
+                await update(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}/${taskIdField.value}`), data);
+                alert("✅ Cập nhật công việc thành công!");
+            } else {
+                await push(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}`), data);
+                alert("✅ Thêm công việc mới thành công!");
+            }
+            modal.style.display = "none";
+        } catch (error) {
+            console.error(error);
+            alert("\u274c Có lỗi xảy ra khi lưu công việc!");
+        }
+    };
+}
 
-        modal.style.display = "none"; // Đóng modal
-    } catch (error) {
-        console.error(error);
-        alert("\u274c Có lỗi xảy ra khi lưu công việc!");
-    }
+// Nút xuất nhanh cho ngày hiện tại (vẫn nằm cạnh thêm công việc)
+if (document.getElementById("exportBtn")) {
+    document.getElementById("exportBtn").onclick = () => {
+        if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
+        performExport('day');
+    };
+}
+
+// dropdown chọn cột
+const columnBtn = document.getElementById('columnSelectBtn');
+const columnDropdown = document.getElementById('columnDropdown');
+if (columnBtn && columnDropdown) {
+    columnBtn.onclick = () => {
+        columnDropdown.style.display = columnDropdown.style.display === 'block' ? 'none' : 'block';
+    };
+    // khi click ngoài sẽ ẩn dropdown
+    document.addEventListener('click', e => {
+        if (!columnDropdown.contains(e.target) && e.target !== columnBtn) {
+            columnDropdown.style.display = 'none';
+        }
+    });
+}
+
+// quản lý phần xuất trong menu
+const exportTypeSelect = document.getElementById('exportType');
+const exportWeekDiv = document.getElementById('exportWeek');
+const exportMonthDiv = document.getElementById('exportMonth');
+const exportRangeDiv = document.getElementById('exportRange');
+if (exportTypeSelect) {
+    exportTypeSelect.onchange = () => {
+        const t = exportTypeSelect.value;
+        exportWeekDiv.style.display = (t === 'week') ? 'block' : 'none';
+        exportMonthDiv.style.display = (t === 'month') ? 'block' : 'none';
+        exportRangeDiv.style.display = (t === 'range') ? 'block' : 'none';
+    };
+}
+
+// nút xác nhận xuất trong menu
+if (document.getElementById('exportConfirmBtn')) {
+    document.getElementById('exportConfirmBtn').onclick = async () => {
+        const t = exportTypeSelect ? exportTypeSelect.value : 'day';
+        await performExport(t);
+    };
+}
+
+// duplicate weekSelect values for export week
+function updateExportWeekOptions(baseSelect) {
+    const dest = document.getElementById('exportWeekSelect');
+    if (!dest || !baseSelect) return;
+    dest.innerHTML = baseSelect.innerHTML;
+    dest.value = baseSelect.value;
+}
+
+function updateImportWeekOptions(baseSelect) {
+    const dest = document.getElementById('importWeekSelect');
+    if (!dest || !baseSelect) return;
+    dest.innerHTML = baseSelect.innerHTML;
+    dest.value = baseSelect.value;
+}
+
+// whenever populateWeekSelect is called, mirror it
+const originalPopulateWeekSelect = populateWeekSelect;
+populateWeekSelect = function (dateStr) {
+    originalPopulateWeekSelect(dateStr);
+    const base = document.getElementById('weekSelect');
+    updateExportWeekOptions(base);
+    updateImportWeekOptions(base);
 };
+
+// quản lý phần import trong menu (hiển thị các control theo loại import)
+const importTypeSelect = document.getElementById('importType');
+const importWeekDiv = document.getElementById('importWeek');
+const importMonthDiv = document.getElementById('importMonth');
+const importRangeDiv = document.getElementById('importRange');
+if (importTypeSelect) {
+    importTypeSelect.onchange = () => {
+        const t = importTypeSelect.value;
+        importWeekDiv.style.display = (t === 'week') ? 'block' : 'none';
+        importMonthDiv.style.display = (t === 'month') ? 'block' : 'none';
+        importRangeDiv.style.display = (t === 'range') ? 'block' : 'none';
+    };
+}
+
 // Nút chuyển tháng tiếp theo
 nextBtn.addEventListener("click", () => {
     currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
@@ -686,8 +1275,8 @@ prevBtn.addEventListener("click", () => {
  * Hàm này được gọi sau khi người dùng đăng nhập thành công
  */
 function startApp() {
-    // Tải danh sách các ngày NB từ Firebase trước
-    loadNbDays().then(() => {
+    // Tải danh sách các ngày NB và NL từ Firebase trước
+    Promise.all([loadNbDays(), loadNlDays()]).then(() => {
         renderCalendar();
         applyRolePermissions(); // Áp dụng quyền dựa trên role
 
@@ -816,14 +1405,28 @@ async function populateTargetWeeks() {
 
 // Populate năm vào select
 function populateYearSelect() {
-    nbYearSelect.innerHTML = "";
     const currentYear = new Date().getFullYear();
-    for (let y = currentYear - 1; y <= currentYear + 5; y++) {
-        const opt = document.createElement("option");
-        opt.value = y;
-        opt.textContent = y;
-        if (y === currentYear) opt.selected = true;
-        nbYearSelect.appendChild(opt);
+
+    if (nbYearSelect) {
+        nbYearSelect.innerHTML = "";
+        for (let y = currentYear - 1; y <= currentYear + 5; y++) {
+            const opt = document.createElement("option");
+            opt.value = y;
+            opt.textContent = y;
+            if (y === currentYear) opt.selected = true;
+            nbYearSelect.appendChild(opt);
+        }
+    }
+
+    if (nlYearSelect) {
+        nlYearSelect.innerHTML = "";
+        for (let y = currentYear - 1; y <= currentYear + 5; y++) {
+            const opt = document.createElement("option");
+            opt.value = y;
+            opt.textContent = y;
+            if (y === currentYear) opt.selected = true;
+            nlYearSelect.appendChild(opt);
+        }
     }
 }
 
@@ -865,6 +1468,46 @@ function populateMonthList() {
         nbMonthList.appendChild(monthDiv);
     }
 }
+
+// tương tự cho NL
+function populateNlMonthList() {
+    const year = parseInt(nlYearSelect.value);
+    nlMonthList.innerHTML = "";
+
+    for (let m = 1; m <= 12; m++) {
+        const monthDiv = document.createElement("div");
+        monthDiv.style.padding = "12px";
+        monthDiv.style.background = "#ffe7e7";
+        monthDiv.style.border = "1px solid #ffb3b3";
+        monthDiv.style.borderRadius = "6px";
+        monthDiv.style.cursor = "pointer";
+        monthDiv.style.textAlign = "center";
+        monthDiv.style.fontWeight = "600";
+        monthDiv.style.color = "#a30000";
+        monthDiv.style.transition = "all 0.2s";
+        monthDiv.innerHTML = `Tháng ${m}`;
+
+        monthDiv.onmouseover = () => {
+            monthDiv.style.background = "#a30000";
+            monthDiv.style.color = "#fff";
+            monthDiv.style.transform = "scale(1.05)";
+        };
+        monthDiv.onmouseout = () => {
+            monthDiv.style.background = "#ffe7e7";
+            monthDiv.style.color = "#a30000";
+            monthDiv.style.transform = "scale(1)";
+        };
+
+        monthDiv.onclick = () => {
+            nlSelectedYear = year;
+            nlSelectedMonth = m;
+            renderNlCalendarForMonth(year, m);
+        };
+
+        nlMonthList.appendChild(monthDiv);
+    }
+}
+
 
 // Render lịch cho tháng được chọn
 function renderCalendarForMonth(year, month) {
@@ -942,6 +1585,78 @@ function renderCalendarForMonth(year, month) {
     }
 }
 
+// NL version of calendar rendering
+function renderNlCalendarForMonth(year, month) {
+    nlMonthSelectSection.style.display = "none";
+    nlCalendarSelectSection.style.display = "block";
+
+    nlCalendarTitle.innerText = `Tháng ${month} - ${year}`;
+
+    const first = (new Date(year, month - 1, 1).getDay() + 6) % 7;
+    const last = new Date(year, month, 0).getDate();
+
+    nlCalendarDays.innerHTML = "";
+
+    // Thêm ô trống
+    for (let i = 0; i < first; i++) {
+        const emptyDiv = document.createElement("div");
+        emptyDiv.style.background = "#f9f9f9";
+        emptyDiv.style.height = "60px";
+        emptyDiv.style.borderRadius = "6px";
+        nlCalendarDays.appendChild(emptyDiv);
+    }
+
+    // Thêm các ngày
+    for (let d = 1; d <= last; d++) {
+        const ds = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const dayDiv = document.createElement("div");
+        dayDiv.style.background = "#fff";
+        dayDiv.style.border = "1px solid #ddd";
+        dayDiv.style.padding = "8px";
+        dayDiv.style.borderRadius = "6px";
+        dayDiv.style.cursor = "pointer";
+        dayDiv.style.height = "60px";
+        dayDiv.style.display = "flex";
+        dayDiv.style.alignItems = "center";
+        dayDiv.style.justifyContent = "center";
+        dayDiv.style.fontWeight = "600";
+        dayDiv.style.fontSize = "16px";
+        dayDiv.style.transition = "all 0.2s";
+        dayDiv.innerHTML = `${d}`;
+
+        const isSelected = nlTempSelectedDates.includes(ds);
+        if (isSelected) {
+            dayDiv.style.background = "#007bff";
+            dayDiv.style.borderColor = "#007bff";
+            dayDiv.style.color = "#fff";
+        }
+
+        dayDiv.onmouseover = () => {
+            if (!isSelected) dayDiv.style.background = "#e8f0fe";
+            dayDiv.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
+            dayDiv.style.transform = "scale(1.05)";
+        };
+        dayDiv.onmouseout = () => {
+            dayDiv.style.background = isSelected ? "#007bff" : "#fff";
+            dayDiv.style.boxShadow = "none";
+            dayDiv.style.transform = "scale(1)";
+        };
+
+        dayDiv.onclick = () => {
+            if (nlTempSelectedDates.includes(ds)) {
+                nlTempSelectedDates = nlTempSelectedDates.filter(d => d !== ds);
+            } else {
+                nlTempSelectedDates.push(ds);
+            }
+            updateNlSelectedDatesList();
+            renderNlCalendarForMonth(year, month);
+        };
+
+        nlCalendarDays.appendChild(dayDiv);
+    }
+}
+
+
 // Update danh sách ngày được chọn
 function updateSelectedDatesList() {
     nbSelectedDatesList.innerHTML = "";
@@ -962,6 +1677,123 @@ function updateSelectedDatesList() {
         });
     }
 }
+
+// Cập nhật danh sách ngày được chọn cho NL
+function updateNlSelectedDatesList() {
+    nlSelectedDatesList.innerHTML = "";
+    if (nlTempSelectedDates.length === 0) {
+        nlNoDatesMsg.style.display = "block";
+    } else {
+        nlNoDatesMsg.style.display = "none";
+        nlTempSelectedDates.sort().forEach(ds => {
+            const badge = document.createElement("span");
+            badge.style.background = "#007bff";
+            badge.style.color = "#fff";
+            badge.style.padding = "6px 10px";
+            badge.style.borderRadius = "12px";
+            badge.style.fontSize = "13px";
+            badge.style.fontWeight = "600";
+            badge.innerHTML = formatDisplayDate(ds);
+            nlSelectedDatesList.appendChild(badge);
+        });
+    }
+}
+
+// quản lý NB qua sidebar
+const manageNbDateInput = document.getElementById('manageNbDate');
+const deleteNbBtn = document.getElementById('deleteNbBtn');
+const changeNbBtn = document.getElementById('changeNbBtn');
+
+if (deleteNbBtn) {
+    deleteNbBtn.onclick = async () => {
+        if (!manageNbDateInput.value) return alert('Vui lòng chọn ngày NB!');
+        const ds = manageNbDateInput.value;
+        if (!isNbDay(ds)) return alert('Ngày này không phải NB');
+        await toggleNbDay(ds);
+        alert('✅ Đã xóa NB ' + formatDisplayDate(ds));
+        renderCalendar();
+        if (selectedDate === ds) loadTasks(ds);
+    };
+}
+
+if (changeNbBtn) {
+    changeNbBtn.onclick = async () => {
+        if (!manageNbDateInput.value) return alert('Vui lòng chọn ngày NB cần đổi!');
+        const oldDate = manageNbDateInput.value;
+        if (!isNbDay(oldDate)) return alert('Ngày này không phải NB');
+        const newDate = prompt('Nhập ngày mới (YYYY-MM-DD):');
+        if (!newDate) return;
+        if (isNlDay(newDate)) return alert('Ngày mới trùng với NL, chọn ngày khác');
+        // xóa cũ và thêm mới
+        await toggleNbDay(oldDate);
+        await toggleNbDay(newDate);
+        alert('🔄 Đã đổi NB từ ' + formatDisplayDate(oldDate) + ' sang ' + formatDisplayDate(newDate));
+        renderCalendar();
+        if (selectedDate === oldDate || selectedDate === newDate) loadTasks(selectedDate);
+    };
+}
+
+// NL management handlers
+const manageNlDateInput = document.getElementById('manageNlDate');
+const deleteNlBtn = document.getElementById('deleteNlBtn');
+const changeNlBtn = document.getElementById('changeNlBtn');
+
+if (deleteNlBtn) {
+    deleteNlBtn.onclick = async () => {
+        if (!manageNlDateInput.value) return alert('Vui lòng chọn ngày NL!');
+        const ds = manageNlDateInput.value;
+        if (!isNlDay(ds)) return alert('Ngày này không phải NL');
+        await toggleNlDay(ds);
+        alert('✅ Đã xóa NL ' + formatDisplayDate(ds));
+        renderCalendar();
+        if (selectedDate === ds) loadTasks(ds);
+    };
+}
+
+if (changeNlBtn) {
+    changeNlBtn.onclick = async () => {
+        if (!manageNlDateInput.value) return alert('Vui lòng chọn ngày NL cần đổi!');
+        const oldDate = manageNlDateInput.value;
+        if (!isNlDay(oldDate)) return alert('Ngày này không phải NL');
+        const newDate = prompt('Nhập ngày mới (YYYY-MM-DD):');
+        if (!newDate) return;
+        if (isNbDay(newDate)) return alert('Ngày mới trùng với NB, chọn ngày khác');
+        await toggleNlDay(oldDate);
+        await toggleNlDay(newDate);
+        alert('🔄 Đã đổi NL từ ' + formatDisplayDate(oldDate) + ' sang ' + formatDisplayDate(newDate));
+        renderCalendar();
+        if (selectedDate === oldDate || selectedDate === newDate) loadTasks(selectedDate);
+    };
+}
+
+// conflict prevention wrappers
+const originalToggleNbDay = toggleNbDay;
+toggleNbDay = async function (dateStr) {
+    // allow removal regardless
+    if (nbDays[dateStr]) {
+        return await originalToggleNbDay(dateStr);
+    }
+    // adding NB, reject if NL exists
+    if (isNlDay(dateStr)) {
+        alert('❌ Không thể đánh dấu NB trùng với ngày NL');
+        return false;
+    }
+    return await originalToggleNbDay(dateStr);
+};
+
+const originalToggleNlDay = toggleNlDay;
+toggleNlDay = async function (dateStr) {
+    // allow removal regardless
+    if (nlDays[dateStr]) {
+        return await originalToggleNlDay(dateStr);
+    }
+    // adding NL, reject if NB exists
+    if (isNbDay(dateStr)) {
+        alert('❌ Không thể đánh dấu NL trùng với ngày NB');
+        return false;
+    }
+    return await originalToggleNlDay(dateStr);
+};
 
 // Mở modal lựa chọn ngày NB
 if (selectNbDayBtn) {
@@ -986,31 +1818,72 @@ if (selectNbDayBtn) {
     };
 }
 
-// Đóng modal
+// Mở modal lựa chọn ngày NL
+if (selectNlDayBtn) {
+    selectNlDayBtn.onclick = () => {
+        nlTempSelectedDates = [];
+        nlSelectedYear = new Date().getFullYear();
+        nlSelectedMonth = null;
+
+        nlMonthSelectSection.style.display = 'block';
+        nlCalendarSelectSection.style.display = 'none';
+
+        // populate year dropdown for NL
+        populateYearSelect();
+        populateNlMonthList();
+
+        nlSelectModal.style.display = 'flex';
+    };
+}
+
+// Đóng modal NB
 if (closeNbSelectModal) {
     closeNbSelectModal.onclick = () => nbSelectModal.style.display = 'none';
 }
+// Đóng modal NL
+if (closeNlSelectModal) {
+    closeNlSelectModal.onclick = () => nlSelectModal.style.display = 'none';
+}
 
-// Click ngoài modal để đóng
+// Click ngoài modal để đóng NB/NL
 if (nbSelectModal) {
     nbSelectModal.onclick = (e) => {
         if (e.target === nbSelectModal) nbSelectModal.style.display = 'none';
     };
 }
+if (nlSelectModal) {
+    nlSelectModal.onclick = (e) => {
+        if (e.target === nlSelectModal) nlSelectModal.style.display = 'none';
+    };
+}
 
-// Khi chọn năm mới
+// Khi chọn năm mới NB
 if (nbYearSelect) {
     nbYearSelect.onchange = () => {
         nbSelectedYear = parseInt(nbYearSelect.value);
         populateMonthList();
     };
 }
+// Khi chọn năm mới NL
+if (nlYearSelect) {
+    nlYearSelect.onchange = () => {
+        nlSelectedYear = parseInt(nlYearSelect.value);
+        populateNlMonthList();
+    };
+}
 
-// Quay lại từ lịch về chọn tháng
+// Quay lại từ lịch về chọn tháng NB
 if (nbCalendarBack) {
     nbCalendarBack.onclick = () => {
         monthSelectSection.style.display = 'block';
         calendarSelectSection.style.display = 'none';
+    };
+}
+// Quay lại NL
+if (nlCalendarBack) {
+    nlCalendarBack.onclick = () => {
+        nlMonthSelectSection.style.display = 'block';
+        nlCalendarSelectSection.style.display = 'none';
     };
 }
 
@@ -1025,6 +1898,7 @@ if (nbConfirmButton) {
         try {
             // Lưu tất cả ngày được chọn vào Firebase (cấu trúc: nbDays/YYYY/MM/DD)
             for (const dateStr of nbTempSelectedDates) {
+                if (isNlDay(dateStr)) throw new Error('Ngày ' + dateStr + ' đã là NL');
                 const [year, month, day] = dateStr.split('-');
                 const r = ref(db, `nbDays/${year}/${month}/${day}`);
                 await set(r, true);
@@ -1044,7 +1918,39 @@ if (nbConfirmButton) {
             renderCalendar();
         } catch (e) {
             console.error('Lỗi lưu ngày NB:', e);
-            alert('❌ Lỗi khi lưu ngày NB');
+            alert('❌ Lỗi khi lưu ngày NB: ' + e.message);
+        }
+    };
+}
+
+// Xác nhận lựa chọn ngày NL
+if (nlConfirmButton) {
+    nlConfirmButton.onclick = async () => {
+        if (nlTempSelectedDates.length === 0) {
+            alert('Vui lòng chọn ít nhất một ngày!');
+            return;
+        }
+
+        try {
+            // kiểm tra xung đột với NB trước khi ghi
+            for (const dateStr of nlTempSelectedDates) {
+                if (isNbDay(dateStr)) throw new Error('Ngày ' + formatDisplayDate(dateStr) + ' đã được đánh dấu NB');
+            }
+            for (const dateStr of nlTempSelectedDates) {
+                const [year, month, day] = dateStr.split('-');
+                const r = ref(db, `nlDays/${year}/${month}/${day}`);
+                await set(r, true);
+                nlDays[dateStr] = true;
+            }
+            alert('✔️ Đã lựa chọn ' + nlTempSelectedDates.length + ' ngày NL thành công!');
+            nlSelectModal.style.display = 'none';
+            if (selectedDate) {
+                loadTasks(selectedDate);
+            }
+            renderCalendar();
+        } catch (e) {
+            console.error('Lỗi lưu ngày NL:', e);
+            alert('❌ Lỗi khi lưu ngày NL: ' + e.message);
         }
     };
 }
@@ -1871,6 +2777,8 @@ function applyRolePermissions() {
 
     // Ẩn nút lựa chọn NB cho member
     if (selectNbDayBtn) selectNbDayBtn.style.display = isMemberRole ? 'none' : 'inline-block';
+    // Ẩn nút lựa chọn NL cho member
+    if (selectNlDayBtn) selectNlDayBtn.style.display = isMemberRole ? 'none' : 'inline-block';
 
     // Ẩn nút nhân bản công việc cho member
     const duplicateDayBtn = document.getElementById('duplicateDayBtn');

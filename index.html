@@ -67,8 +67,10 @@
             <div id="calendar"></div>
             <!-- Tiêu đề ngày đang chọn -->
             <h2 id="selectedDateTitle">Chọn ngày để xem công việc</h2>
-            <!-- Nút thêm công việc -->
-            <button id="openAddModal" class="btn-add">➕ Thêm công việc</button>
+            <!-- Nút thêm công việc (xuất/tuỳ chọn đã được chuyển vào menu) -->
+            <div style="display: flex; gap: 10px; align-items: center; position: relative;">
+                <button id="openAddModal" class="btn-add">➕ Thêm công việc</button>
+            </div>
             <!-- Sidebar Menu -->
             <div id="sideMenuPanel" class="side-menu-panel">
                 <div class="side-menu-header">
@@ -76,15 +78,109 @@
                     <button id="menuCloseBtn" class="menu-close-btn">&times;</button>
                 </div>
                 <div class="side-menu-content">
-                    <!-- SECTION 1: Lựa chọn ngày NB -->
+                    <!-- SECTION 1: Quản lý ngày NB -->
                     <div class="menu-section">
-                        <h4 class="menu-section-title">🏷️ Lựa chọn ngày NB</h4>
+                        <h4 class="menu-section-title">🛠️ Quản lý ngày NB</h4>
                         <button id="selectNbDayBtn" class="btn-check-nb menu-btn">Lựa chọn ngày NB</button>
+                        <div style="margin-top:12px;">
+                            <label class="menu-form-label">Chọn NB cần chỉnh:</label>
+                            <input type="date" id="manageNbDate" class="menu-form-input">
+                        </div>
+                        <button id="deleteNbBtn" class="btn-delete" style="width:100%; margin-top:8px;">🗑️ Xóa NB</button>
+                        <button id="changeNbBtn" class="btn-edit" style="width:100%; margin-top:4px;">🔄 Đổi ngày NB</button>
+                    </div>
+                    <!-- SECTION 1b: Quản lý ngày NL -->
+                    <div class="menu-section">
+                        <h4 class="menu-section-title">🛠️ Quản lý ngày NL</h4>
+                        <button id="selectNlDayBtn" class="btn-check-nl menu-btn">Lựa chọn ngày NL</button>
+                        <div style="margin-top:12px;">
+                            <label class="menu-form-label">Chọn NL cần chỉnh:</label>
+                            <input type="date" id="manageNlDate" class="menu-form-input">
+                        </div>
+                        <button id="deleteNlBtn" class="btn-delete" style="width:100%; margin-top:8px;">🗑️ Xóa NL</button>
+                        <button id="changeNlBtn" class="btn-edit" style="width:100%; margin-top:4px;">🔄 Đổi ngày NL</button>
                     </div>
                     <!-- SECTION 2: Nhân bản công việc -->
                     <div class="menu-section">
                         <h4 class="menu-section-title">📅 Nhân bản công việc</h4>
                         <button id="duplicateDayBtn" class="btn-duplicate-day menu-btn">Nhân bản công việc</button>
+                    </div>
+                    <!-- SECTION 2b: Xuất công việc -->
+                    <div class="menu-section">
+                        <h4 class="menu-section-title">📤 Xuất công việc</h4>
+                        <select id="exportType" class="menu-form-input">
+                            <option value="day">Ngày</option>
+                            <option value="week">Tuần</option>
+                            <option value="month">Tháng</option>
+                            <option value="range">Khoảng</option>
+                        </select>
+                        <div id="exportWeek" style="margin-top:12px; display:none;">
+                            <label class="menu-form-label">Chọn tuần:</label>
+                            <select id="exportWeekSelect" class="menu-form-input" style="margin-bottom:10px;"></select>
+                        </div>
+                        <div id="exportMonth" style="margin-top:12px; display:none;">
+                            <label class="menu-form-label">Chọn tháng:</label>
+                            <input type="month" id="exportMonthPicker" class="menu-form-input">
+                        </div>
+                        <div id="exportRange" style="margin-top:12px; display:none;">
+                            <label class="menu-form-label">Từ ngày:</label>
+                            <input
+                                type="date"
+                                id="exportRangeStart"
+                                class="menu-form-input"
+                                style="margin-bottom:8px;"
+                            >
+                            <label class="menu-form-label">Đến ngày:</label>
+                            <input type="date" id="exportRangeEnd" class="menu-form-input">
+                        </div>
+                        <button id="exportConfirmBtn" class="btn-add" style="width:100%; margin-top:8px; background:#28a745;">📄 Xuất</button>
+                    </div>
+                    <!-- SECTION 2c: Nhập công việc -->
+                    <div class="menu-section">
+                        <h4 class="menu-section-title">📥 Nhập công việc</h4>
+                        <label class="menu-form-label">Loại import:</label>
+                        <select id="importType" class="menu-form-input" style="margin-bottom:8px;">
+                            <option value="auto">Tự động (theo sheet/Ngày)</option>
+                            <option value="week">Tuần</option>
+                            <option value="month">Tháng</option>
+                            <option value="range">Khoảng</option>
+                        </select>
+                        <div id="importWeek" style="display:none; margin-bottom:8px;">
+                            <label class="menu-form-label">Chọn tuần:</label>
+                            <select id="importWeekSelect" class="menu-form-input"></select>
+                        </div>
+                        <div id="importMonth" style="display:none; margin-bottom:8px;">
+                            <label class="menu-form-label">Chọn tháng:</label>
+                            <input type="month" id="importMonthPicker" class="menu-form-input">
+                        </div>
+                        <div id="importRange" style="display:none; margin-bottom:8px;">
+                            <label class="menu-form-label">Từ ngày:</label>
+                            <input
+                                type="date"
+                                id="importRangeStart"
+                                class="menu-form-input"
+                                style="margin-bottom:8px;"
+                            >
+                            <label class="menu-form-label">Đến ngày:</label>
+                            <input type="date" id="importRangeEnd" class="menu-form-input">
+                        </div>
+                        <label class="menu-form-label">Chọn file .xlsx (cấu trúc giống file xuất):</label>
+                        <input
+                            type="file"
+                            id="importFile"
+                            accept=".xlsx"
+                            class="menu-form-input"
+                            style="margin-bottom:8px;"
+                        >
+                        <div style="display:flex; gap:8px;">
+                            <button id="importConfirmBtn" class="btn-add" style="flex:1; background:#007bff;">📥 Nhập</button>
+                            <button id="importPreviewBtn" class="btn-edit" style="flex:1; background:#6c757d;">🔎 Xem trước</button>
+                        </div>
+                        <small style="display:block; margin-top:8px; color:#666;">
+                            Hỗ trợ file nhiều sheet (mỗi sheet là 1 ngày) hoặc 1 sheet có cột "Ngày". Với
+                            <strong>Tuần/Tháng</strong>
+                            , nếu file không chứa cột "Ngày" thì các hàng sẽ được gán ngày bắt đầu tương ứng.
+                        </small>
                     </div>
                     <!-- SECTION 3: Xóa công việc -->
                     <div class="menu-section">
@@ -188,6 +284,48 @@
                     </div>
                 </div>
             </div>
+            <!-- Modal lựa chọn ngày NL -->
+            <div id="nlSelectModal" class="modal">
+                <div class="modal-content nl-modal-content">
+                    <span class="close" id="closeNlSelectModal">&times;</span>
+                    <h2 style="margin-top: 0; color: #333; text-align: center; font-size: 22px; margin-bottom: 20px;">🏖️ Lựa chọn ngày Nghỉ Lễ (NL)</h2>
+                    <!-- Section chọn Năm/Tháng -->
+                    <div id="nlMonthSelectSection" style="margin-bottom: 20px;">
+                        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                            <div style="flex: 1;">
+                                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Chọn Năm:</label>
+                                <select id="nlYearSelect" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;"></select>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px;" id="nlMonthList"></div>
+                    </div>
+                    <!-- Section lịch (ẩn ban đầu) -->
+                    <div id="nlCalendarSelectSection" style="display: none; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <button id="nlCalendarBack" style="padding: 8px 14px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">← Quay lại</button>
+                            <h3 id="nlCalendarTitle" style="margin: 0; font-size: 18px; color: #333;"></h3>
+                            <div style="width: 100px;"></div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 10px; text-align: center; font-weight: 600; color: #555; font-size: 13px;">
+                            <div style="padding: 8px 0;">Thứ hai</div>
+                            <div style="padding: 8px 0;">Thứ ba</div>
+                            <div style="padding: 8px 0;">Thứ tư</div>
+                            <div style="padding: 8px 0;">Thứ năm</div>
+                            <div style="padding: 8px 0;">Thứ sáu</div>
+                            <div style="padding: 8px 0;">Thứ bảy</div>
+                            <div style="padding: 8px 0;">Chủ nhật</div>
+                        </div>
+                        <div id="nlCalendarDays" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 15px;"></div>
+                        <!-- Danh sách ngày được chọn -->
+                        <div id="nlSelectedDatesContainer" style="margin-bottom: 15px; padding: 12px; background: #fff0f6; border-radius: 6px; border: 1px solid #ffccd5;">
+                            <div style="font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">Ngày được chọn:</div>
+                            <div id="nlSelectedDatesList" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+                            <div id="nlNoDatesMsg" style="color: #999; font-size: 14px;">Chưa chọn ngày nào</div>
+                        </div>
+                        <button id="nlConfirmButton" style="width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px;">✔️ Xác nhận</button>
+                    </div>
+                </div>
+            </div>
             <!-- Modal thêm / sửa công việc -->
             <div id="taskModal" class="modal">
                 <div class="modal-content">
@@ -275,6 +413,7 @@
         </div>
         <!-- ========== SCRIPT ========== -->
         <!-- Firebase Realtime Database -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
         <script type="module" src="firebase.js"></script>
         <!-- Logic chính của ứng dụng -->
         <script type="module" src="script.js"></script>
