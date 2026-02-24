@@ -701,27 +701,32 @@ async function exportTasksForCollection(taskList, includeDate) {
 
 // Hàm chính gọi theo loại
 async function performExport(type) {
-    if (type === 'day') {
-        exportTasksForDay();
-    } else if (type === 'week') {
-        const sel = document.getElementById('exportWeekSelect');
-        if (!sel || !sel.value) return alert('Vui lòng chọn tuần!');
-        const [y, m, w] = sel.value.split('|');
-        const tasks = await fetchTasksForWeek(y, m, w);
-        await exportTasksForCollection(tasks, true);
-    } else if (type === 'month') {
-        const mp = document.getElementById('exportMonthPicker');
-        if (!mp || !mp.value) return alert('Vui lòng chọn tháng!');
-        const [y, m] = mp.value.split('-');
-        const tasks = await fetchTasksForMonth(y, m);
-        await exportTasksForCollection(tasks, true);
-    } else if (type === 'range') {
-        const s = document.getElementById('exportRangeStart').value;
-        const e = document.getElementById('exportRangeEnd').value;
-        if (!s || !e) return alert('Vui lòng chọn cả ngày bắt đầu và kết thúc!');
-        if (s > e) return alert('Ngày bắt đầu phải <= ngày kết thúc');
-        const tasks = await fetchTasksForRange(s, e);
-        await exportTasksForCollection(tasks, true);
+    showLoading();
+    try {
+        if (type === 'day') {
+            exportTasksForDay();
+        } else if (type === 'week') {
+            const sel = document.getElementById('exportWeekSelect');
+            if (!sel || !sel.value) return alert('Vui lòng chọn tuần!');
+            const [y, m, w] = sel.value.split('|');
+            const tasks = await fetchTasksForWeek(y, m, w);
+            await exportTasksForCollection(tasks, true);
+        } else if (type === 'month') {
+            const mp = document.getElementById('exportMonthPicker');
+            if (!mp || !mp.value) return alert('Vui lòng chọn tháng!');
+            const [y, m] = mp.value.split('-');
+            const tasks = await fetchTasksForMonth(y, m);
+            await exportTasksForCollection(tasks, true);
+        } else if (type === 'range') {
+            const s = document.getElementById('exportRangeStart').value;
+            const e = document.getElementById('exportRangeEnd').value;
+            if (!s || !e) return alert('Vui lòng chọn cả ngày bắt đầu và kết thúc!');
+            if (s > e) return alert('Ngày bắt đầu phải <= ngày kết thúc');
+            const tasks = await fetchTasksForRange(s, e);
+            await exportTasksForCollection(tasks, true);
+        }
+    } finally {
+        hideLoading();
     }
 }
 
@@ -1087,9 +1092,16 @@ function loadTasks(ds) {
                     note: t.note,
                     startDate: t.startDate
                 };
-
-                await push(tasksRef(y, m, w, ds), newTask);
-                alert("🔁 Đã nhân bản công việc!");
+                showLoading();
+                try {
+                    await push(tasksRef(y, m, w, ds), newTask);
+                    alert("🔁 Đã nhân bản công việc!");
+                } catch (e) {
+                    console.error(e);
+                    alert("❌ Lỗi khi nhân bản");
+                } finally {
+                    hideLoading();
+                }
             };
 
             // Nút xóa công việc
@@ -1102,6 +1114,7 @@ function loadTasks(ds) {
                 const confirmDelete = confirm("Bạn có chắc muốn xóa công việc này không?");
 
                 if (!confirmDelete) return;
+                showLoading();
 
                 try {
                     await remove(tasksRef(y, m, w, ds, k));
@@ -1109,6 +1122,8 @@ function loadTasks(ds) {
                 } catch (error) {
                     alert("❌ Có lỗi xảy ra khi xóa!");
                     console.error(error);
+                } finally {
+                    hideLoading();
                 }
             };
 
@@ -1180,6 +1195,7 @@ if (saveTaskBtn) {
             note: noteInput.value,
             startDate: selectedDate
         };
+        showLoading();
         try {
             if (taskIdField.value) {
                 await update(tasksRef(y, m, w, selectedDate, taskIdField.value), data);
@@ -1192,15 +1208,17 @@ if (saveTaskBtn) {
         } catch (error) {
             console.error(error);
             alert("\u274c Có lỗi xảy ra khi lưu công việc!");
+        } finally {
+            hideLoading();
         }
     };
 }
 
 // Nút xuất nhanh cho ngày hiện tại (vẫn nằm cạnh thêm công việc)
 if (document.getElementById("exportBtn")) {
-    document.getElementById("exportBtn").onclick = () => {
+    document.getElementById("exportBtn").onclick = async () => {
         if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
-        performExport('day');
+        await performExport('day');
     };
 }
 

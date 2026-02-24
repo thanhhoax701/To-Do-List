@@ -24,6 +24,17 @@ const newRole = document.getElementById('newRole'); // Dropdown role user
 // ========== BIẾN TOÀN CỤC ==========
 let editingUserId = null; // Lưu ID user đang chỉnh sửa (null = thêm mới)
 
+// ---------- loading helpers for admin page ----------
+function showLoadingAdmin() {
+    if (addUserBtn) addUserBtn.disabled = true;
+    if (cancelEditBtn) cancelEditBtn.disabled = true;
+}
+function hideLoadingAdmin() {
+    if (addUserBtn) addUserBtn.disabled = false;
+    if (cancelEditBtn) cancelEditBtn.disabled = false;
+}
+
+
 // ========== PHÂN LOẠI ROLE VÀ HIỂN THỊ ==========
 // Định nghĩa các role và icon/label tương ứng
 const roleDisplay = {
@@ -175,10 +186,13 @@ function renderUsers(usersObj) {
                 el.querySelector('.btn-delete').onclick = async (e) => {
                     e.preventDefault();
                     if (!confirm('Xóa người dùng "' + (u.name || 'User') + '" này?')) return;
+                    showLoadingAdmin();
                     try {
                         await remove(ref(db, `users/${e.target.dataset.key}`));
                     } catch (error) {
                         alert('Lỗi khi xóa người dùng: ' + error.message);
+                    } finally {
+                        hideLoadingAdmin();
                     }
                 };
             });
@@ -221,6 +235,7 @@ addUserBtn.onclick = async () => {
     if (!name) return alert('Vui lòng nhập tên người dùng');
     if (!pin || pin.length !== 4) return alert('PIN phải đủ 4 chữ số');
 
+    showLoadingAdmin();
     try {
         const userData = { name, pin, role };
 
@@ -262,6 +277,8 @@ addUserBtn.onclick = async () => {
     } catch (e) {
         console.error(e);
         alert('❌ Có lỗi: ' + (e.message || 'Không xác định'));
+    } finally {
+        hideLoadingAdmin();
     }
 };
 
