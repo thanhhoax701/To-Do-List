@@ -105,11 +105,33 @@ let multiDates = [];
 let nbDays = {}; // Format: {"YYYY-MM-DD": true}
 let nlDays = {}; // Format: {"YYYY-MM-DD": true}  -- ngày Nghỉ lễ
 
+// ---------- user helpers ----------
+function getCurrentUser() {
+    return JSON.parse(sessionStorage.getItem('user') || 'null');
+}
+function getCurrentUserId() {
+    const u = getCurrentUser();
+    return u ? u.key : null;
+}
+
+function tasksRef(...parts) {
+    const uid = getCurrentUserId();
+    return ref(db, `tasks/${uid}${parts.length ? '/' + parts.join('/') : ''}`);
+}
+function nbRef(...parts) {
+    const uid = getCurrentUserId();
+    return ref(db, `nbDays/${uid}${parts.length ? '/' + parts.join('/') : ''}`);
+}
+function nlRef(...parts) {
+    const uid = getCurrentUserId();
+    return ref(db, `nlDays/${uid}${parts.length ? '/' + parts.join('/') : ''}`);
+}
+
 /* ========== LỊCH ========== */
 // Tải danh sách các ngày NB từ Firebase (cấu trúc: nbDays/YYYY/MM/DD)
 async function loadNbDays() {
     try {
-        const r = ref(db, 'nbDays');
+        const r = nbRef();
         const snap = await get(r);
         nbDays = {};
         if (snap.exists()) {
@@ -134,7 +156,7 @@ async function loadNbDays() {
 // Tải danh sách các ngày NL từ Firebase (cấu trúc: nlDays/YYYY/MM/DD)
 async function loadNlDays() {
     try {
-        const r = ref(db, 'nlDays');
+        const r = nlRef();
         const snap = await get(r);
         nlDays = {};
         if (snap.exists()) {
@@ -160,7 +182,7 @@ async function loadNlDays() {
 async function toggleNbDay(dateStr) {
     try {
         const [year, month, day] = dateStr.split('-');
-        const r = ref(db, `nbDays/${year}/${month}/${day}`);
+        const r = nbRef(year, month, day);
         const snap = await get(r);
         if (snap.exists() && snap.val() === true) {
             // Bỏ đánh dấu NB
@@ -188,7 +210,7 @@ function isNbDay(dateStr) {
 async function toggleNlDay(dateStr) {
     try {
         const [year, month, day] = dateStr.split('-');
-        const r = ref(db, `nlDays/${year}/${month}/${day}`);
+        const r = nlRef(year, month, day);
         const snap = await get(r);
         if (snap.exists() && snap.val() === true) {
             // Bỏ đánh dấu NL
@@ -421,7 +443,7 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
                 // push to firebase
                 const [y, m] = dateVal.split('-');
                 const w = getWeekNumber(dateVal);
-                await push(ref(db, `tasks/${y}/${m}/${w}/${dateVal}`), task);
+                await push(tasksRef(y, m, w, dateVal), task);
                 total++;
             }
         }
@@ -538,7 +560,7 @@ function exportTasksForDay() {
 // Các hàm lấy dữ liệu từ Firebase cho tuần/tháng/khoảng
 async function fetchTasksForWeek(y, m, w) {
     const result = [];
-    const snap = await get(ref(db, `tasks/${y}/${m}/${w}`));
+    const snap = await get(tasksRef(y, m, w));
     if (snap.exists()) {
         snap.forEach(dateSnap => {
             const date = dateSnap.key;
@@ -553,7 +575,7 @@ async function fetchTasksForWeek(y, m, w) {
 
 async function fetchTasksForMonth(y, m) {
     const result = [];
-    const snap = await get(ref(db, `tasks/${y}/${m}`));
+    const snap = await get(tasksRef(y, m));
     if (snap.exists()) {
         snap.forEach(weekSnap => {
             weekSnap.forEach(dateSnap => {
@@ -575,7 +597,7 @@ async function fetchTasksForRange(startDate, endDate) {
         const ds = toYMDLocal(cur);
         const [yy, mm] = ds.split('-');
         const w = getWeekNumber(ds);
-        const snap = await get(ref(db, `tasks/${yy}/${mm}/${w}/${ds}`));
+        const snap = await get(tasksRef(yy, mm, w, ds));
         if (snap.exists()) {
             snap.forEach(taskSnap => {
                 result.push({ date: ds, task: taskSnap.val() });
@@ -987,7 +1009,7 @@ function loadTasks(ds) {
 
     const [y, m] = ds.split("-");
     const w = getWeekNumber(ds);
-    const r = ref(db, `tasks/${y}/${m}/${w}/${ds}`);
+    const r = tasksRef(y, m, w, ds);
 
     // Lắng nghe thay đổi dữ liệu từ Firebase Realtime Database
     onValue(r, snap => {
@@ -1024,7 +1046,7 @@ function loadTasks(ds) {
                 ["Thấp", "Trung bình", "Cao"],
                 t.priority,
                 priorityClass,
-                v => update(ref(db, `tasks/${y}/${m}/${w}/${ds}/${k}`), { priority: v })
+                v => update(tasksRef(y, m, w, ds, k), { priority: v })
             );
 
             // Tạo dropdown chọn trạng thái công việc với màu sắc
@@ -1032,7 +1054,7 @@ function loadTasks(ds) {
                 ["Chưa xử lý", "Đang xử lý", "Đã xử lý"],
                 t.status,
                 statusClass,
-                v => update(ref(db, `tasks/${y}/${m}/${w}/${ds}/${k}`), { status: v })
+                v => update(tasksRef(y, m, w, ds, k), { status: v })
             );
 
             // Vô hiệu hóa select cho member (họ không được phép sửa)
@@ -1066,7 +1088,7 @@ function loadTasks(ds) {
                     startDate: t.startDate
                 };
 
-                await push(ref(db, `tasks/${y}/${m}/${w}/${ds}`), newTask);
+                await push(tasksRef(y, m, w, ds), newTask);
                 alert("🔁 Đã nhân bản công việc!");
             };
 
@@ -1082,7 +1104,7 @@ function loadTasks(ds) {
                 if (!confirmDelete) return;
 
                 try {
-                    await remove(ref(db, `tasks/${y}/${m}/${w}/${ds}/${k}`));
+                    await remove(tasksRef(y, m, w, ds, k));
                     alert("✅ Xóa công việc thành công!");
                 } catch (error) {
                     alert("❌ Có lỗi xảy ra khi xóa!");
@@ -1160,10 +1182,10 @@ if (saveTaskBtn) {
         };
         try {
             if (taskIdField.value) {
-                await update(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}/${taskIdField.value}`), data);
+                await update(tasksRef(y, m, w, selectedDate, taskIdField.value), data);
                 alert("✅ Cập nhật công việc thành công!");
             } else {
-                await push(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}`), data);
+                await push(tasksRef(y, m, w, selectedDate), data);
                 alert("✅ Thêm công việc mới thành công!");
             }
             modal.style.display = "none";
@@ -1900,7 +1922,7 @@ if (nbConfirmButton) {
             for (const dateStr of nbTempSelectedDates) {
                 if (isNlDay(dateStr)) throw new Error('Ngày ' + dateStr + ' đã là NL');
                 const [year, month, day] = dateStr.split('-');
-                const r = ref(db, `nbDays/${year}/${month}/${day}`);
+                const r = nbRef(year, month, day);
                 await set(r, true);
                 nbDays[dateStr] = true;
             }
@@ -1938,7 +1960,7 @@ if (nlConfirmButton) {
             }
             for (const dateStr of nlTempSelectedDates) {
                 const [year, month, day] = dateStr.split('-');
-                const r = ref(db, `nlDays/${year}/${month}/${day}`);
+                const r = nlRef(year, month, day);
                 await set(r, true);
                 nlDays[dateStr] = true;
             }
@@ -1998,7 +2020,7 @@ confirmAdvBtn.onclick = async () => {
 
     try {
         async function getAllWeekTasks(year, month, weekId) {
-            const r = ref(db, `tasks/${year}/${month}/${weekId}`);
+            const r = tasksRef(year, month, weekId);
             const snap = await get(r);
             const allTasks = {};
             if (snap.exists()) {
@@ -2025,7 +2047,7 @@ confirmAdvBtn.onclick = async () => {
                 await showCustomAlert(`🔎 Tìm thấy ${sourceTaskCount} công việc ở tuần ${sw}`);
             } else {
                 // Month: lấy tất cả công việc của tháng
-                const r = ref(db, `tasks/${sy}/${sm}`);
+                const r = tasksRef(sy, sm);
                 const snap = await get(r);
                 sourceTaskCount = 0;
                 if (snap.exists()) {
@@ -2044,7 +2066,7 @@ confirmAdvBtn.onclick = async () => {
             }
         } else {
             // Nhân bản ngày hoặc nhiều ngày: lấy công việc của ngày được chọn
-            const snap = await get(ref(db, `tasks/${sy}/${sm}/${sw}/${selectedDate}`));
+            const snap = await get(tasksRef(sy, sm, sw, selectedDate));
             if (snap.exists()) {
                 allSourceTasks[selectedDate] = [];
                 snap.forEach(ch => {
@@ -2079,7 +2101,7 @@ confirmAdvBtn.onclick = async () => {
                     const ntw = getWeekNumber(newTargetDateStr);
 
                     for (const task of tasksArr) {
-                        await push(ref(db, `tasks/${nty}/${ntm}/${ntw}/${newTargetDateStr}`), {
+                        await push(tasksRef(nty, ntm, ntw, newTargetDateStr), {
                             ...task,
                             startDate: newTargetDateStr
                         });
@@ -2089,7 +2111,7 @@ confirmAdvBtn.onclick = async () => {
                 // Nhân bản ngày: dùng công việc từ selectedDate
                 const tasksArr = allSourceTasks[selectedDate] || [];
                 for (const task of tasksArr) {
-                    await push(ref(db, `tasks/${ty}/${tm}/${tw}/${targetDate}`), {
+                    await push(tasksRef(ty, tm, tw, targetDate), {
                         ...task,
                         startDate: targetDate
                     });
@@ -2179,7 +2201,7 @@ confirmAdvBtn.onclick = async () => {
  * @param {string} weekId - ID của tuần (week1, week2, ...)
  */
 function loadTasksForWeek(y, m, weekId) {
-    const r = ref(db, `tasks/${y}/${m}/${weekId}`);
+    const r = tasksRef(y, m, weekId);
     // Lắng nghe thay đổi dữ liệu từ Firebase Realtime Database
     onValue(r, snap => {
         taskTable.innerHTML = ""; // Xóa bảng công việc cũ
@@ -2234,7 +2256,7 @@ function loadTasksForWeek(y, m, weekId) {
 async function countTasksForDay(date) {
     const [y, m] = date.split("-");
     const w = getWeekNumber(date);
-    const r = ref(db, `tasks/${y}/${m}/${w}/${date}`);
+    const r = tasksRef(y, m, w, date);
     const snap = await get(r);
     let c = 0;
     if (snap.exists()) {
@@ -2254,7 +2276,7 @@ async function countTasksForDay(date) {
 async function countTasksForWeek(date) {
     const [y, m] = date.split("-");
     const w = getWeekNumber(date);
-    const r = ref(db, `tasks/${y}/${m}/${w}`);
+    const r = tasksRef(y, m, w);
     const snap = await get(r);
     let c = 0;
     if (snap.exists()) {
@@ -2274,7 +2296,7 @@ async function countTasksForWeek(date) {
  * @returns {number} Số lượng công việc của tuần đó
  */
 async function countTasksForWeekById(y, m, weekId) {
-    const r = ref(db, `tasks/${y}/${m}/${weekId}`);
+    const r = tasksRef(y, m, weekId);
     const snap = await get(r);
     let c = 0;
     if (snap.exists()) {
@@ -2291,7 +2313,7 @@ async function countTasksForWeekById(y, m, weekId) {
  */
 async function countTasksForMonth(date) {
     const [y, m] = date.split("-");
-    const r = ref(db, `tasks/${y}/${m}`);
+    const r = tasksRef(y, m);
     const snap = await get(r);
     let c = 0;
     if (snap.exists()) {
@@ -2315,7 +2337,7 @@ async function countTasksForMonth(date) {
  */
 async function countDaysAndTasksForMonth(date) {
     const [y, m] = date.split("-");
-    const r = ref(db, `tasks/${y}/${m}`);
+    const r = tasksRef(y, m);
     const snap = await get(r);
     let tasksCount = 0;
     const details = {}; // Lưu chi tiết công việc từng ngày {ngày: số công việc}
@@ -2370,7 +2392,7 @@ async function countDaysAndTasksForMonth(date) {
  *          - details: object chứa số công việc từng ngày {YYYY-MM-DD: count, ...}
  */
 async function countDaysAndTasksForWeekById(y, m, weekId) {
-    const r = ref(db, `tasks/${y}/${m}/${weekId}`);
+    const r = tasksRef(y, m, weekId);
     const snap = await get(r);
     let tasksCount = 0;
     const details = {}; // Lưu chi tiết công việc từng ngày {ngày: số công việc}
@@ -2452,7 +2474,7 @@ if (document.getElementById('deleteDayBtn')) {
 
         showLoading();
         try {
-            await remove(ref(db, `tasks/${y}/${m}/${w}/${selectedDate}`));
+            await remove(tasksRef(y, m, w, selectedDate));
             hideLoading();
             await showCustomAlert(`✅ Đã xóa ${cnt} công việc`);
             taskTable.innerHTML = ""; // Xóa bảng hiển thị
@@ -2508,7 +2530,7 @@ if (document.getElementById('deleteWeekBtn')) {
             // Thực hiện xóa
             showLoading();
             try {
-                await remove(ref(db, `tasks/${y}/${m}/${w}`));
+                await remove(tasksRef(y, m, w));
                 hideLoading();
                 await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc)`);
                 loadTasksForWeek(y, m, w);
@@ -2561,7 +2583,7 @@ if (document.getElementById('deleteMonthBtn')) {
 
             showLoading();
             try {
-                await remove(ref(db, `tasks/${y}/${m}`));
+                await remove(tasksRef(y, m));
                 hideLoading();
                 await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc) của tháng ${m}/${y}`);
                 taskTable.innerHTML = ""; // Xóa bảng hiển thị
@@ -2622,7 +2644,7 @@ if (deleteSelect) {
                     const w = cb.dataset.week;
                     const d = cb.dataset.date;
                     const k = cb.dataset.key;
-                    await remove(ref(db, `tasks/${y}/${m}/${w}/${d}/${k}`));
+                    await remove(tasksRef(y, m, w, d, k));
                 }
             } finally {
                 hideLoading();
