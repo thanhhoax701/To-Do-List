@@ -1,9 +1,9 @@
-// ========== IMPORT FIREBASE ==========
+// ========== NHẬP FIREBASE ==========
 // Nhập Firebase Realtime Database và các hàm cần thiết để thao tác với database
 import { db } from "./firebase.js";
 import { ref, push, onValue, remove, update, get, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// ========== GOOGLE SHEETS SYNCHRONIZATION ==========
+// ========== ĐỒNG BỘ GOOGLE SHEETS ==========
 // Các hằng số tương ứng với credentials đã tạo ở index.html
 const GS_API_KEY = 'AIzaSyAzSlJ6KNuolSKWVqmvwefZRFDsYw6iO3o'; // phải trùng với GOOGLE_API_KEY ở index.html
 const GS_CLIENT_ID = '909540518349-euuig3pibn1npr2njtj8s0d6a9k9nlgd.apps.googleusercontent.com';
@@ -59,7 +59,7 @@ async function syncDayToSheet(dateStr) {
     });
 }
 
-// end of google sheets sync helpers
+// kết thúc phần trợ giúp đồng bộ Sheets
 
 /* ========== DOM ELEMENTS ========== */
 // Phần tử lịch và tiêu đề tháng

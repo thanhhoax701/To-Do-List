@@ -2,13 +2,13 @@
 
 ## 📋 Danh sách các phần chính và chú thích
 
-### 1. **IMPORT FIREBASE** (Dòng 1-2)
+### 1. **NHẬP FIREBASE** (Dòng 1-2)
 - ✅ Đã cập nhật Tiếng Việt
 - Nhập Firebase Realtime Database và các hàm cần thiết
 
 ---
 
-### 2. **DOM ELEMENTS** (Dòng 4-57)
+### 2. **PHẦN TỬ DOM** (Dòng 4-57)
 - ✅ Đã cập nhật Tiếng Việt chi tiết
 - Lấy các phần tử HTML từ DOM để sử dụng trong JavaScript
 
@@ -283,8 +283,8 @@
 
 | Phần | Trạng thái | % Chi tiết |
 |------|-----------|-----------|
-| Import | ✅ | 100% |
-| DOM Elements | ✅ | 90% |
+| Nhập | ✅ | 100% |
+| Phần tử DOM | ✅ | 90% |
 | Biến Toàn Cục | ✅ | 80% |
 | Hàm Lịch | ⚠️ | 60% |
 | Hỗ Trợ Ngày Tháng | ⚠️ | 70% |
