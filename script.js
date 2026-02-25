@@ -301,6 +301,24 @@ function pad(n) { return String(n).padStart(2, "0"); }
 
 // ========== HỖ TRỢ NGÀY THÁNG ==========
 
+// trả về chỉ phần ngày (2 chữ số) từ chuỗi YYYY-MM-DD hoặc DD-MM-YYYY
+function formatDayOnly(ds) {
+    if (!ds && ds !== 0) return ds;
+    const s = String(ds).trim();
+    // nếu là kiểu đầy đủ Y-M-D
+    const parts = s.split("-");
+    if (parts.length === 3) {
+        // phần thứ 3 là ngày
+        return pad(Number(parts[2]));
+    }
+    // nếu chỉ là số hoặc DD/MM/YYYY dạng được trước đó
+    if (/^\d{1,2}$/.test(s)) {
+        return pad(Number(s));
+    }
+    // mặc định trả về nguyên văn
+    return s;
+}
+
 // ========== XUẤT XLSX ==========
 // Các cột có thể xuất (theo thứ tự trình bày trong bảng)
 const ALL_EXPORT_COLUMNS = ["STT", "Nội dung", "Đơn vị", "Thời gian", "Mức độ", "Trạng thái", "Ghi chú"];
@@ -309,21 +327,110 @@ const ALL_EXPORT_COLUMNS = ["STT", "Nội dung", "Đơn vị", "Thời gian", "M
  * Viết một mảng dữ liệu (array of arrays) thành file xlsx và tải xuống.
  * `header` là mảng tiêu đề cột, `rows` là mảng hàng tương ứng.
  */
+// Tính toán chiều rộng cột dựa trên nội dung (số ký tự lớn nhất)
+function computeColWidths(header, rows) {
+    const all = [header, ...rows];
+    const widths = [];
+    const MAX_CONTENT = 50; // giới hạn chiều rộng ký tự cho cột Nội dung
+    for (let c = 0; c < header.length; c++) {
+        let max = header[c] ? String(header[c]).length : 0;
+        for (let r = 0; r < rows.length; r++) {
+            const cell = rows[r][c];
+            if (cell != null) {
+                const len = String(cell).length;
+                if (len > max) max = len;
+            }
+        }
+        // nếu là cột Nội dung, áp dụng giới hạn
+        if (header[c] === 'Nội dung' && max > MAX_CONTENT) {
+            max = MAX_CONTENT;
+        }
+        // thêm một chút padding
+        widths[c] = { wch: max + 2 };
+    }
+    return widths;
+}
+
+// Áp dụng style chung lên worksheet export: header bold, wrap nội dung, set widths, căn giữa cột A
+function styleWorksheet(ws, header, rows) {
+    // hàng đầu bold
+    for (let C = 0; C < header.length; C++) {
+        const cellRef = XLSX.utils.encode_cell({ r: 0, c: C });
+        if (!ws[cellRef]) continue;
+        ws[cellRef].s = ws[cellRef].s || {};
+        ws[cellRef].s.font = ws[cellRef].s.font || {};
+        ws[cellRef].s.font.bold = true;
+    }
+    // wrap text ở cột Nội dung (thường là cột B)
+    const contentColIndex = header.findIndex(h => h === 'Nội dung');
+    if (contentColIndex !== -1) {
+        for (let r = 1; r < rows.length + 1; r++) {
+            const cellRef = XLSX.utils.encode_cell({ r, c: contentColIndex });
+            if (!ws[cellRef]) continue;
+            ws[cellRef].s = ws[cellRef].s || {};
+            ws[cellRef].s.alignment = ws[cellRef].s.alignment || {};
+            ws[cellRef].s.alignment.wrapText = true;
+            // đặt vertical top để nội dung hiển thị gọn
+            ws[cellRef].s.alignment.vertical = 'top';
+        }
+    }
+    // căn giữa toàn bộ cột A
+    for (let r = 0; r < rows.length + 1; r++) {
+        const cellRef = XLSX.utils.encode_cell({ r, c: 0 });
+        if (!ws[cellRef]) continue;
+        ws[cellRef].s = ws[cellRef].s || {};
+        ws[cellRef].s.alignment = ws[cellRef].s.alignment || {};
+        ws[cellRef].s.alignment.horizontal = 'center';
+    }
+    ws['!cols'] = computeColWidths(header, rows);
+}
+
 function writeDataToXLSX(header, rows) {
     const data = [header, ...rows];
     const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // áp dụng style: hàng đầu bold
+    for (let C = 0; C < header.length; C++) {
+        const cellRef = XLSX.utils.encode_cell({ r: 0, c: C });
+        if (!ws[cellRef]) continue;
+        ws[cellRef].s = ws[cellRef].s || {};
+        ws[cellRef].s.font = ws[cellRef].s.font || {};
+        ws[cellRef].s.font.bold = true;
+    }
+
+    // bọc văn bản ở cột "Nội dung"
+    const contentColIndex = header.findIndex(h => h === 'Nội dung');
+    if (contentColIndex !== -1) {
+        for (let r = 1; r < data.length; r++) {
+            const cellRef = XLSX.utils.encode_cell({ r, c: contentColIndex });
+            if (!ws[cellRef]) continue;
+            ws[cellRef].s = ws[cellRef].s || {};
+            ws[cellRef].s.alignment = ws[cellRef].s.alignment || {};
+            ws[cellRef].s.alignment.wrapText = true;
+        }
+    }
+
+    // đặt chiều rộng cột
+    ws['!cols'] = computeColWidths(header, rows);
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Tasks');
     const now = new Date();
     const filename = `tasks_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}.xlsx`;
-    XLSX.writeFile(wb, filename);
+    // xuất với cellStyles để font bold và căn giữa được bảo toàn
+    XLSX.writeFile(wb, filename, { bookType: 'xlsx', cellStyles: true });
 }
 
 // ==== IMPORT XLSX FUNCTIONS ====
-// Nhận 1 chuỗi ngày từ sheet name hoặc cell, cố parse thành YYYY-MM-DD
+// Nhận 1 chuỗi ngày từ sheet name hoặc cell, cố parse thành YYYY-MM-DD hoặc chỉ ngày (DD)
 function normalizeDateString(s) {
     if (!s && s !== 0) return null;
     s = String(s).trim();
+    // ngày chỉ gồm 1-2 chữ số
+    const dayOnlyMatch = s.match(/^(\d{1,2})$/);
+    if (dayOnlyMatch) {
+        return pad(Number(dayOnlyMatch[1]));
+    }
     // nếu đã ở dạng YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
     // dạng DD-MM-YYYY
@@ -357,7 +464,7 @@ function normalizeDateString(s) {
 function parseDateFromSheetName(name) {
     if (!name) return null;
     const n = name.trim();
-    // try dd-mm-yyyy
+    // normalize will now also handle day-only strings
     const d = normalizeDateString(n);
     return d;
 }
@@ -379,7 +486,7 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
             const idxMap = {};
             header.forEach((h, i) => { idxMap[h] = i; });
 
-            // determine date for this sheet if possible
+            // determine date for this sheet if possible (could be full or just day)
             let sheetDate = parseDateFromSheetName(sheetName);
             // if not parseable and only one sheet, try infer from filename (tasks_YYYYMMDD)
             if (!sheetDate && wb.SheetNames.length === 1 && filename) {
@@ -423,6 +530,38 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
                 // determine date for this row: prefer 'Ngày' column
                 let dateVal = null;
                 if (idxMap['Ngày'] !== undefined) dateVal = normalizeDateString(row[idxMap['Ngày']]);
+                // nếu vẫn chưa có ngày và giá trị cột/ngày sheet chỉ có ngày, cố ghép với tháng/năm từ context
+                if (!dateVal) {
+                    const rawCell = row[idxMap['Ngày']];
+                    const cellTrim = String(rawCell || '').trim();
+                    const sheetTrim = String(sheetDate || '').trim();
+                    // ngày chỉ gồm 1-2 chữ số trong cell hoặc sheet name
+                    let dayOnly = null;
+                    if (/^\d{1,2}$/.test(cellTrim)) dayOnly = pad(Number(cellTrim));
+                    else if (/^\d{1,2}$/.test(sheetTrim)) dayOnly = pad(Number(sheetTrim));
+                    if (dayOnly) {
+                        // xác định tháng/năm từ giá trị khả thi
+                        let base = null;
+                        if (sheetDate && /^\d{4}-\d{2}-\d{2}$/.test(sheetDate)) base = sheetDate;
+                        else if (importDefaultDate && /^\d{4}-\d{2}-\d{2}$/.test(importDefaultDate)) base = importDefaultDate;
+                        else {
+                            // try infer month/year from filename if possible (e.g. tasks_20260205.xlsx)
+                            if (!base && filename) {
+                                const m2 = filename.match(/(\d{4})(\d{2})/);
+                                if (m2) {
+                                    base = `${m2[1]}-${m2[2]}-01`;
+                                }
+                            }
+                            if (!base) {
+                                const now = new Date();
+                                base = toYMDLocal(now);
+                            }
+                        }
+                        const [yy, mm] = base.split('-');
+                        dateVal = `${yy}-${mm}-${dayOnly}`;
+                    }
+                }
+                if (!dateVal && importDefaultDate) dateVal = importDefaultDate;
                 if (!dateVal && sheetDate) dateVal = sheetDate;
                 if (!dateVal && importDefaultDate) dateVal = importDefaultDate;
                 if (!dateVal) {
@@ -624,7 +763,7 @@ async function exportTasksForCollection(taskList, includeDate) {
     for (const { date, task } of taskList) {
         const row = [];
         if (selectedCols.includes('STT')) row.push(idx++);
-        if (includeDate) row.push(date);
+        if (includeDate) row.push(formatDayOnly(date));
         for (const c of selectedCols) {
             if (c === 'STT') continue;
             const map = {
@@ -659,6 +798,7 @@ async function exportTasksForCollection(taskList, includeDate) {
 
     // nhiều ngày: tạo workbook với mỗi sheet là 1 ngày
     const wb = XLSX.utils.book_new();
+    const usedNames = new Set();
     for (const d of dates) {
         const tasksOfDay = grouped[d];
         const sheetHeader = [];
@@ -687,8 +827,15 @@ async function exportTasksForCollection(taskList, includeDate) {
         }
 
         const ws = XLSX.utils.aoa_to_sheet([sheetHeader, ...sheetRows]);
-        // Sheet name: format DD-MM-YYYY (safe and short)
-        let sheetName = formatDisplayDate(d);
+        // apply styling (bold header, widths, wrap)
+        styleWorksheet(ws, sheetHeader, sheetRows);
+        // Sheet name: format chỉ ngày (DD) để phù hợp yêu cầu mới
+        let sheetName = formatDayOnly(d);
+        // nếu tên này đã sử dụng (ví dụ cùng số ngày của tháng khác), chuyển sang định dạng đầy đủ
+        if (usedNames.has(sheetName)) {
+            sheetName = formatDisplayDate(d);
+        }
+        usedNames.add(sheetName);
         // ensure sheet name <=31 chars and remove illegal characters
         sheetName = sheetName.replace(/[\\/*?:\[\]]/g, '_').slice(0, 31);
         XLSX.utils.book_append_sheet(wb, ws, sheetName);

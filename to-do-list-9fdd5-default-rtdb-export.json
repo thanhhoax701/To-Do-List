@@ -7,6 +7,10 @@
           "21": true,
           "07": true,
           "09": true
+        },
+        "04": {
+          "11": true,
+          "07": true
         }
       }
     },
@@ -333,34 +337,52 @@
         "02": {
           "week1": {
             "2026-02-01": {
-              "-OmD2u77W0EBORu-rhfF": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "-OmHMGTzB_mL5ca-SzrO": {
+                "content": "Kiểm tra nguồn UPS trong phòng Server có báo đỏ hoặc kêu hú hay không.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-01",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2uAJoqTdjJ20_aT6": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "-OmHMGXO91O31aFaHeZ_": {
+                "content": "Kiểm tra các website đang có: Bán Hàng, Dịch vụ, App ZNS của Hồng Đức và Hòa Đức",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-01",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2uDSZLqIPFeXDY1s": {
-                "content": "Kiểm tra trạng thái các mẫu gửi Hồng Đức và Hòa Đức.",
+              "-OmHMG_nJj1g3B1pSjmA": {
+                "content": "Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng Hồng Đức. Theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-01",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2uGiaqSDNIe6onhf": {
+              "-OmHMGdDB3PrBOgIAmy9": {
+                "content": "Kiểm tra website Zalo OA và check số dư của website Zalo ZNS",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-01",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMGgep8mfmEtJzf-3": {
+                "content": "Kiểm tra trạng thái, lịch sử gửi của các mẫu gửi Hồng Đức (BO, CMSN,…) và Hòa Đức.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-01",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMGk3PXQV4tAt_QiQ": {
                 "content": "Hỗ trợ xử lý khi xuất hiện lỗi cuộc gọi ở CSKH, toàn bộ cửa hàng.",
                 "duration": "Khoảng 30p thực hiện",
                 "note": "Khi có yêu cầu",
@@ -369,7 +391,7 @@
                 "status": "Đã xử lý",
                 "unit": "Văn Phòng và Cửa Hàng"
               },
-              "-OmD2uJoRuEUYqi0tYV6": {
+              "-OmHMGnUQACyI4Q2v2jF": {
                 "content": "Hỗ trợ kết nối, sửa máy in ở Văn Phòng và Cửa Hàng.",
                 "duration": "Khoảng 30p thực hiện",
                 "note": "Khi có yêu cầu",
@@ -378,10 +400,10 @@
                 "status": "Đã xử lý",
                 "unit": "Văn Phòng và Cửa Hàng"
               },
-              "-OmD2uN4IB2nHOR8EIwj": {
+              "-OmHMGqrpsV6ob2mLTag": {
                 "content": "Cài đặt Bravo vào Laptop của anh Thạnh BH HĐ 1",
                 "duration": "Khoảng 15p",
-                "note": "Đang chờ anh Hải duyệt máy",
+                "note": "Anh Hải duyệt máy",
                 "priority": "Thấp",
                 "startDate": "2026-02-01",
                 "status": "Đã xử lý",
@@ -391,34 +413,52 @@
           },
           "week2": {
             "2026-02-02": {
-              "-OmD2uQCyfDKBA4vJp3Q": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "-OmHMGuFg1WFhYkDoVlL": {
+                "content": "Kiểm tra nguồn UPS trong phòng Server có báo đỏ hoặc kêu hú hay không.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-02",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2uTNU50wDlJEM3nl": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "-OmHMGxefj2EfJ0FThEn": {
+                "content": "Kiểm tra các website đang có: Bán Hàng, Dịch vụ, App ZNS của Hồng Đức và Hòa Đức",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-02",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2uWXAROGRWD-Wm2a": {
-                "content": "Kiểm tra trạng thái các mẫu gửi Hồng Đức và Hòa Đức.",
+              "-OmHMH00mRHK-cXje3PM": {
+                "content": "Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng Hồng Đức. Theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-02",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2uZiVWd4QE_KHe2z": {
+              "-OmHMH3Q_KrS2xBNIvoi": {
+                "content": "Kiểm tra website Zalo OA và check số dư của website Zalo ZNS",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-02",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMH6mJguKGIAUSeSR": {
+                "content": "Kiểm tra trạng thái, lịch sử gửi của các mẫu gửi Hồng Đức (BO, CMSN,…) và Hòa Đức.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-02",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMHABLIHq5o8vCnbO": {
                 "content": "Hỗ trợ xử lý khi xuất hiện lỗi cuộc gọi ở CSKH, toàn bộ cửa hàng.",
                 "duration": "Khoảng 30p thực hiện",
                 "note": "Khi có yêu cầu",
@@ -427,7 +467,7 @@
                 "status": "Đã xử lý",
                 "unit": "Văn Phòng và Cửa Hàng"
               },
-              "-OmD2uby6mWi-mCjnNya": {
+              "-OmHMHHQWefN2002KgZ-": {
                 "content": "Hỗ trợ kết nối, sửa máy in ở Hồng Đức Nam Cần Thơ",
                 "duration": "Khoảng 30p thực hiện",
                 "note": "Bộ phận Dịch Vụ ở Hồng Đức Nam Cần Thơ yêu cầu",
@@ -436,7 +476,7 @@
                 "status": "Đang xử lý",
                 "unit": "Văn Phòng và Cửa Hàng"
               },
-              "-OmD2uf9Pei7GxjveVcY": {
+              "-OmHMHKpomOPqOHVJTJC": {
                 "content": "Cài đặt, cấu hình máy chấm công mới cho Hồng Đức 5",
                 "duration": "8h00 - 10h20",
                 "note": "03/02/2026 anh Phong đi H5 lắp",
@@ -445,7 +485,7 @@
                 "status": "Đã xử lý",
                 "unit": "IT, Nhân Sự"
               },
-              "-OmD2uiMyGliSq_a7FUE": {
+              "-OmHMHOF2HxIN6EcaE-W": {
                 "content": "Đồng bộ thời gian cho các máy chấm công cho các Cửa Hàng. Xóa dữ liệu chấm công của Hồng Đức 3, Hồng Đức Mậu Thân.",
                 "duration": "8h45 - 9h00",
                 "note": "Xử lý trên phần mềm Mita Pro",
@@ -454,7 +494,7 @@
                 "status": "Đã xử lý",
                 "unit": "IT"
               },
-              "-OmD2ulaTfT6HR7x3OJc": {
+              "-OmHMHRfu7ekBStuwmrR": {
                 "content": "Kiểm tra 2 danh sách KTĐK giữa anh Hải và Bravo xem có bị lệch nhiều không.",
                 "duration": "8h50",
                 "note": "",
@@ -463,7 +503,7 @@
                 "status": "Đang xử lý",
                 "unit": "IT"
               },
-              "-OmD2uonhGNa1OBW7LS9": {
+              "-OmHMHV2sj8rVXDM9eMl": {
                 "content": "Kiểm tra kết nối máy in cho Dịch Vụ HĐ 12.",
                 "duration": "09h15 - 09h35",
                 "note": "",
@@ -472,7 +512,7 @@
                 "status": "Đang xử lý",
                 "unit": "Hồng Đức 12"
               },
-              "-OmD2us3Od34Xcz68Ihd": {
+              "-OmHMHYOCRw1ToRBRwQe": {
                 "content": "Cài đặt UltraViewer, Bravo cho Mac của anh Thiên Quân Hồng Đức Vĩnh Thạnh.",
                 "duration": "10p",
                 "note": "",
@@ -481,7 +521,7 @@
                 "status": "Đã xử lý",
                 "unit": "Hồng Đức Vĩnh Thạnh"
               },
-              "-OmD2uvE0IgZgQG2KseA": {
+              "-OmHMHaoCnLp_0j7Aok-": {
                 "content": "Kết nối ổ chung cho Laptop của anh Thâu Hồng Đức 11.",
                 "duration": "09h25 - 09h30",
                 "note": "",
@@ -490,7 +530,7 @@
                 "status": "Đã xử lý",
                 "unit": "Hồng Đức 11"
               },
-              "-OmD2uyRsCJUV6hd9SzD": {
+              "-OmHMHeCiLU0RP1dRRiK": {
                 "content": "Soạn file import KTĐK T02/2026.",
                 "duration": "10h25",
                 "note": "",
@@ -499,7 +539,16 @@
                 "status": "Đang xử lý",
                 "unit": "IT"
               },
-              "-OmD2v0ejktObNW8063j": {
+              "-OmHMHhbq40_dpV_ipSZ": {
+                "content": "Lau chùi, xịt bụi CPU cho các máy tính ở Hồng Đức Mậu Thân.",
+                "duration": "13h00 - 15h30",
+                "note": "",
+                "priority": "Cao",
+                "startDate": "2026-02-02",
+                "status": "Đã xử lý",
+                "unit": "Hồng Đức Mậu Thân"
+              },
+              "-OmHMHl1j9HHrqv9LqVM": {
                 "content": "Xử lý ổ C bị đầy của máy tính Kế Toán Hoà Đức",
                 "duration": "16h45 - 17h00",
                 "note": "",
@@ -510,34 +559,52 @@
               }
             },
             "2026-02-03": {
-              "-OmD2v3pkS7YDm1mck9G": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "-OmHMHoTnJux7wWl-uUQ": {
+                "content": "Kiểm tra nguồn UPS trong phòng Server có báo đỏ hoặc kêu hú hay không.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-03",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2v6zauMjOZtkSkAX": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "-OmHMHrtOXrnzvBino7T": {
+                "content": "Kiểm tra các website đang có: Bán Hàng, Dịch vụ, App ZNS của Hồng Đức và Hòa Đức",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-03",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2vAAIrEW1RY8ZpkG": {
-                "content": "Kiểm tra trạng thái các mẫu gửi Hồng Đức và Hòa Đức.",
+              "-OmHMHvHAvDVx3PxmqUV": {
+                "content": "Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng Hồng Đức. Theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-03",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2vDMhsWC_cMJwvMb": {
+              "-OmHMHygNr5orkb8TvyE": {
+                "content": "Kiểm tra website Zalo OA và check số dư của website Zalo ZNS",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-03",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMI156V5-qJE9q7hT": {
+                "content": "Kiểm tra trạng thái, lịch sử gửi của các mẫu gửi Hồng Đức (BO, CMSN,…) và Hòa Đức.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-03",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMI4VX4Y-BUgrOWT1": {
                 "content": "Hỗ trợ xử lý khi xuất hiện lỗi cuộc gọi ở CSKH, toàn bộ cửa hàng.",
                 "duration": "Khoảng 30p thực hiện",
                 "note": "Khi có yêu cầu",
@@ -546,7 +613,7 @@
                 "status": "Đã xử lý",
                 "unit": "Văn Phòng và Cửa Hàng"
               },
-              "-OmD2vGXuXARqiHjcYFg": {
+              "-OmHMI7udn5fQ1PJsddp": {
                 "content": "Hỗ trợ kết nối, sửa máy in ở Văn Phòng và Cửa Hàng.",
                 "duration": "Khoảng 30p thực hiện",
                 "note": "Khi có yêu cầu",
@@ -555,7 +622,7 @@
                 "status": "Đã xử lý",
                 "unit": "Văn Phòng và Cửa Hàng"
               },
-              "-OmD2vJeYIoBVVsXktyC": {
+              "-OmHMIBLLkg12XUVBL-x": {
                 "content": "Hỗ trợ xử lý form Đặt lịch hẹn - Head bị lỗi. Lỗi ở tháng 2 ở HĐ 1, HĐ 2",
                 "duration": "07h45 - 08h30",
                 "note": "Nghi ngờ bị tấn công",
@@ -564,7 +631,7 @@
                 "status": "Đã xử lý",
                 "unit": "IT"
               },
-              "-OmD2vMl1URlwXhw3iCw": {
+              "-OmHMIEni1CGaIIFEIUn": {
                 "content": "Soạn file import KTĐK T02. Import KTĐK T02 RemindDate 07/02/2026.",
                 "duration": "11h50 - 16h",
                 "note": "Mốc thời gian: 8h, 8h (sau), 10h",
@@ -572,37 +639,64 @@
                 "startDate": "2026-02-03",
                 "status": "Đã xử lý",
                 "unit": "IT"
+              },
+              "-OmHMIIBEpmFv-lpK6KC": {
+                "content": "Lau chùi, xịt bụi CPU cho các máy tính ở Hồng Đức Nam Cần Thơ.",
+                "duration": "13h00 - 15h30",
+                "note": "",
+                "priority": "Cao",
+                "startDate": "2026-02-03",
+                "status": "Đã xử lý",
+                "unit": "Hồng Đức Nam Cần Thơ"
               }
             },
             "2026-02-04": {
-              "-OmD2vPsUEvqNMbSCzY8": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "-OmHMILaUklhPILOYhRA": {
+                "content": "Kiểm tra nguồn UPS trong phòng Server có báo đỏ hoặc kêu hú hay không.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-04",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2vSx4EkPnxzs03Dk": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "-OmHMIP-sc1EQbiSUmoQ": {
+                "content": "Kiểm tra các website đang có: Bán Hàng, Dịch vụ, App ZNS của Hồng Đức và Hòa Đức",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-04",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2vW3cx0Tx9BIwFmF": {
-                "content": "Kiểm tra trạng thái các mẫu gửi Hồng Đức và Hòa Đức.",
+              "-OmHMISR2DkDhIggbckx": {
+                "content": "Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng Hồng Đức. Theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-04",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2vZF_MdNP_lbUf49": {
+              "-OmHMIVqIzfT4sotn0Ed": {
+                "content": "Kiểm tra website Zalo OA và check số dư của website Zalo ZNS",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-04",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMIZADYiuct1f2za0": {
+                "content": "Kiểm tra trạng thái, lịch sử gửi của các mẫu gửi Hồng Đức (BO, CMSN,…) và Hòa Đức.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-04",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMIbXrDoYtJujp3M_": {
                 "content": "Hỗ trợ xử lý khi xuất hiện lỗi cuộc gọi ở CSKH, toàn bộ cửa hàng.",
                 "duration": "Khoảng 30p thực hiện",
                 "note": "Khi có yêu cầu",
@@ -611,7 +705,7 @@
                 "status": "Đã xử lý",
                 "unit": "Văn Phòng và Cửa Hàng"
               },
-              "-OmD2vbPcQr9YQ1OmCxA": {
+              "-OmHMIesOozMKWSJCOVb": {
                 "content": "Hỗ trợ kết nối máy in ở Dịch Vụ Hồng Đức Nam Cần Thơ.",
                 "duration": "10p",
                 "note": "",
@@ -620,7 +714,7 @@
                 "status": "Đã xử lý",
                 "unit": "Hồng Đức Nam Cần Thơ"
               },
-              "-OmD2veW4LOQMKPwOgBr": {
+              "-OmHMIiE7D0G9jGXZcWS": {
                 "content": "Import KTĐK T02 RemindDate 17/02/2026.",
                 "duration": "8h - 16h",
                 "note": "Mốc thời gian: 8h, 9h, 10h, 11h",
@@ -631,34 +725,52 @@
               }
             },
             "2026-02-05": {
-              "-OmD2vhc4f9xKwVHR4ML": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "-OmHMIlbldhqNTVkGgJS": {
+                "content": "Kiểm tra nguồn UPS trong phòng Server có báo đỏ hoặc kêu hú hay không.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-05",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2vkjtBRa4qxTSoie": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "-OmHMIoy_fmfQXhpqVPI": {
+                "content": "Kiểm tra các website đang có: Bán Hàng, Dịch vụ, App ZNS của Hồng Đức và Hòa Đức",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-05",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2vnsfqb3ak15dN3g": {
-                "content": "Kiểm tra trạng thái các mẫu gửi Hồng Đức và Hòa Đức.",
+              "-OmHMIsKOyjE753Uqb5l": {
+                "content": "Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng Hồng Đức. Theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-05",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2vqywg9FLAJx1spF": {
+              "-OmHMIvgsQHgZqGCUjS8": {
+                "content": "Kiểm tra website Zalo OA và check số dư của website Zalo ZNS",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-05",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMIz2ZIx_DKo0j9X1": {
+                "content": "Kiểm tra trạng thái, lịch sử gửi của các mẫu gửi Hồng Đức (BO, CMSN,…) và Hòa Đức.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-05",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMJ1PZECKcK9YuSid": {
                 "content": "Hỗ trợ, xử lý dây mạng của máy tính chị Tuyền - CSKH bị rớt xuống đất.",
                 "duration": "5p",
                 "note": "Báo rớt",
@@ -667,7 +779,7 @@
                 "status": "Đã xử lý",
                 "unit": "CSKH"
               },
-              "-OmD2vu4AwY8q1xnAw74": {
+              "-OmHMJ4lDGL87WJmfIkx": {
                 "content": "Hỗ trợ kết nối máy in ở Dịch Vụ Hồng Đức Nam Cần Thơ.",
                 "duration": "Khoảng 30p thực hiện",
                 "note": "Khi có yêu cầu",
@@ -676,7 +788,7 @@
                 "status": "Đã xử lý",
                 "unit": "Hồng Đức Nam Cần Thơ"
               },
-              "-OmD2vxEl-_qpc_WWUEK": {
+              "-OmHMJ8AjfEl3N-Snyp2": {
                 "content": "Hỗ trợ kết nối máy in ở Kế Toán Hồng Đức 9.",
                 "duration": "Khoảng 15p",
                 "note": "PT HĐ 9 yêu cầu",
@@ -685,7 +797,7 @@
                 "status": "Đã xử lý",
                 "unit": "Hồng Đức 9"
               },
-              "-OmD2w-JmmCxqHkNppF-": {
+              "-OmHMJBWAlqVYcbC19in": {
                 "content": "Hỗ trợ kiểm tra Bravo ở Hồng Đức 4 và Hồng Đức 9 bị treo.",
                 "duration": "08h10 - 09h52",
                 "note": "Tắt router mở lại",
@@ -694,7 +806,7 @@
                 "status": "Đã xử lý",
                 "unit": "Hồng Đức 4 và Hồng Đức 9"
               },
-              "-OmD2w2QGCeQmr2fNTsr": {
+              "-OmHMJEsl_H8LLb2Apnp": {
                 "content": "Hỗ trợ kiểm tra Bravo ở Hồng Đức 1 bị chậm, treo liên tục.",
                 "duration": "10h23 - 10h33",
                 "note": "Anh Hải xử lý dealock",
@@ -703,7 +815,7 @@
                 "status": "Đã xử lý",
                 "unit": "Hồng Đức 1"
               },
-              "-OmD2w5apv67HjKU77Co": {
+              "-OmHMJIEk1t9k4EjSAKU": {
                 "content": "Hỗ trợ kiểm tra, xử lý điện thoại dưới Hòa Đức - CSKH không có mạng.",
                 "duration": "11h08 - 11h15",
                 "note": "Đổi nguồn, cắm lại dây mạng từ 31758 qua điện thoại gọi Hồng Đức",
@@ -712,7 +824,7 @@
                 "status": "Đã xử lý",
                 "unit": "CSKH"
               },
-              "-OmD2w8i470RpUKsK1ty": {
+              "-OmHMJLcGMjrwnTmJeFn": {
                 "content": "Xử lý máy in của Tố Như - PKT báo in mà không chạy gì hết.",
                 "duration": "10p",
                 "note": "xóa hết hàng đợi in -> restart Print Spooler -> tắt máy in mở lại",
@@ -723,34 +835,52 @@
               }
             },
             "2026-02-06": {
-              "-OmD2wBq9eG8pM6wGR2d": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "-OmHMJP-KKIQfW5uXFQP": {
+                "content": "Kiểm tra nguồn UPS trong phòng Server có báo đỏ hoặc kêu hú hay không.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-06",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2wEw6OHszz8SbJGn": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "-OmHMJSLIF9tH_TQsfYB": {
+                "content": "Kiểm tra các website đang có: Bán Hàng, Dịch vụ, App ZNS của Hồng Đức và Hòa Đức",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-06",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2wI1gH88Vm_foOJ7": {
-                "content": "Kiểm tra trạng thái các mẫu gửi Hồng Đức và Hòa Đức.",
+              "-OmHMJVhVPqGQQCHL31z": {
+                "content": "Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng Hồng Đức. Theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-06",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2wLATlCr0527iE3T": {
+              "-OmHMJZ3kddEZveYHF_7": {
+                "content": "Kiểm tra website Zalo OA và check số dư của website Zalo ZNS",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-06",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMJbQ0kR5sKnZuM20": {
+                "content": "Kiểm tra trạng thái, lịch sử gửi của các mẫu gửi Hồng Đức (BO, CMSN,…) và Hòa Đức.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-06",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMJelemKMeXLTOoYK": {
                 "content": "Kết nối máy in cho máy tính của Kế Toán Hồng Đức 9.",
                 "duration": "5p",
                 "note": "Kết nối máy in từ máy PT2 qua",
@@ -759,7 +889,7 @@
                 "status": "Đã xử lý",
                 "unit": "Hồng Đức 9"
               },
-              "-OmD2wOGYwYMH4cV6pw6": {
+              "-OmHMJiR-qTFOLbOg0WP": {
                 "content": "Hỗ trợ giải nén file trên máy tính cho chị Son - PKT.",
                 "duration": "15p",
                 "note": "",
@@ -768,7 +898,7 @@
                 "status": "Đã xử lý",
                 "unit": "PKT Lầu 3"
               },
-              "-OmD2wRO9SLwQoaFWR6Q": {
+              "-OmHMJlngwGrI6zKDasi": {
                 "content": "Kết nối máy in cho Dịch Vụ Hồng Đức 6, Hồng Đức Nam Cần Thơ.",
                 "duration": "30p",
                 "note": "",
@@ -779,34 +909,52 @@
               }
             },
             "2026-02-08": {
-              "-OmD2wUX29WLVun2Enss": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "-OmHMJp9P7D1vn0z8VG0": {
+                "content": "Kiểm tra nguồn UPS trong phòng Server có báo đỏ hoặc kêu hú hay không.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-08",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2wXdWiCJn0y6ube1": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "-OmHMJsW4a3l4Y0WBTl6": {
+                "content": "Kiểm tra các website đang có: Bán Hàng, Dịch vụ, App ZNS của Hồng Đức và Hòa Đức",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-08",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2w_saeIb-toVseGc": {
-                "content": "Kiểm tra trạng thái các mẫu gửi Hồng Đức và Hòa Đức.",
+              "-OmHMJvs2fDLoesQSOEc": {
+                "content": "Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng Hồng Đức. Theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-08",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2wd-R-XpNF0BwwUp": {
+              "-OmHMJzEBbe38pZGnwnF": {
+                "content": "Kiểm tra website Zalo OA và check số dư của website Zalo ZNS",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-08",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMK1a0Fst5e59HuA6": {
+                "content": "Kiểm tra trạng thái, lịch sử gửi của các mẫu gửi Hồng Đức (BO, CMSN,…) và Hòa Đức.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-08",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMK4xDgWk5G9g37ls": {
                 "content": "Kiểm tra điện thoại bàn gọi KH báo rè rè, tiếng được tiếng không ở Hồng Đức 10.",
                 "duration": "15h50 - 16h30",
                 "note": "Đang theo dõi",
@@ -819,63 +967,99 @@
           },
           "week3": {
             "2026-02-10": {
-              "-OmD2wg6RVePFirQUR-r": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "-OmHMK8JD25qzKW7C_hX": {
+                "content": "Kiểm tra nguồn UPS trong phòng Server có báo đỏ hoặc kêu hú hay không.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-10",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2wjDo5aHZBLWyTtA": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "-OmHMKBf6GX-IevXORvr": {
+                "content": "Kiểm tra các website đang có: Bán Hàng, Dịch vụ, App ZNS của Hồng Đức và Hòa Đức",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-10",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2wmMlc1LfphJkgLf": {
-                "content": "Kiểm tra trạng thái các mẫu gửi Hồng Đức và Hòa Đức.",
+              "-OmHMKF1rL5c8U3IfhpA": {
+                "content": "Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng Hồng Đức. Theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-10",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
+              },
+              "-OmHMKIN_M1rIiNucVB2": {
+                "content": "Kiểm tra website Zalo OA và check số dư của website Zalo ZNS",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-10",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMKLiN-PnM5MHD04S": {
+                "content": "Kiểm tra trạng thái, lịch sử gửi của các mẫu gửi Hồng Đức (BO, CMSN,…) và Hòa Đức.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-10",
+                "status": "Đã xử lý",
+                "unit": "IT"
               }
             },
             "2026-02-11": {
-              "-OmD2wpVSt3Rv8c0MpnA": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "-OmHMKP39p0h2U0VCM8s": {
+                "content": "Kiểm tra nguồn UPS trong phòng Server có báo đỏ hoặc kêu hú hay không.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-11",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2wsbbeJJAAaTFjKp": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "-OmHMKSR6ufjV4ygsC5b": {
+                "content": "Kiểm tra các website đang có: Bán Hàng, Dịch vụ, App ZNS của Hồng Đức và Hòa Đức",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-11",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2wvhJRnA65CP_Y5G": {
-                "content": "Kiểm tra trạng thái các mẫu gửi Hồng Đức và Hòa Đức.",
+              "-OmHMKVn950LWToRoX4W": {
+                "content": "Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng Hồng Đức. Theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-11",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2wypUYvy7uMKhCV1": {
+              "-OmHMKZ9uIdoUn4UdjCH": {
+                "content": "Kiểm tra website Zalo OA và check số dư của website Zalo ZNS",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-11",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMKbVuflxPRDjHFBJ": {
+                "content": "Kiểm tra trạng thái, lịch sử gửi của các mẫu gửi Hồng Đức (BO, CMSN,…) và Hòa Đức.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-11",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMKepkbPQsd-beMJZ": {
                 "content": "Kiểm tra điện thoại bàn (Panasonic) gọi KH báo rè rè, tiếng được tiếng không ở Hồng Đức 1.",
                 "duration": "8h00 - 8h30",
                 "note": "",
@@ -884,7 +1068,7 @@
                 "status": "Đã xử lý",
                 "unit": "Hồng Đức 1"
               },
-              "-OmD2x10SUl-FDX6s-x4": {
+              "-OmHMKiDrznFxEAIgjTw": {
                 "content": "Hỗ trợ kết nối máy in cho Dịch Vụ Hồng Đức 8.",
                 "duration": "12h30 - 14h00",
                 "note": "Kết nối máy in 2 mặt",
@@ -895,34 +1079,52 @@
               }
             },
             "2026-02-12": {
-              "-OmD2x47XF5RUPcrEnrM": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "-OmHMKl_Trdnu4WHyJip": {
+                "content": "Kiểm tra nguồn UPS trong phòng Server có báo đỏ hoặc kêu hú hay không.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-12",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2x7C_z1r-_OC1HM9": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "-OmHMKovObMgWQixjYRN": {
+                "content": "Kiểm tra các website đang có: Bán Hàng, Dịch vụ, App ZNS của Hồng Đức và Hòa Đức",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-12",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2xALdHDcFF_pqTXf": {
-                "content": "Kiểm tra trạng thái các mẫu gửi Hồng Đức và Hòa Đức.",
+              "-OmHMKsGUZmEQaH5DBFm": {
+                "content": "Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng Hồng Đức. Theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-12",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2xDTjLdIeRusKEYR": {
+              "-OmHMKvcoMjpa4NEBAAZ": {
+                "content": "Kiểm tra website Zalo OA và check số dư của website Zalo ZNS",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-12",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMKyzTCW-5FYX2et6": {
+                "content": "Kiểm tra trạng thái, lịch sử gửi của các mẫu gửi Hồng Đức (BO, CMSN,…) và Hòa Đức.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-12",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHML1M1dL-Fmkh2NaT": {
                 "content": "Kiểm tra điện thoại bàn (Panasonic) gọi KH báo rè rè, tiếng được tiếng không ở Hồng Đức 1.",
                 "duration": "8h00 - 8h30",
                 "note": "",
@@ -931,7 +1133,7 @@
                 "status": "Đã xử lý",
                 "unit": "Hồng Đức 1"
               },
-              "-OmD2xGbxaWn5BbN0-OY": {
+              "-OmHML4icBsHcGWj-tD5": {
                 "content": "Xóa ghi âm Hotline.",
                 "duration": "13h00 - 16h00",
                 "note": "",
@@ -942,34 +1144,52 @@
               }
             },
             "2026-02-13": {
-              "-OmD2xJhMu9MvaOFiUZW": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "-OmHML85fwpjJMmIK4El": {
+                "content": "Kiểm tra nguồn UPS trong phòng Server có báo đỏ hoặc kêu hú hay không.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-13",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2xMo3wVaR1q47T1W": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "-OmHMLBRna4gb8kBnWcz": {
+                "content": "Kiểm tra các website đang có: Bán Hàng, Dịch vụ, App ZNS của Hồng Đức và Hòa Đức",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-13",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2xPu9jza_jYB8s_5": {
-                "content": "Kiểm tra trạng thái các mẫu gửi Hồng Đức và Hòa Đức.",
+              "-OmHMLEnlanDF3EYEgUC": {
+                "content": "Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng Hồng Đức. Theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-13",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2xT0s9iBmU78_Uy4": {
+              "-OmHMLI7eRaFbSozgNEO": {
+                "content": "Kiểm tra website Zalo OA và check số dư của website Zalo ZNS",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-13",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMLLT3gZrOzhcfXsF": {
+                "content": "Kiểm tra trạng thái, lịch sử gửi của các mẫu gửi Hồng Đức (BO, CMSN,…) và Hòa Đức.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-13",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMLOpYLJRSEnj6bH3": {
                 "content": "Kiểm tra điện thoại bàn (Panasonic) gọi KH báo rè rè, tiếng được tiếng không ở Hồng Đức 1.",
                 "duration": "8h00 - 8h30",
                 "note": "Nối dây lại rồi",
@@ -982,34 +1202,52 @@
           },
           "week4": {
             "2026-02-22": {
-              "-OmD2xW7EikNPeoXsecS": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "-OmHMLSF2DtHqRnY_y-5": {
+                "content": "Kiểm tra nguồn UPS trong phòng Server có báo đỏ hoặc kêu hú hay không.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-22",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2xZJdjD5Gj5NfIwO": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "-OmHMLVctogxzupZEIIx": {
+                "content": "Kiểm tra các website đang có: Bán Hàng, Dịch vụ, App ZNS của Hồng Đức và Hòa Đức",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-22",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2xbRbvH-TfpyeWoE": {
-                "content": "Kiểm tra trạng thái các mẫu gửi Hồng Đức và Hòa Đức.",
+              "-OmHMLYzftSzJFQxictv": {
+                "content": "Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng Hồng Đức. Theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-22",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2xeZMPm0itKLNyDi": {
+              "-OmHMLbLfHZ0WYCWyLWc": {
+                "content": "Kiểm tra website Zalo OA và check số dư của website Zalo ZNS",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-22",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMLehR18Nghk7-VWA": {
+                "content": "Kiểm tra trạng thái, lịch sử gửi của các mẫu gửi Hồng Đức (BO, CMSN,…) và Hòa Đức.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-22",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMLi1623Ho1gZZzaV": {
                 "content": "Sửa máy tính chị Trang không lên nguồn.",
                 "duration": "10p",
                 "note": "Chị Trang chưa cắm nguồn ổ điện",
@@ -1018,7 +1256,7 @@
                 "status": "Đã xử lý",
                 "unit": "PKT L2"
               },
-              "-OmD2xhgRLXS15JDCqHt": {
+              "-OmHMLlP7JvahBwvzN3G": {
                 "content": "Xử lý CPU máy tính CSKH (nhucskh) không lên nguồn.",
                 "duration": "30p",
                 "note": "Đem lên anh Phong coi lại nguồn",
@@ -1027,7 +1265,7 @@
                 "status": "Đã xử lý",
                 "unit": "CSKH"
               },
-              "-OmD2xkqxy6n8BK8Y2vB": {
+              "-OmHMLokb4-t2STpYf6C": {
                 "content": "Kết nối máy in cho máy tính của Dịch Vụ Hồng Đức 6.",
                 "duration": "10p",
                 "note": "Share máy in từ máy DV1 qua máy DV2",
@@ -1040,34 +1278,52 @@
           },
           "week5": {
             "2026-02-23": {
-              "-OmD2xnxfKkEMpt4cHDC": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "-OmHMLs6cLtoX2-T6eTa": {
+                "content": "Kiểm tra nguồn UPS trong phòng Server có báo đỏ hoặc kêu hú hay không.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-23",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2xr3cm4eM2UsV4DW": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "-OmHMLvT2hVPFizgixjH": {
+                "content": "Kiểm tra các website đang có: Bán Hàng, Dịch vụ, App ZNS của Hồng Đức và Hòa Đức",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-23",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2xuAGqcRbgClNIyd": {
-                "content": "Kiểm tra trạng thái các mẫu gửi Hồng Đức và Hòa Đức.",
+              "-OmHMLyrMYd_Rpn1mYGc": {
+                "content": "Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng Hồng Đức. Theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-23",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2xxHkCvrl39uAqUD": {
+              "-OmHMM1FrL8yx6FCJC8E": {
+                "content": "Kiểm tra website Zalo OA và check số dư của website Zalo ZNS",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-23",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMM4aBKGMDQgh1qpm": {
+                "content": "Kiểm tra trạng thái, lịch sử gửi của các mẫu gửi Hồng Đức (BO, CMSN,…) và Hòa Đức.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-23",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMM7yOrZboUKuTdIt": {
                 "content": "Hỗ trợ xử lý máy tính Dịch Vụ Hồng Đức 1 bị rớt mạng.",
                 "duration": "10p",
                 "note": "Rớt xíu tự có lại, rớt toàn quầy DV",
@@ -1076,7 +1332,7 @@
                 "status": "Đã xử lý",
                 "unit": "Hồng Đức 1"
               },
-              "-OmD2y-QVv5OfLRyncPs": {
+              "-OmHMMBLLjVWiaJ5xtcG": {
                 "content": "Xử lý máy tính Kế Toán Hồng Đức 5 excel bị treo thanh công cụ phía trên.",
                 "duration": "20p",
                 "note": "Do có 1 file excel bị mở đè",
@@ -1085,7 +1341,7 @@
                 "status": "Đã xử lý",
                 "unit": "Hồng Đức 5"
               },
-              "-OmD2y2bECgSPcoIFBt2": {
+              "-OmHMMEf7UIKXsV2JRFA": {
                 "content": "Xử lý máy tính của chị Phương PKT bị ẩn sheet.",
                 "duration": "10p",
                 "note": "Vào mục Options -> Avanced -> phần Display Options for this workbook -> tick vào ô Show sheet tabs",
@@ -1094,7 +1350,7 @@
                 "status": "Đã xử lý",
                 "unit": "PKT"
               },
-              "-OmD2y5iypt3Of1hjPy4": {
+              "-OmHMMI1AlgkGAEuiS6S": {
                 "content": "Xử lý máy tính chị Tiên (lớn) PKT chưa tải Plugin chữ ký số.",
                 "duration": "20p",
                 "note": "Truy cập vào trang dịch vụ công (đã mở sẵn) -> vào mục Trợ giúp -> tải chữ ký số về và cài đặt",
@@ -1105,34 +1361,52 @@
               }
             },
             "2026-02-24": {
-              "-OmD2y8qr4sv_Rt6BIoy": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hồng Đức. Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng.",
+              "-OmHMMLOq4xTrHBZxd7y": {
+                "content": "Kiểm tra nguồn UPS trong phòng Server có báo đỏ hoặc kêu hú hay không.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-24",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2yBxlew_eBqWH6Ig": {
-                "content": "Kiểm tra các hệ thống đang có: Bán Hàng, Dịch vụ, ZNS của Hòa Đức; theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+              "-OmHMMOn1ffWNWIQ_wsn": {
+                "content": "Kiểm tra các website đang có: Bán Hàng, Dịch vụ, App ZNS của Hồng Đức và Hòa Đức",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-24",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2yF7bsaY4hj1Nif6": {
-                "content": "Kiểm tra trạng thái các mẫu gửi Hồng Đức và Hòa Đức.",
+              "-OmHMMSCIMM9Y_kVbVpj": {
+                "content": "Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng Hồng Đức. Theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
                 "duration": "07h30 - 08h30 mỗi ngày",
-                "note": "Xử lý hằng ngày",
+                "note": "Xử lý mỗi ngày",
                 "priority": "Cao",
                 "startDate": "2026-02-24",
                 "status": "Đã xử lý",
-                "unit": "Văn Phòng"
+                "unit": "IT"
               },
-              "-OmD2yIGXcV4gEDTK9VO": {
+              "-OmHMMVaDQSyQhlwmWYn": {
+                "content": "Kiểm tra website Zalo OA và check số dư của website Zalo ZNS",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-24",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMMYyknZv5MBBqHFo": {
+                "content": "Kiểm tra trạng thái, lịch sử gửi của các mẫu gửi Hồng Đức (BO, CMSN,…) và Hòa Đức.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-24",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMMbJTuIuvh8f1ljq": {
                 "content": "Nối lại dây nguồn cho CSKH (Thiên Nhi).",
                 "duration": "10p",
                 "note": "Dây nguồn bị chuột cắn -> đã đổi nguồn mới",
@@ -1140,6 +1414,107 @@
                 "startDate": "2026-02-24",
                 "status": "Đã xử lý",
                 "unit": "CSKH"
+              },
+              "-OmHMMeh14UlXXhGSHuV": {
+                "content": "Hỗ trợ xử lý khi cúp điện (kiểm tra nguồn UPS, kiếm tra bật máy phát điện chưa.",
+                "duration": "13h00 - 13h30",
+                "note": "Đã có điện lại",
+                "priority": "Cao",
+                "startDate": "2026-02-24",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMMi4gzMabxoQZ9CD": {
+                "content": "Xử lý máy tính không lên nguồn ở P. CSKH.",
+                "duration": "14h10 - 14h30",
+                "note": "Bị ngậm tụ do cúp điện",
+                "priority": "Trung bình",
+                "startDate": "2026-02-24",
+                "status": "Đã xử lý",
+                "unit": "CSKH"
+              },
+              "-OmHMMlTcUF1ZTuv0eg3": {
+                "content": "Kết nối máy in cho máy tính Dịch Vụ Hồng Đức 3.",
+                "duration": "10p",
+                "note": "Share từ máy in HD3-DV1",
+                "priority": "Thấp",
+                "startDate": "2026-02-24",
+                "status": "Đã xử lý",
+                "unit": "Hồng Đức 3"
+              },
+              "-OmHMMopNwfZwirU3KG5": {
+                "content": "Xử lý máy tính kế bên chị Trang không lên, hiện màn hình boot.",
+                "duration": "10p",
+                "note": "Chọn lại phân vùng boot",
+                "priority": "Thấp",
+                "startDate": "2026-02-24",
+                "status": "Đã xử lý",
+                "unit": "PKT L2"
+              }
+            },
+            "2026-02-25": {
+              "-OmHMMsDdv1gnjHVtnHi": {
+                "content": "Kiểm tra nguồn UPS trong phòng Server có báo đỏ hoặc kêu hú hay không.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-25",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMMvboriGvcdY86KW": {
+                "content": "Kiểm tra các website đang có: Bán Hàng, Dịch vụ, App ZNS của Hồng Đức và Hòa Đức",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-25",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMMz-0xQyCjGXYIfn": {
+                "content": "Theo dõi tỉ lệ cuộc gọi ra vào của điện thoại cấp cho các cửa hàng Hồng Đức. Theo dõi tỉ lệ gửi Zalo, SMS của CSKH Hòa Đức tại 3 bộ phận Bán Hàng, Dịch Vụ, Phụ Tùng.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-25",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMN1Ni2PatTG1TFxf": {
+                "content": "Kiểm tra website Zalo OA và check số dư của website Zalo ZNS",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-25",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMN4kiFg3lkQr15xa": {
+                "content": "Kiểm tra trạng thái, lịch sử gửi của các mẫu gửi Hồng Đức (BO, CMSN,…) và Hòa Đức.",
+                "duration": "07h30 - 08h30 mỗi ngày",
+                "note": "Xử lý mỗi ngày",
+                "priority": "Cao",
+                "startDate": "2026-02-25",
+                "status": "Đã xử lý",
+                "unit": "IT"
+              },
+              "-OmHMN87TBrNP-x35I2r": {
+                "content": "Xuất file ghi âm Hotline cho CSKH (chị Tuyền).",
+                "duration": "10p",
+                "note": "Khi có yêu cầu",
+                "priority": "Trung bình",
+                "startDate": "2026-02-25",
+                "status": "Đã xử lý",
+                "unit": "CSKH"
+              },
+              "-OmHTn2WVGYEatWdQZQL": {
+                "content": "Hỗ trợ xử lý các máy tính ở Dịch Vụ Hồng Đức 1 bị rớt mạng.",
+                "duration": "10p",
+                "note": "Switch bị ngáo, rút ra cắm lại được rồi",
+                "priority": "Trung bình",
+                "startDate": "2026-02-25",
+                "status": "Đã xử lý",
+                "unit": "Hồng Đức 1"
               }
             }
           }
