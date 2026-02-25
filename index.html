@@ -4,6 +4,36 @@
         <meta charset="UTF-8">
         <title>Quản Lý Công Việc</title>
         <link rel="stylesheet" href="style.css">
+        <!-- Google APIs for Sheets (client-side) -->
+        <script src="https://apis.google.com/js/api.js"></script>
+        <script>
+            // TODO: điền giá trị của bạn
+            const GOOGLE_API_KEY = 'AIzaSyAzSlJ6KNuolSKWVqmvwefZRFDsYw6iO3o';
+            const GOOGLE_CLIENT_ID = '909540518349-euuig3pibn1npr2njtj8s0d6a9k9nlgd.apps.googleusercontent.com';
+            const GOOGLE_SPREADSHEET_ID = '1ZlwzaUEw0ixifnoBjfP206CX3pxDiMMfjMWFJCy6bnU';
+
+            function initGapi() {
+                gapi.load('client:auth2', () => {
+                    gapi.client.init({
+                        apiKey: GOOGLE_API_KEY,
+                        clientId: GOOGLE_CLIENT_ID,
+                        discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+                        scope: 'https://www.googleapis.com/auth/spreadsheets'
+                    });
+                });
+            }
+
+            function gapiSignIn() {
+                const auth = gapi.auth2.getAuthInstance();
+                if (!auth.isSignedIn.get()) {
+                    return auth.signIn();
+                }
+                return Promise.resolve();
+            }
+
+            // khởi tạo ngay khi tải trang
+            window.addEventListener('load', initGapi);
+        </script>
     </head>
     <body>
         <!-- ========== ĐĂNG NHẬP VÀ KEYPAD ========== -->
@@ -67,9 +97,10 @@
             <div id="calendar"></div>
             <!-- Tiêu đề ngày đang chọn -->
             <h2 id="selectedDateTitle">Chọn ngày để xem công việc</h2>
-            <!-- Nút thêm công việc (xuất/tuỳ chọn đã được chuyển vào menu) -->
+            <!-- Nút thêm công việc và nút đồng bộ với Google Sheets -->
             <div style="display: flex; gap: 10px; align-items: center; position: relative;">
                 <button id="openAddModal" class="btn-add">➕ Thêm công việc</button>
+                <button id="syncSheetBtn" class="btn-add" style="background:#17a2b8;">🔄 Đồng bộ Sheet</button>
             </div>
             <!-- Sidebar Menu -->
             <div id="sideMenuPanel" class="side-menu-panel">
