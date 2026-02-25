@@ -3,64 +3,6 @@
 import { db } from "./firebase.js";
 import { ref, push, onValue, remove, update, get, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// ========== ĐỒNG BỘ GOOGLE SHEETS ==========
-// Các hằng số tương ứng với credentials đã tạo ở index.html
-const GS_API_KEY = 'AIzaSyAzSlJ6KNuolSKWVqmvwefZRFDsYw6iO3o'; // phải trùng với GOOGLE_API_KEY ở index.html
-const GS_CLIENT_ID = '909540518349-euuig3pibn1npr2njtj8s0d6a9k9nlgd.apps.googleusercontent.com';
-const GS_SPREADSHEET_ID = '1ZlwzaUEw0ixifnoBjfP206CX3pxDiMMfjMWFJCy6bnU';
-
-// Nếu dùng client-side sync, gapi đã được khởi tạo trong index.html
-// và bạn chỉ cần gọi gapiSignIn() trước khi thực hiện các thao tác.
-
-/**
- * Đồng bộ dữ liệu task của một ngày sang Google Sheet tương ứng.
- * @param {string} dateStr - định dạng YYYY-MM-DD
- */
-async function syncDayToSheet(dateStr) {
-    // 1. lấy tất cả công việc từ Firebase
-    const parts = dateStr.split('-'); // [YYYY,MM,DD]
-    const snap = await get(tasksRef(parts[0], parts[1], null, dateStr));
-    const tasks = [];
-    if (snap.exists()) {
-        snap.forEach(ch => tasks.push(ch.val()));
-    }
-
-    // 2. chuẩn bị mảng giá trị theo định dạng Sheets
-    const rows = tasks.map((t, i) => [
-        i + 1,
-        t.content || '',
-        t.unit || '',
-        t.duration || '',
-        t.priority || '',
-        t.status || '',
-        t.note || ''
-    ]);
-    const body = { values: [['STT', 'Nội dung', 'Đơn vị', 'Thời gian', 'Mức độ', 'Trạng thái', 'Ghi chú'], ...rows] };
-
-    // 3. đảm bảo đã đăng nhập gapi
-    await gapiSignIn();
-
-    // 4. tìm hoặc tạo sheet có tên đúng ngày
-    const meta = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: GS_SPREADSHEET_ID });
-    const sheet = (meta.result.sheets || []).find(s => s.properties.title === dateStr);
-    if (!sheet) {
-        await gapi.client.sheets.spreadsheets.batchUpdate({
-            spreadsheetId: GS_SPREADSHEET_ID,
-            requests: [{ addSheet: { properties: { title: dateStr } } }]
-        });
-    }
-
-    // 5. ghi dữ liệu (ghi đè toàn bộ sheet)
-    await gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: GS_SPREADSHEET_ID,
-        range: `'${dateStr}'!A1`,
-        valueInputOption: 'RAW',
-        resource: body
-    });
-}
-
-// kết thúc phần trợ giúp đồng bộ Sheets
-
 /* ========== DOM ELEMENTS ========== */
 // Phần tử lịch và tiêu đề tháng
 const calendarDiv = document.getElementById("calendar");
@@ -1343,7 +1285,6 @@ function loadTasks(ds) {
 
             taskTable.appendChild(row);
         });
-        syncDayToSheet(ds).catch(err => console.error('Sheets sync error', err));
     });
 }
 
@@ -1383,22 +1324,7 @@ if (document.getElementById("openAddModal")) {
     };
 }
 
-// Nút đồng bộ ngày đang chọn lên Google Sheets
-if (document.getElementById("syncSheetBtn")) {
-    document.getElementById("syncSheetBtn").onclick = async () => {
-        if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
-        try {
-            showLoading();
-            await syncDayToSheet(selectedDate);
-            alert('✅ Đã đồng bộ lên Google Sheets');
-        } catch (err) {
-            console.error(err);
-            alert('❌ Lỗi khi đồng bộ: ' + (err.message || err));
-        } finally {
-            hideLoading();
-        }
-    };
-}
+
 
 // Nút lưu trong modal thêm/sửa
 if (saveTaskBtn) {
