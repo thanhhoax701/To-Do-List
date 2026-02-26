@@ -471,7 +471,7 @@ function parseDateFromSheetName(name) {
 
 // Import workbook (ArrayBuffer) and push tasks to Firebase
 async function importWorkbookArrayBuffer(ab, filename, importType, importValue) {
-    if (!isAdmin()) { alert('Chỉ admin mới có quyền nhập công việc'); return; }
+    if (!isAdmin()) { await showCustomAlert('Chỉ admin mới có quyền nhập công việc'); return; }
     showLoading();
     try {
         const wb = XLSX.read(ab, { type: 'array' });
@@ -597,10 +597,10 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
 
 // Handler cho nút import
 if (document.getElementById('importConfirmBtn')) {
-    document.getElementById('importConfirmBtn').onclick = () => {
-        if (!isAdmin()) { alert('Chỉ admin mới có quyền nhập công việc'); return; }
+    document.getElementById('importConfirmBtn').onclick = async () => {
+        if (!isAdmin()) { await showCustomAlert('Chỉ admin mới có quyền nhập công việc'); return; }
         const fi = document.getElementById('importFile');
-        if (!fi || !fi.files || fi.files.length === 0) return alert('Vui lòng chọn file .xlsx');
+        if (!fi || !fi.files || fi.files.length === 0) { await showCustomAlert('Vui lòng chọn file .xlsx'); return; }
         const importTypeEl = document.getElementById('importType');
         const importType = importTypeEl ? importTypeEl.value : 'auto';
 
@@ -608,16 +608,16 @@ if (document.getElementById('importConfirmBtn')) {
         let importValue = '';
         if (importType === 'week') {
             const sel = document.getElementById('importWeekSelect');
-            if (!sel || !sel.value) return alert('Vui lòng chọn tuần để import!');
+            if (!sel || !sel.value) { await showCustomAlert('Vui lòng chọn tuần để import!'); return; }
             importValue = sel.value; // format: YYYY|MM|weekN
         } else if (importType === 'month') {
             const mp = document.getElementById('importMonthPicker');
-            if (!mp || !mp.value) return alert('Vui lòng chọn tháng để import!');
+            if (!mp || !mp.value) { await showCustomAlert('Vui lòng chọn tháng để import!'); return; }
             importValue = mp.value; // format: YYYY-MM
         } else if (importType === 'range') {
             const s = document.getElementById('importRangeStart').value;
             const e = document.getElementById('importRangeEnd').value;
-            if (!s || !e) return alert('Vui lòng chọn cả ngày bắt đầu và kết thúc cho import range!');
+            if (!s || !e) { await showCustomAlert('Vui lòng chọn cả ngày bắt đầu và kết thúc cho import range!'); return; }
             importValue = `${s}|${e}`; // START|END
         }
 
@@ -633,9 +633,9 @@ if (document.getElementById('importConfirmBtn')) {
 
 // (Optional) Preview button - just shows a quick summary of sheets and rows
 if (document.getElementById('importPreviewBtn')) {
-    document.getElementById('importPreviewBtn').onclick = () => {
+    document.getElementById('importPreviewBtn').onclick = async () => {
         const fi = document.getElementById('importFile');
-        if (!fi || !fi.files || fi.files.length === 0) return alert('Vui lòng chọn file .xlsx');
+        if (!fi || !fi.files || fi.files.length === 0) { await showCustomAlert('Vui lòng chọn file .xlsx'); return; }
         const f = fi.files[0];
         const reader = new FileReader();
         reader.onload = (ev) => {
@@ -668,10 +668,10 @@ function getSelectedColumns() {
 }
 
 // Xuất công việc của 1 ngày dựa trên DOM
-function exportTasksForDay() {
+async function exportTasksForDay() {
     const selectedCols = getSelectedColumns();
     if (selectedCols.length === 0) {
-        alert('Vui lòng chọn ít nhất một cột để xuất.');
+        await showCustomAlert('Vui lòng chọn ít nhất một cột để xuất.');
         return;
     }
     const colIndices = ALL_EXPORT_COLUMNS.map((c, i) => selectedCols.includes(c) ? i : -1).filter(i => i >= 0);
@@ -689,7 +689,7 @@ function exportTasksForDay() {
         rows.push(rowCells.filter((_, idx) => colIndices.includes(idx)));
     });
     if (rows.length === 0) {
-        alert('Không có công việc để xuất.');
+        await showCustomAlert('Không có công việc để xuất.');
         return;
     }
     writeDataToXLSX(selectedCols, rows);
@@ -750,7 +750,7 @@ async function fetchTasksForRange(startDate, endDate) {
 async function exportTasksForCollection(taskList, includeDate) {
     const selectedCols = getSelectedColumns();
     if (selectedCols.length === 0) {
-        alert('Vui lòng chọn ít nhất một cột để xuất.');
+        await showCustomAlert('Vui lòng chọn ít nhất một cột để xuất.');
         return;
     }
     let header = [];
@@ -779,7 +779,7 @@ async function exportTasksForCollection(taskList, includeDate) {
         rows.push(row);
     }
     if (rows.length === 0) {
-        alert('Không có công việc để xuất.');
+        await showCustomAlert('Không có công việc để xuất.');
         return;
     }
     // Nếu có nhiều ngày (ví dụ xuất tuần/tháng/khoảng), tách từng ngày ra 1 sheet
@@ -854,21 +854,21 @@ async function performExport(type) {
             exportTasksForDay();
         } else if (type === 'week') {
             const sel = document.getElementById('exportWeekSelect');
-            if (!sel || !sel.value) return alert('Vui lòng chọn tuần!');
+            if (!sel || !sel.value) { await showCustomAlert('Vui lòng chọn tuần!'); return; }
             const [y, m, w] = sel.value.split('|');
             const tasks = await fetchTasksForWeek(y, m, w);
             await exportTasksForCollection(tasks, true);
         } else if (type === 'month') {
             const mp = document.getElementById('exportMonthPicker');
-            if (!mp || !mp.value) return alert('Vui lòng chọn tháng!');
+            if (!mp || !mp.value) { await showCustomAlert('Vui lòng chọn tháng!'); return; }
             const [y, m] = mp.value.split('-');
             const tasks = await fetchTasksForMonth(y, m);
             await exportTasksForCollection(tasks, true);
         } else if (type === 'range') {
             const s = document.getElementById('exportRangeStart').value;
             const e = document.getElementById('exportRangeEnd').value;
-            if (!s || !e) return alert('Vui lòng chọn cả ngày bắt đầu và kết thúc!');
-            if (s > e) return alert('Ngày bắt đầu phải <= ngày kết thúc');
+            if (!s || !e) { await showCustomAlert('Vui lòng chọn cả ngày bắt đầu và kết thúc!'); return; }
+            if (s > e) { await showCustomAlert('Ngày bắt đầu phải <= ngày kết thúc'); return; }
             const tasks = await fetchTasksForRange(s, e);
             await exportTasksForCollection(tasks, true);
         }
@@ -1222,11 +1222,11 @@ function loadTasks(ds) {
             // Nút nhân bản công việc
             row.querySelector(".btn-duplicate").onclick = async () => {
                 if (isMember()) {
-                    alert('👤 Thành viên không có quyền nhân bản công việc');
+                    await showCustomAlert('👤 Thành viên không có quyền nhân bản công việc');
                     return;
                 }
 
-                const confirmDup = confirm("Bạn có muốn nhân bản công việc này không?");
+                const confirmDup = await showCustomConfirm("Bạn có muốn nhân bản công việc này không?");
                 if (!confirmDup) return;
 
                 // Sao chép thông tin công việc cần thiết
@@ -1242,10 +1242,10 @@ function loadTasks(ds) {
                 showLoading();
                 try {
                     await push(tasksRef(y, m, w, ds), newTask);
-                    alert("🔁 Đã nhân bản công việc!");
+                    await showCustomAlert("🔁 Đã nhân bản công việc!");
                 } catch (e) {
                     console.error(e);
-                    alert("❌ Lỗi khi nhân bản");
+                    await showCustomAlert("❌ Lỗi khi nhân bản");
                 } finally {
                     hideLoading();
                 }
@@ -1254,20 +1254,20 @@ function loadTasks(ds) {
             // Nút xóa công việc
             row.querySelector(".btn-delete").onclick = async () => {
                 if (isMember()) {
-                    alert('👤 Thành viên không có quyền xóa công việc');
+                    await showCustomAlert('👤 Thành viên không có quyền xóa công việc');
                     return;
                 }
 
-                const confirmDelete = confirm("Bạn có chắc muốn xóa công việc này không?");
+                const confirmDelete = await showCustomConfirm("Bạn có chắc muốn xóa công việc này không?");
 
                 if (!confirmDelete) return;
                 showLoading();
 
                 try {
                     await remove(tasksRef(y, m, w, ds, k));
-                    alert("✅ Xóa công việc thành công!");
+                    await showCustomAlert("✅ Xóa công việc thành công!");
                 } catch (error) {
-                    alert("❌ Có lỗi xảy ra khi xóa!");
+                    await showCustomAlert("❌ Có lỗi xảy ra khi xóa!");
                     console.error(error);
                 } finally {
                     hideLoading();
@@ -1275,9 +1275,9 @@ function loadTasks(ds) {
             };
 
             // Nút sửa công việc
-            row.querySelector(".btn-edit").onclick = () => {
+            row.querySelector(".btn-edit").onclick = async () => {
                 if (isMember()) {
-                    alert('👤 Thành viên không có quyền chỉnh sửa công việc');
+                    await showCustomAlert('👤 Thành viên không có quyền chỉnh sửa công việc');
                     return;
                 }
                 openModal("Chỉnh sửa công việc", k, t);
@@ -1318,8 +1318,8 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") modal.style.
 
 // Nút mở modal thêm công việc mới
 if (document.getElementById("openAddModal")) {
-    document.getElementById("openAddModal").onclick = () => {
-        if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
+    document.getElementById("openAddModal").onclick = async () => {
+        if (!selectedDate) { await showCustomAlert("Vui lòng chọn ngày trước!"); return; }
         openModal("Thêm công việc");
     };
 }
@@ -1330,7 +1330,7 @@ if (document.getElementById("openAddModal")) {
 if (saveTaskBtn) {
     saveTaskBtn.onclick = async () => {
         if (!selectedDate) {
-            alert("Vui lòng chọn ngày trước!");
+            await showCustomAlert("Vui lòng chọn ngày trước!");
             return;
         }
         const [y, m] = selectedDate.split("-");
@@ -1348,16 +1348,23 @@ if (saveTaskBtn) {
         try {
             if (taskIdField.value) {
                 await update(tasksRef(y, m, w, selectedDate, taskIdField.value), data);
-                alert("✅ Cập nhật công việc thành công!");
             } else {
                 await push(tasksRef(y, m, w, selectedDate), data);
-                alert("✅ Thêm công việc mới thành công!");
+            }
+            // hide spinner before showing confirmation
+            hideLoading();
+            if (taskIdField.value) {
+                await showCustomAlert("✅ Cập nhật công việc thành công!");
+            } else {
+                await showCustomAlert("✅ Thêm công việc mới thành công!");
             }
             modal.style.display = "none";
         } catch (error) {
             console.error(error);
-            alert("\u274c Có lỗi xảy ra khi lưu công việc!");
+            hideLoading();
+            await showCustomAlert("\u274c Có lỗi xảy ra khi lưu công việc!");
         } finally {
+            // ensure spinner hidden if not already
             hideLoading();
         }
     };
@@ -1366,7 +1373,7 @@ if (saveTaskBtn) {
 // Nút xuất nhanh cho ngày hiện tại (vẫn nằm cạnh thêm công việc)
 if (document.getElementById("exportBtn")) {
     document.getElementById("exportBtn").onclick = async () => {
-        if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
+        if (!selectedDate) { await showCustomAlert("Vui lòng chọn ngày trước!"); return; }
         await performExport('day');
     };
 }
@@ -1895,11 +1902,11 @@ const changeNbBtn = document.getElementById('changeNbBtn');
 
 if (deleteNbBtn) {
     deleteNbBtn.onclick = async () => {
-        if (!manageNbDateInput.value) return alert('Vui lòng chọn ngày NB!');
+        if (!manageNbDateInput.value) { await showCustomAlert('Vui lòng chọn ngày NB!'); return; }
         const ds = manageNbDateInput.value;
-        if (!isNbDay(ds)) return alert('Ngày này không phải NB');
+        if (!isNbDay(ds)) { await showCustomAlert('Ngày này không phải NB'); return; }
         await toggleNbDay(ds);
-        alert('✅ Đã xóa NB ' + formatDisplayDate(ds));
+        await showCustomAlert('✅ Đã xóa NB ' + formatDisplayDate(ds));
         renderCalendar();
         if (selectedDate === ds) loadTasks(ds);
     };
@@ -1907,16 +1914,16 @@ if (deleteNbBtn) {
 
 if (changeNbBtn) {
     changeNbBtn.onclick = async () => {
-        if (!manageNbDateInput.value) return alert('Vui lòng chọn ngày NB cần đổi!');
+        if (!manageNbDateInput.value) { await showCustomAlert('Vui lòng chọn ngày NB cần đổi!'); return; }
         const oldDate = manageNbDateInput.value;
-        if (!isNbDay(oldDate)) return alert('Ngày này không phải NB');
+        if (!isNbDay(oldDate)) { await showCustomAlert('Ngày này không phải NB'); return; }
         const newDate = prompt('Nhập ngày mới (YYYY-MM-DD):');
         if (!newDate) return;
-        if (isNlDay(newDate)) return alert('Ngày mới trùng với NL, chọn ngày khác');
+        if (isNlDay(newDate)) { await showCustomAlert('Ngày mới trùng với NL, chọn ngày khác'); return; }
         // xóa cũ và thêm mới
         await toggleNbDay(oldDate);
         await toggleNbDay(newDate);
-        alert('🔄 Đã đổi NB từ ' + formatDisplayDate(oldDate) + ' sang ' + formatDisplayDate(newDate));
+        await showCustomAlert('🔄 Đã đổi NB từ ' + formatDisplayDate(oldDate) + ' sang ' + formatDisplayDate(newDate));
         renderCalendar();
         if (selectedDate === oldDate || selectedDate === newDate) loadTasks(selectedDate);
     };
@@ -1929,11 +1936,11 @@ const changeNlBtn = document.getElementById('changeNlBtn');
 
 if (deleteNlBtn) {
     deleteNlBtn.onclick = async () => {
-        if (!manageNlDateInput.value) return alert('Vui lòng chọn ngày NL!');
+        if (!manageNlDateInput.value) { await showCustomAlert('Vui lòng chọn ngày NL!'); return; }
         const ds = manageNlDateInput.value;
-        if (!isNlDay(ds)) return alert('Ngày này không phải NL');
+        if (!isNlDay(ds)) { await showCustomAlert('Ngày này không phải NL'); return; }
         await toggleNlDay(ds);
-        alert('✅ Đã xóa NL ' + formatDisplayDate(ds));
+        await showCustomAlert('✅ Đã xóa NL ' + formatDisplayDate(ds));
         renderCalendar();
         if (selectedDate === ds) loadTasks(ds);
     };
@@ -1941,15 +1948,15 @@ if (deleteNlBtn) {
 
 if (changeNlBtn) {
     changeNlBtn.onclick = async () => {
-        if (!manageNlDateInput.value) return alert('Vui lòng chọn ngày NL cần đổi!');
+        if (!manageNlDateInput.value) { await showCustomAlert('Vui lòng chọn ngày NL cần đổi!'); return; }
         const oldDate = manageNlDateInput.value;
-        if (!isNlDay(oldDate)) return alert('Ngày này không phải NL');
+        if (!isNlDay(oldDate)) { await showCustomAlert('Ngày này không phải NL'); return; }
         const newDate = prompt('Nhập ngày mới (YYYY-MM-DD):');
         if (!newDate) return;
-        if (isNbDay(newDate)) return alert('Ngày mới trùng với NB, chọn ngày khác');
+        if (isNbDay(newDate)) { await showCustomAlert('Ngày mới trùng với NB, chọn ngày khác'); return; }
         await toggleNlDay(oldDate);
         await toggleNlDay(newDate);
-        alert('🔄 Đã đổi NL từ ' + formatDisplayDate(oldDate) + ' sang ' + formatDisplayDate(newDate));
+        await showCustomAlert('🔄 Đã đổi NL từ ' + formatDisplayDate(oldDate) + ' sang ' + formatDisplayDate(newDate));
         renderCalendar();
         if (selectedDate === oldDate || selectedDate === newDate) loadTasks(selectedDate);
     };
@@ -1964,7 +1971,7 @@ toggleNbDay = async function (dateStr) {
     }
     // adding NB, reject if NL exists
     if (isNlDay(dateStr)) {
-        alert('❌ Không thể đánh dấu NB trùng với ngày NL');
+        await showCustomAlert('❌ Không thể đánh dấu NB trùng với ngày NL');
         return false;
     }
     return await originalToggleNbDay(dateStr);
@@ -1978,7 +1985,7 @@ toggleNlDay = async function (dateStr) {
     }
     // adding NL, reject if NB exists
     if (isNbDay(dateStr)) {
-        alert('❌ Không thể đánh dấu NL trùng với ngày NB');
+        await showCustomAlert('❌ Không thể đánh dấu NL trùng với ngày NB');
         return false;
     }
     return await originalToggleNlDay(dateStr);
@@ -2080,7 +2087,7 @@ if (nlCalendarBack) {
 if (nbConfirmButton) {
     nbConfirmButton.onclick = async () => {
         if (nbTempSelectedDates.length === 0) {
-            alert('Vui lòng chọn ít nhất một ngày!');
+            await showCustomAlert('Vui lòng chọn ít nhất một ngày!');
             return;
         }
 
@@ -2095,7 +2102,7 @@ if (nbConfirmButton) {
             }
 
             // Thông báo thành công
-            alert('✔️ Đã lựa chọn ' + nbTempSelectedDates.length + ' ngày NB thành công!');
+            await showCustomAlert('✔️ Đã lựa chọn ' + nbTempSelectedDates.length + ' ngày NB thành công!');
 
             // Đóng modal
             nbSelectModal.style.display = 'none';
@@ -2107,7 +2114,7 @@ if (nbConfirmButton) {
             renderCalendar();
         } catch (e) {
             console.error('Lỗi lưu ngày NB:', e);
-            alert('❌ Lỗi khi lưu ngày NB: ' + e.message);
+            await showCustomAlert('❌ Lỗi khi lưu ngày NB: ' + e.message);
         }
     };
 }
@@ -2116,7 +2123,7 @@ if (nbConfirmButton) {
 if (nlConfirmButton) {
     nlConfirmButton.onclick = async () => {
         if (nlTempSelectedDates.length === 0) {
-            alert('Vui lòng chọn ít nhất một ngày!');
+            await showCustomAlert('Vui lòng chọn ít nhất một ngày!');
             return;
         }
 
@@ -2131,7 +2138,7 @@ if (nlConfirmButton) {
                 await set(r, true);
                 nlDays[dateStr] = true;
             }
-            alert('✔️ Đã lựa chọn ' + nlTempSelectedDates.length + ' ngày NL thành công!');
+            await showCustomAlert('✔️ Đã lựa chọn ' + nlTempSelectedDates.length + ' ngày NL thành công!');
             nlSelectModal.style.display = 'none';
             if (selectedDate) {
                 loadTasks(selectedDate);
@@ -2139,7 +2146,7 @@ if (nlConfirmButton) {
             renderCalendar();
         } catch (e) {
             console.error('Lỗi lưu ngày NL:', e);
-            alert('❌ Lỗi khi lưu ngày NL: ' + e.message);
+            await showCustomAlert('❌ Lỗi khi lưu ngày NL: ' + e.message);
         }
     };
 }
@@ -2147,9 +2154,9 @@ if (nlConfirmButton) {
 /* Mở modal nhân bản nâng cao */
 const duplicateDayBtn = document.getElementById("duplicateDayBtn");
 if (duplicateDayBtn) {
-    duplicateDayBtn.onclick = () => {
-        if (isMember()) return alert('👤 Thành viên không có quyền sử dụng tính năng này');
-        if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
+    duplicateDayBtn.onclick = async () => {
+        if (isMember()) { await showCustomAlert('👤 Thành viên không có quyền sử dụng tính năng này'); return; }
+        if (!selectedDate) { await showCustomAlert("Vui lòng chọn ngày trước!"); return; }
         advancedDates = [];
         dateList.innerHTML = "";
         multiDatePicker.value = "";
@@ -2164,7 +2171,7 @@ advModal.onclick = e => { if (e.target === advModal) advModal.style.display = "n
 /* Thêm ngày vào danh sách */
 addDateBtn.onclick = () => {
     const d = multiDatePicker.value;
-    if (!d) return alert("Vui lòng chọn ngày hợp lệ!");
+    if (!d) { showCustomAlert("Vui lòng chọn ngày hợp lệ!"); return; }
     if (advancedDates.includes(d)) return;
     advancedDates.push(d);
 
@@ -2181,7 +2188,7 @@ addDateBtn.onclick = () => {
 
 /* Hàm nhân bản */
 confirmAdvBtn.onclick = async () => {
-    if (!selectedDate) return alert("Vui lòng chọn ngày nguồn!");
+    if (!selectedDate) { await showCustomAlert("Vui lòng chọn ngày nguồn!"); return; }
     const [sy, sm] = selectedDate.split("-");
     const sw = getWeekNumber(selectedDate);
 
@@ -2244,7 +2251,7 @@ confirmAdvBtn.onclick = async () => {
             await showCustomAlert(`🔎 Tìm thấy ${sourceTaskCount} công việc ở ${formatDisplayDate(selectedDate)}`);
         }
 
-        if (sourceTaskCount === 0) return alert("Không có công việc để nhân bản!");
+        if (sourceTaskCount === 0) { await showCustomAlert("Không có công việc để nhân bản!"); return; }
 
         const duplicateTo = async (targetDate, sourceStartDate) => {
             const [ty, tm] = targetDate.split("-");
@@ -2291,7 +2298,7 @@ confirmAdvBtn.onclick = async () => {
             try {
                 if (advancedDates.length === 0) {
                     const targetDate = prompt("Nhập ngày muốn nhân bản tới (YYYY-MM-DD):");
-                    if (!targetDate || targetDate === selectedDate) return alert("Ngày đích không hợp lệ hoặc trùng ngày nguồn!");
+                    if (!targetDate || targetDate === selectedDate) { await showCustomAlert("Ngày đích không hợp lệ hoặc trùng ngày nguồn!"); return; }
                     await duplicateTo(targetDate);
                     hideLoading();
                     await showCustomAlert(`✅ Đã nhân bản ${sourceTaskCount} công việc sang ${formatDisplayDate(targetDate)}`);
@@ -2310,7 +2317,7 @@ confirmAdvBtn.onclick = async () => {
             // Nhân bản tuần: người dùng chọn tuần đích để nhân bản vào - cần loading
             showLoading();
             try {
-                if (!targetWeekSelect.value) return alert("Vui lòng chọn tuần đích!");
+                if (!targetWeekSelect.value) { await showCustomAlert("Vui lòng chọn tuần đích!"); return; }
                 const [ty, tm, tw] = targetWeekSelect.value.split("|");
                 const weekNum = parseInt(tw.replace("week", ""));
 
@@ -2340,7 +2347,7 @@ confirmAdvBtn.onclick = async () => {
             // Nhân bản tháng: người dùng chọn tháng đích để nhân bản vào - cần loading
             showLoading();
             try {
-                if (!targetMonthPicker.value) return alert("Vui lòng chọn tháng đích!");
+                if (!targetMonthPicker.value) { await showCustomAlert("Vui lòng chọn tháng đích!"); return; }
                 const [ty, tm] = targetMonthPicker.value.split("-");
                 const [sy, sm] = selectedDate.split("-");
                 const sourceFirstDate = `${sy}-${sm}-01`;
@@ -2355,7 +2362,7 @@ confirmAdvBtn.onclick = async () => {
         }
     } catch (error) {
         console.error(error);
-        alert("❌ Có lỗi khi nhân bản!");
+        await showCustomAlert("❌ Có lỗi khi nhân bản!");
     }
 };
 
@@ -2623,17 +2630,17 @@ if (document.getElementById('deleteDayBtn')) {
     document.getElementById('deleteDayBtn').onclick = async () => {
         // Kiểm tra quyền: Chỉ admin mới có quyền xóa
         if (isMember()) {
-            alert('👤 Thành viên không có quyền xóa công việc');
+            await showCustomAlert('👤 Thành viên không có quyền xóa công việc');
             return;
         }
 
-        if (!selectedDate) return alert("Vui lòng chọn ngày trước!");
+        if (!selectedDate) { await showCustomAlert("Vui lòng chọn ngày trước!"); return; }
         const [y, m] = selectedDate.split("-");
         const w = getWeekNumber(selectedDate);
 
         // Đếm số công việc cần xóa
         const cnt = await countTasksForDay(selectedDate);
-        if (cnt === 0) return alert("Không có công việc để xóa ở ngày này!");
+        if (cnt === 0) { await showCustomAlert("Không có công việc để xóa ở ngày này!"); return; }
 
         // Xác nhận trước khi xóa
         const ok = await showCustomConfirm(`Xác nhận xóa ${cnt} công việc của ngày ${formatDisplayDate(selectedDate)}?`);
@@ -2660,7 +2667,7 @@ if (document.getElementById('deleteWeekBtn')) {
     document.getElementById('deleteWeekBtn').onclick = async () => {
         // Kiểm tra quyền: Chỉ admin mới có quyền xóa
         if (isMember()) {
-            alert('👤 Thành viên không có quyền xóa công việc');
+            await showCustomAlert('👤 Thành viên không có quyền xóa công việc');
             return;
         }
 
@@ -2719,7 +2726,7 @@ if (document.getElementById('deleteMonthBtn')) {
     document.getElementById('deleteMonthBtn').onclick = async () => {
         // Kiểm tra quyền: Chỉ admin mới có quyền xóa
         if (isMember()) {
-            alert('👤 Thành viên không có quyền xóa công việc');
+            await showCustomAlert('👤 Thành viên không có quyền xóa công việc');
             return;
         }
 
@@ -2729,7 +2736,7 @@ if (document.getElementById('deleteMonthBtn')) {
             if (monthPicker && monthPicker.value) {
                 [y, m] = monthPicker.value.split("-");
             } else {
-                if (!selectedDate) return alert("Vui lòng chọn ngày hoặc chọn tháng trước!");
+                if (!selectedDate) { await showCustomAlert("Vui lòng chọn ngày hoặc chọn tháng trước!"); return; }
                 [y, m] = selectedDate.split("-");
             }
 
@@ -2791,13 +2798,13 @@ if (deleteSelect) {
             // ========== XÓA CÔNG VIỆC ĐÃ CHỌN ==========
             // Kiểm tra quyền: Chỉ admin mới có quyền xóa
             if (isMember()) {
-                alert('👤 Thành viên không có quyền xóa công việc');
+                await showCustomAlert('👤 Thành viên không có quyền xóa công việc');
                 return;
             }
 
             // Lấy tất cả checkbox đã được chọn
             const selected = document.querySelectorAll(".task-checkbox:checked");
-            if (selected.length === 0) return alert("Vui lòng chọn ít nhất 1 công việc!");
+            if (selected.length === 0) { await showCustomAlert("Vui lòng chọn ít nhất 1 công việc!"); return; }
 
             // Xác nhận trước khi xóa
             if (!await showCustomConfirm(`Xác nhận xóa ${selected.length} công việc?`)) return;
@@ -2968,7 +2975,7 @@ function getTodayString() {
 // Kiểm trá quyền: Thành viên chỉ được xem công việc hôm nay
 function checkMemberAccess(dateStr) {
     if (isMember() && dateStr !== getTodayString()) {
-        alert('👤 Thành viên chỉ được xem công việc của ngày hôm nay');
+        showCustomAlert('👤 Thành viên chỉ được xem công việc của ngày hôm nay');
         return false;
     }
     return true;

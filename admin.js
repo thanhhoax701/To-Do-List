@@ -185,12 +185,13 @@ function renderUsers(usersObj) {
 
                 el.querySelector('.btn-delete').onclick = async (e) => {
                     e.preventDefault();
-                    if (!confirm('Xóa người dùng "' + (u.name || 'User') + '" này?')) return;
+                    const ok = await showCustomConfirm('Xóa người dùng "' + (u.name || 'User') + '" này?');
+                    if (!ok) return;
                     showLoadingAdmin();
                     try {
                         await remove(ref(db, `users/${e.target.dataset.key}`));
                     } catch (error) {
-                        alert('Lỗi khi xóa người dùng: ' + error.message);
+                        await showCustomAlert('Lỗi khi xóa người dùng: ' + error.message);
                     } finally {
                         hideLoadingAdmin();
                     }
@@ -232,8 +233,8 @@ addUserBtn.onclick = async () => {
     const pin = newPin.value.trim();
     const role = newRole.value;
 
-    if (!name) return alert('Vui lòng nhập tên người dùng');
-    if (!pin || pin.length !== 4) return alert('PIN phải đủ 4 chữ số');
+    if (!name) { await showCustomAlert('Vui lòng nhập tên người dùng'); return; }
+    if (!pin || pin.length !== 4) { await showCustomAlert('PIN phải đủ 4 chữ số'); return; }
 
     showLoadingAdmin();
     try {
@@ -242,7 +243,7 @@ addUserBtn.onclick = async () => {
         if (editingUserId) {
             // Update existing user
             await update(ref(db, `users/${editingUserId}`), userData);
-            alert('✅ Cập nhật người dùng thành công');
+            await showCustomAlert('✅ Cập nhật người dùng thành công');
         } else {
             // Add new user: create sequential id like "userNNN" instead of random push key
             const usersSnap = await get(ref(db, 'users'));
@@ -271,12 +272,12 @@ addUserBtn.onclick = async () => {
                 }
             }
             await set(ref(db, `users/${nextId}`), userData);
-            alert(`✅ Thêm người dùng mới thành công (${nextId})`);
+            await showCustomAlert(`✅ Thêm người dùng mới thành công (${nextId})`);
         }
         resetFormUI();
     } catch (e) {
         console.error(e);
-        alert('❌ Có lỗi: ' + (e.message || 'Không xác định'));
+        await showCustomAlert('❌ Có lỗi: ' + (e.message || 'Không xác định'));
     } finally {
         hideLoadingAdmin();
     }
