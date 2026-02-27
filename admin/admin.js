@@ -1,6 +1,6 @@
 // ========== IMPORT FIREBASE ==========
 // Nhập Firebase Database và các hàm thao tác dữ liệu
-import { db } from './firebase.js';
+import { db } from '../firebase.js';
 import { ref, push, get, remove, onValue, update, set } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
 // ========== DOM ELEMENTS - PHẦN ĐĂNG NHẬP ==========
@@ -24,7 +24,7 @@ const newRole = document.getElementById('newRole'); // Dropdown role user
 // ========== BIẾN TOÀN CỤC ==========
 let editingUserId = null; // Lưu ID user đang chỉnh sửa (null = thêm mới)
 
-// ---------- loading helpers for admin page ----------
+// ---------- hàm tiện ích hiển thị/loading cho trang quản trị ----------
 function showLoadingAdmin() {
     if (addUserBtn) addUserBtn.disabled = true;
     if (cancelEditBtn) cancelEditBtn.disabled = true;
@@ -202,9 +202,9 @@ function renderUsers(usersObj) {
 }
 
 function normalizeUsers(obj) {
-    // After importing JSON, Firebase sometimes wraps the real users
-    // under a generated push-id. Detect and unwrap that layer so the
-    // admin UI shows the correct entries instead of the random key.
+    // Sau khi nhập file JSON, Firebase đôi khi bọc dữ liệu người dùng thực
+    // dưới một push-id tự sinh. Phát hiện và mở lớp bọc đó để giao diện
+    // quản trị hiển thị đúng người dùng thay vì khóa ngẫu nhiên.
     if (obj && typeof obj === 'object') {
         const keys = Object.keys(obj);
         if (keys.length === 1) {
@@ -250,7 +250,7 @@ addUserBtn.onclick = async () => {
             let nextId = 'user001';
             if (usersSnap.exists()) {
                 let usersObj = usersSnap.val();
-                // unwrap possible wrapper
+                // mở lớp bọc nếu có
                 if (usersObj && typeof usersObj === 'object') {
                     const keys = Object.keys(usersObj);
                     if (keys.length === 1 && usersObj[keys[0]] && typeof usersObj[keys[0]] === 'object' &&

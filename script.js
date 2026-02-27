@@ -836,7 +836,7 @@ async function exportTasksForCollection(taskList, includeDate) {
             sheetName = formatDisplayDate(d);
         }
         usedNames.add(sheetName);
-        // ensure sheet name <=31 chars and remove illegal characters
+        // đảm bảo tên sheet không quá 31 ký tự và loại bỏ các ký tự không hợp lệ
         sheetName = sheetName.replace(/[\\/*?:\[\]]/g, '_').slice(0, 31);
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
     }
@@ -996,6 +996,8 @@ function hideCustomAlert() {
 
 // Hiển thị modal thông báo (chỉ có nút OK, người dùng chỉ xem thôi)
 function showCustomAlert(html) {
+    // mỗi lần hiển thị thông báo, đảm bảo overlay loading đã được ẩn
+    hideLoading();
     return new Promise(resolve => {
         if (!customAlertModal) { alert(html); resolve(); return; } // Fallback nếu không có modal
         customAlertBody.innerHTML = html;
@@ -1008,6 +1010,8 @@ function showCustomAlert(html) {
 
 // Hiển thị modal xác nhận (có nút OK và Hủy, người dùng phải xác nhận)
 function showCustomConfirm(html) {
+    // thông báo và xác nhận nên luôn hủy chỉ báo loading nếu đang tồn tại
+    hideLoading();
     return new Promise(resolve => {
         if (!customAlertModal) { resolve(confirm(html)); return; } // Fallback
         customAlertBody.innerHTML = html.replace(/\n/g, '<br>'); // Chuyển dòng thành HTML break
@@ -1265,12 +1269,15 @@ function loadTasks(ds) {
 
                 try {
                     await remove(tasksRef(y, m, w, ds, k));
+                    hideLoading();
+                    // đợi trình duyệt vẽ lại để spinner biến mất trước khi thông báo
+                    await new Promise(r => requestAnimationFrame(r));
                     await showCustomAlert("✅ Xóa công việc thành công!");
                 } catch (error) {
+                    hideLoading();
+                    await new Promise(r => requestAnimationFrame(r));
                     await showCustomAlert("❌ Có lỗi xảy ra khi xóa!");
                     console.error(error);
-                } finally {
-                    hideLoading();
                 }
             };
 
@@ -1351,7 +1358,7 @@ if (saveTaskBtn) {
             } else {
                 await push(tasksRef(y, m, w, selectedDate), data);
             }
-            // hide spinner before showing confirmation
+            // ẩn spinner trước khi hiển thị xác nhận
             hideLoading();
             if (taskIdField.value) {
                 await showCustomAlert("✅ Cập nhật công việc thành công!");
@@ -1364,7 +1371,7 @@ if (saveTaskBtn) {
             hideLoading();
             await showCustomAlert("\u274c Có lỗi xảy ra khi lưu công việc!");
         } finally {
-            // ensure spinner hidden if not already
+            // đảm bảo spinner đã bị ẩn nếu chưa
             hideLoading();
         }
     };
@@ -2706,6 +2713,7 @@ if (document.getElementById('deleteWeekBtn')) {
             try {
                 await remove(tasksRef(y, m, w));
                 hideLoading();
+                await new Promise(r => requestAnimationFrame(r));
                 await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc)`);
                 loadTasksForWeek(y, m, w);
             } catch (error) {
@@ -2759,6 +2767,7 @@ if (document.getElementById('deleteMonthBtn')) {
             try {
                 await remove(tasksRef(y, m));
                 hideLoading();
+                await new Promise(r => requestAnimationFrame(r));
                 await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc) của tháng ${m}/${y}`);
                 taskTable.innerHTML = ""; // Xóa bảng hiển thị
             } catch (error) {
@@ -2820,10 +2829,14 @@ if (deleteSelect) {
                     const k = cb.dataset.key;
                     await remove(tasksRef(y, m, w, d, k));
                 }
-            } finally {
                 hideLoading();
+                await new Promise(r => requestAnimationFrame(r));
+                await showCustomAlert(`✅ Đã xóa ${selected.length} công việc`);
+            } catch (error) {
+                hideLoading();
+                await new Promise(r => requestAnimationFrame(r));
+                await showCustomAlert(`❌ Có lỗi khi xóa: ${error && error.message ? error.message : String(error)}`);
             }
-            await showCustomAlert(`✅ Đã xóa ${selected.length} công việc`);
             selectAllCheckbox.checked = false; // Bỏ chọn checkbox "chọn tất cả"
         }
     };
