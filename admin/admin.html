@@ -31,35 +31,76 @@
         <!-- ========== PANEL QUẢN LÝ (SAU KHI ĐĂNG NHẬP) ========== -->
         <!-- Hiển thị sau khi đăng nhập thành công -->
         <div id="adminPanel" style="display:none">
-            <!-- Hộp quản lý người dùng -->
-            <div class="admin-box">
-                <h2>📋 Quản lý người dùng</h2>
-                <!-- Input Đang chỉnh sửa user ID (hidden) -->
-                <input type="hidden" id="editingUserId">
-                <!-- Form thêm/sửa user -->
-                <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-                    <!-- Input tên user -->
-                    <input id="newName" placeholder="Tên người dùng" style="padding:8px;flex:1;min-width:200px;border-radius:6px;border:1px solid #ddd">
-                    <!-- Input PIN 4 chữ số -->
-                    <input
-                        id="newPin"
-                        placeholder="PIN (4 chữ số)"
-                        maxlength="4"
-                        style="padding:8px;width:140px;border-radius:6px;border:1px solid #ddd"
-                    >
-                    <!-- Dropdown chọn role -->
-                    <select id="newRole" style="padding:8px;border-radius:6px;border:1px solid #ddd">
-                        <option value="member">👤 Thành viên</option>
-                        <option value="admin">👨‍💼 Quản trị viên</option>
-                        <option value="superadmin">👑 Quản trị viên cấp cao</option>
-                    </select>
-                    <!-- Nút thêm / cập nhật -->
-                    <button id="addUserBtn" class="btn-add" style="white-space:nowrap">➕ Thêm</button>
-                    <!-- Nút hủy chỉnh sửa (hiện khi edit) -->
-                    <button id="cancelEditBtn" class="btn-edit" style="white-space:nowrap;display:none">❌ Hủy</button>
+            <div class="admin-container">
+                <!-- navigation sidebar -->
+                <nav class="admin-sidebar">
+                    <ul id="adminNav">
+                        <li data-panel="panel-users" class="active">📋 Quản lý người dùng</li>
+                        <li data-panel="panel-tasks">🗂️ Quản lý công việc</li>
+                        <li data-panel="panel-editLog">📝 Nhật ký chỉnh sửa</li>
+                        <li data-panel="panel-loginLog">🔐 Nhật ký đăng nhập</li>
+                    </ul>
+                </nav>
+                <!-- main content area -->
+                <div class="admin-main">
+                    <!-- panel: users -->
+                    <div id="panel-users" class="panel-content">
+                        <div class="admin-box">
+                            <h2>📋 Quản lý người dùng</h2>
+                            <!-- Input Đang chỉnh sửa user ID (hidden) -->
+                            <input type="hidden" id="editingUserId">
+                            <!-- Form thêm/sửa user -->
+                            <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+                                <!-- Input tên user -->
+                                <input id="newName" placeholder="Tên người dùng" style="padding:8px;flex:1;min-width:200px;border-radius:6px;border:1px solid #ddd">
+                                <!-- Input PIN 4 chữ số -->
+                                <input
+                                    id="newPin"
+                                    placeholder="PIN (4 chữ số)"
+                                    maxlength="4"
+                                    style="padding:8px;width:140px;border-radius:6px;border:1px solid #ddd"
+                                >
+                                <!-- Dropdown chọn role -->
+                                <select id="newRole" style="padding:8px;border-radius:6px;border:1px solid #ddd">
+                                    <option value="member">👤 Thành viên</option>
+                                    <option value="admin">👨‍💼 Quản trị viên</option>
+                                    <option value="superadmin">👑 Quản trị viên cấp cao</option>
+                                </select>
+                                <!-- Nút thêm / cập nhật -->
+                                <button id="addUserBtn" class="btn-add" style="white-space:nowrap">➕ Thêm</button>
+                                <!-- Nút hủy chỉnh sửa (hiện khi edit) -->
+                                <button id="cancelEditBtn" class="btn-edit" style="white-space:nowrap;display:none">❌ Hủy</button>
+                            </div>
+                            <!-- Danh sách người dùng - render bởi JavaScript -->
+                            <div class="user-list" id="userList"></div>
+                        </div>
+                    </div>
+                    <!-- panel: tasks -->
+                    <div id="panel-tasks" class="panel-content" style="display:none">
+                        <div class="admin-box">
+                            <h2>🗂️ Quản lý công việc</h2>
+                            <div id="taskUserList"></div>
+                            <div id="taskDetails" style="display:none;margin-top:16px">
+                                <button id="taskBackBtn">← Quay lại</button>
+                                <div id="tasksContent" style="margin-top:12px"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- panel: edit log -->
+                    <div id="panel-editLog" class="panel-content" style="display:none">
+                        <div class="admin-box">
+                            <h2>📝 Nhật ký chỉnh sửa</h2>
+                            <em>Chức năng đang được xây dựng. Dự kiến hiển thị theo: người dùng → năm → tháng → tuần → ngày → công việc → phần nhỏ.</em>
+                        </div>
+                    </div>
+                    <!-- panel: login log -->
+                    <div id="panel-loginLog" class="panel-content" style="display:none">
+                        <div class="admin-box">
+                            <h2>🔐 Nhật ký đăng nhập</h2>
+                            <em>Chức năng đang được xây dựng. Hiển thị sự kiện đăng nhập của người dùng.</em>
+                        </div>
+                    </div>
                 </div>
-                <!-- Danh sách người dùng - render bởi JavaScript -->
-                <div class="user-list" id="userList"></div>
             </div>
         </div>
         <!-- ========== SCRIPT ========== -->

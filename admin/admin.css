@@ -123,3 +123,249 @@ body {
     font-size: 14px;
     min-height: 18px
 }
+
+/* layout for admin panels */
+.admin-container {
+    display: flex;
+    min-height: calc(100vh - 40px);
+    /* account for body padding */
+}
+
+.admin-sidebar {
+    width: 240px;
+    background: #fff;
+    border-right: 1px solid #ddd;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.admin-sidebar ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.admin-sidebar li {
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.admin-sidebar li:hover {
+    background: #f0f0f0;
+}
+
+.admin-sidebar li.active {
+    background: #e0e0e0;
+    font-weight: bold;
+}
+
+.admin-main {
+    flex: 1;
+    padding: 20px;
+    overflow: auto;
+}
+
+.panel-content {
+    /* panels are already boxes; hide by default via inline style when needed */
+}
+
+/* small adjustments for task panel back button */
+#taskBackBtn {
+    padding: 6px 10px;
+    border: none;
+    background: #007bff;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#taskBackBtn:hover {
+    background: #0069d9;
+}
+
+/* task panel list styles */
+#taskUserList button {
+    padding: 6px 12px;
+    margin: 4px;
+    background: #f8f9fa;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#taskUserList button:hover {
+    background: #e2e6ea;
+}
+
+/* navigation buttons (years/months/weeks/days) and back button */
+#tasksContent button {
+    padding: 6px 14px;
+    margin: 4px;
+    background: #ffffff;
+    border: 1px solid #007bff;
+    color: #007bff;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+#tasksContent button:hover {
+    background: #007bff;
+    color: #fff;
+}
+
+#tasksContent button[style*="margin"] {
+    /* allow styled inline margin/back button */
+}
+
+/* admin task table borders */
+#tasksContent table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    margin-top: 10px;
+}
+
+#tasksContent table tbody tr {
+    background: #fff;
+}
+
+#tasksContent table td,
+#tasksContent table th {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+}
+
+/* header row appearance */
+#tasksContent table thead tr {
+    background: #007bff;
+    color: #fff;
+}
+
+#tasksContent table thead th {
+    border: 1px solid #ddd;
+}
+
+#tasksContent table tbody td:nth-child(2) {
+    text-align: left;
+}
+
+#tasksContent {
+    margin-top: 12px;
+}
+
+#tasksContent ul {
+    margin-left: 16px;
+    list-style: disc;
+}
+
+/* Tasks tree structure styling */
+.tasks-tree {
+    margin-top: 12px;
+    font-family: Arial, sans-serif;
+}
+
+.tree-item {
+    margin-bottom: 4px;
+}
+
+.tree-toggle {
+    padding: 8px;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 4px;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tree-toggle:hover {
+    background: #f0f0f0;
+}
+
+.tree-toggle .arrow {
+    display: inline-block;
+    width: 16px;
+    text-align: center;
+    font-size: 12px;
+    transition: transform 0.2s;
+}
+
+.tree-content {
+    overflow: hidden;
+    transition: max-height 0.2s ease;
+}
+
+.task-item {
+    background: #f9f9f9;
+    border-left: 3px solid #007bff;
+    border-radius: 3px;
+    margin: 8px 0;
+    padding: 10px;
+    font-size: 13px;
+}
+
+.task-item>div:first-child {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.task-item>div:nth-child(2) {
+    color: #666;
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+
+.task-item>div:nth-child(3) {
+    color: #777;
+    font-size: 11px;
+}
+
+/* Status badges */
+.status-badge,
+.priority-badge {
+    display: inline-block;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Status colors */
+.status-đã-xử-lý {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-chưa-xử-lý {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-đang-xử-lý {
+    background: #cfe2ff;
+    color: #084298;
+}
+
+/* Priority colors */
+.priority-thấp {
+    background: #e7f3ff;
+    color: #004085;
+}
+
+.priority-trung-bình {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.priority-cao {
+    background: #f8d7da;
+    color: #721c24;
+}

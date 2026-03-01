@@ -24,7 +24,42 @@ const newRole = document.getElementById('newRole'); // Dropdown role user
 // ========== BIẾN TOÀN CỤC ==========
 let editingUserId = null; // Lưu ID user đang chỉnh sửa (null = thêm mới)
 
+// DOM elements new panels/navigation
+const navItems = document.querySelectorAll('#adminNav li');
+const panels = document.querySelectorAll('.panel-content');
+const taskUserListDiv = document.getElementById('taskUserList');
+const taskDetailsDiv = document.getElementById('taskDetails');
+const tasksContentDiv = document.getElementById('tasksContent');
+const taskBackBtn = document.getElementById('taskBackBtn');
+
 // ---------- hàm tiện ích hiển thị/loading cho trang quản trị ----------
+
+// ---------- panel navigation ----------
+function switchPanel(panelId) {
+    // hide all panels
+    panels.forEach(p => p.style.display = 'none');
+    // remove active class
+    navItems.forEach(i => i.classList.remove('active'));
+    // show requested
+    const target = document.getElementById(panelId);
+    if (target) target.style.display = 'block';
+    // highlight nav
+    const activeItem = document.querySelector(`#adminNav li[data-panel="${panelId}"]`);
+    if (activeItem) activeItem.classList.add('active');
+
+    // load data for some panels
+    if (panelId === 'panel-tasks') {
+        loadUsersForTasks();
+    }
+}
+
+// attach nav event listeners
+navItems.forEach(li => {
+    li.addEventListener('click', () => {
+        switchPanel(li.dataset.panel);
+    });
+});
+
 function showLoadingAdmin() {
     if (addUserBtn) addUserBtn.disabled = true;
     if (cancelEditBtn) cancelEditBtn.disabled = true;
@@ -85,6 +120,7 @@ async function performAdminLogin() {
         adminLoginDiv.style.display = 'none';
         adminPanel.style.display = 'block';
         bindUsers(); // Tải danh sách users
+        switchPanel('panel-users'); // hiển thị panel mặc định
     } catch (e) {
         adminLoginMsg.innerText = 'Lỗi khi kiểm tra PIN';
         console.error(e);
@@ -226,6 +262,278 @@ function bindUsers() {
             renderUsers(data);
         } else userListDiv.innerHTML = '<em>Chưa có người dùng nào</em>';
     });
+}
+
+// --------- task panel helpers ----------
+async function loadUsersForTasks() {
+    try {
+        const snap = await get(ref(db, 'users'));
+        if (snap.exists()) {
+            const data = normalizeUsers(snap.val());
+            renderUsersForTasks(data);
+        } else {
+            taskUserListDiv.innerHTML = '<em>Không có người dùng</em>';
+        }
+    } catch (e) {
+        taskUserListDiv.innerHTML = '<em>Lỗi khi tải danh sách người dùng</em>';
+        console.error(e);
+    }
+}
+
+function renderUsersForTasks(usersObj) {
+    taskUserListDiv.innerHTML = '';
+    if (!usersObj) return;
+    Object.entries(usersObj).forEach(([id, u]) => {
+        const btn = document.createElement('button');
+        btn.textContent = u.name || id;
+        btn.style.margin = '4px';
+        btn.dataset.id = id;
+        btn.addEventListener('click', () => loadTasks(id));
+        taskUserListDiv.appendChild(btn);
+    });
+}
+
+let currentTasksObj = null; // full tasks data for selected user
+let navPath = []; // e.g. ['2026','01','week5','2026-01-26']
+
+async function loadTasks(userId) {
+    taskDetailsDiv.style.display = 'block';
+    tasksContentDiv.innerHTML = 'Đang tải...';
+    try {
+        const snap = await get(ref(db, `tasks/${userId}`));
+        if (!snap.exists()) {
+            tasksContentDiv.innerHTML = '<em>Không có công việc cho người dùng này</em>';
+        } else {
+            currentTasksObj = snap.val();
+            renderYearView();
+        }
+    } catch (e) {
+        tasksContentDiv.innerHTML = '<em>Lỗi khi tải công việc</em>';
+        console.error(e);
+    }
+}
+
+// navigation rendering functions
+function clearTasksArea() {
+    tasksContentDiv.innerHTML = '';
+}
+
+function renderBackButton(level) {
+    // level: 0 => back to user list; >0 back up one level
+    const btn = document.createElement('button');
+    btn.textContent = '← Trở lại';
+    btn.style.margin = '8px 0';
+    btn.onclick = () => {
+        if (level === 0) {
+            taskBackBtn.click();
+        } else {
+            navPath.pop();
+            switch (level) {
+                case 1: renderYearView(); break;
+                case 2: renderMonthView(navPath[0]); break;
+                case 3: renderWeekView(navPath[0], navPath[1]); break;
+                case 4: renderDayView(navPath[0], navPath[1], navPath[2]); break;
+            }
+        }
+    };
+    tasksContentDiv.appendChild(btn);
+}
+
+function renderYearView() {
+    clearTasksArea();
+    renderBackButton(0);
+    const years = Object.keys(currentTasksObj || {}).sort();
+    years.forEach(year => {
+        const btn = document.createElement('button');
+        btn.textContent = year;
+        btn.style.margin = '4px';
+        btn.onclick = () => renderMonthView(year);
+        tasksContentDiv.appendChild(btn);
+    });
+}
+
+function renderMonthView(year) {
+    navPath = [year];
+    clearTasksArea();
+    renderBackButton(1);
+    const months = Object.keys(currentTasksObj[year] || {}).sort();
+    months.forEach(month => {
+        const btn = document.createElement('button');
+        btn.textContent = `Tháng ${month}`;
+        btn.style.margin = '4px';
+        btn.onclick = () => renderWeekView(year, month);
+        tasksContentDiv.appendChild(btn);
+    });
+}
+
+function renderWeekView(year, month) {
+    navPath = [year, month];
+    clearTasksArea();
+    renderBackButton(2);
+    const weeks = Object.keys((currentTasksObj[year] || {})[month] || {}).sort();
+    weeks.forEach(week => {
+        const weekData = (currentTasksObj[year] || {})[month] || {};
+        const daysObj = weekData[week] || {};
+        const dates = Object.keys(daysObj).sort();
+        let label = week;
+        if (dates.length > 0) {
+            const start = dates[0];
+            const end = dates[dates.length - 1];
+            // extract number from week string
+            const numMatch = week.match(/week(\d+)/i);
+            const num = numMatch ? numMatch[1] : week;
+            label = `Tuần ${num} - ${month}/${year} (${start} - ${end})`;
+        }
+        const btn = document.createElement('button');
+        btn.textContent = label;
+        btn.style.margin = '4px';
+        btn.onclick = () => renderDayView(year, month, week);
+        tasksContentDiv.appendChild(btn);
+    });
+}
+
+function renderDayView(year, month, week) {
+    navPath = [year, month, week];
+    clearTasksArea();
+    renderBackButton(3);
+    const days = Object.keys(((currentTasksObj[year] || {})[month] || {})[week] || {}).sort();
+    days.forEach(date => {
+        const btn = document.createElement('button');
+        btn.textContent = date;
+        btn.style.margin = '4px';
+        btn.onclick = () => renderTasksForDate(year, month, week, date);
+        tasksContentDiv.appendChild(btn);
+    });
+}
+
+function renderTasksForDate(year, month, week, date) {
+    navPath = [year, month, week, date];
+    clearTasksArea();
+    renderBackButton(4);
+    const list = currentTasksObj[year][month][week][date];
+    if (!list) {
+        tasksContentDiv.innerHTML += '<em>Không có công việc</em>';
+        return;
+    }
+    // create styled table similar to main interface
+    const table = document.createElement('table');
+    table.style.width = '100%';
+    // don't collapse borders for admin task table
+    // table.style.borderCollapse = 'collapse';
+    table.style.marginTop = '8px';
+    const thead = document.createElement('thead');
+    thead.innerHTML = `
+        <tr style="background:#007bff;color:#fff;">
+            <th style="padding:8px;border:1px solid #ddd;">STT</th>
+            <th style="padding:8px;border:1px solid #ddd;">Nội dung</th>
+            <th style="padding:8px;border:1px solid #ddd;">Đơn vị</th>
+            <th style="padding:8px;border:1px solid #ddd;">Thời gian</th>
+            <th style="padding:8px;border:1px solid #ddd;">Mức độ</th>
+            <th style="padding:8px;border:1px solid #ddd;">Trạng thái</th>
+            <th style="padding:8px;border:1px solid #ddd;">Ghi chú</th>
+        </tr>`;
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    let idx = 1;
+    Object.entries(list).forEach(([taskId, task]) => {
+        const tr = document.createElement('tr');
+        // no border on tr; we'll style cells instead
+        tr.innerHTML = `
+            <td style="padding:6px;vertical-align:top;">${idx++}</td>
+            <td style="padding:6px;vertical-align:top;">${task.content || ''}</td>
+            <td style="padding:6px;vertical-align:top;">${task.unit || ''}</td>
+            <td style="padding:6px;vertical-align:top;">${task.duration || ''}</td>
+            <td style="padding:6px;vertical-align:top;">${task.priority || ''}</td>
+            <td style="padding:6px;vertical-align:top;">${task.status || ''}</td>
+            <td style="padding:6px;vertical-align:top;">${task.note || ''}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    tasksContentDiv.appendChild(table);
+}
+
+taskBackBtn && taskBackBtn.addEventListener('click', () => {
+    taskDetailsDiv.style.display = 'none';
+    tasksContentDiv.innerHTML = '';
+});
+
+function buildTasksTable(obj) {
+    const rows = [];
+
+    // Traverse nested structure: year > month > week > date > taskId > task
+    Object.entries(obj).forEach(([year, yearData]) => {
+        if (!yearData || typeof yearData !== 'object') return;
+
+        Object.entries(yearData).forEach(([month, monthData]) => {
+            if (!monthData || typeof monthData !== 'object') return;
+
+            Object.entries(monthData).forEach(([week, weekData]) => {
+                if (!weekData || typeof weekData !== 'object') return;
+
+                Object.entries(weekData).forEach(([date, dateData]) => {
+                    if (!dateData || typeof dateData !== 'object') return;
+
+                    Object.entries(dateData).forEach(([taskId, task]) => {
+                        if (!task || typeof task !== 'object') return;
+
+                        rows.push({
+                            year,
+                            month,
+                            week,
+                            date,
+                            taskId,
+                            content: task.content || '',
+                            duration: task.duration || '',
+                            status: task.status || '',
+                            priority: task.priority || '',
+                            unit: task.unit || '',
+                            startDate: task.startDate || '',
+                            note: task.note || ''
+                        });
+                    });
+                });
+            });
+        });
+    });
+
+    // Create table
+    const table = document.createElement('table');
+    table.className = 'tasks-table';
+
+    // Header
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    const headers = ['Năm', 'Tháng', 'Tuần', 'Ngày', 'Nội dung', 'Thời gian', 'Trạng thái', 'Ưu tiên', 'Đơn vị', 'Ghi chú'];
+    headers.forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h;
+        headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    // Body
+    const tbody = document.createElement('tbody');
+    rows.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${row.year}</td>
+            <td>${row.month}</td>
+            <td>${row.week}</td>
+            <td>${row.date}</td>
+            <td class="task-content">${row.content}</td>
+            <td>${row.duration}</td>
+            <td><span class="status-badge status-${row.status.toLowerCase().replace(/\s+/g, '-')}">${row.status}</span></td>
+            <td><span class="priority-badge priority-${row.priority.toLowerCase().replace(/\s+/g, '-')}">${row.priority}</span></td>
+            <td>${row.unit}</td>
+            <td>${row.note}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+
+    return table;
 }
 
 addUserBtn.onclick = async () => {
