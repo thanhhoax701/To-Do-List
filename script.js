@@ -1189,7 +1189,7 @@ function loadTasks(ds) {
                 <td>${t.duration}</td>
                 <td></td>
                 <td></td>
-                <td>${t.note}</td>
+                <td>${t.note.replace(/\./g, '.<br>')}</td>
                 <td>
                     <button class="btn-duplicate">🔁 Nhân bản</button>
                     <button class="btn-edit">✏️ Sửa</button>

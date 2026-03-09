@@ -96,6 +96,13 @@ th:nth-child(3) {
     text-align: left;
 }
 
+/* Cột "Ghi chú" (cột 8) - giữ nguyên xuống dòng, bọc text, căn trái */
+td:nth-child(8),
+th:nth-child(8) {
+    text-align: left;
+    white-space: pre-wrap;
+}
+
 /* Cột hành động - flex layout cho buttons */
 td:last-child {
     display: flex;
