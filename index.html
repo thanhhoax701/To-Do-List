@@ -68,8 +68,12 @@
             <!-- Tiêu đề ngày đang chọn -->
             <h2 id="selectedDateTitle">Chọn ngày để xem công việc</h2>
             <!-- Nút thêm công việc -->
-            <div style="display: flex; gap: 10px; align-items: center; position: relative;">
-                <button id="openAddModal" class="btn-add">➕ Thêm công việc</button>
+            <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 12px;">
+                <button id="openAddModal" class="btn-add" style="height:40px; font-size:17px; padding:0 22px; display:flex; align-items:center;">➕ Thêm công việc</button>
+                <select id="deleteSelect" style="height:40px; font-size:16px; padding:0 16px; border-radius:6px; border:1px solid #bbb; background:#fff;">
+                    <option value="">Xóa...</option>
+                    <option value="selected">Xóa đã chọn</option>
+                </select>
             </div>
             <!-- Sidebar Menu -->
             <div id="sideMenuPanel" class="side-menu-panel">
@@ -220,12 +224,8 @@
             <table>
                 <thead>
                     <tr>
-                        <!-- Cột chọn, chỗ để dropdown xóa và checkbox chọn tất cả -->
-                        <th style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-                            <select id="deleteSelect" style="padding:2px 4px; width:auto; font-size:12px; height:20px;">
-                                <option value="">Xóa...</option>
-                                <option value="selected">Xóa đã chọn</option>
-                            </select>
+                        <!-- Cột chọn, chỗ để checkbox chọn tất cả -->
+                        <th>
                             <input type="checkbox" id="selectAllCheckbox">
                         </th>
                         <th>STT</th>

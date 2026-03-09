@@ -1312,10 +1312,19 @@ function openModal(title, id = "", t = {}) {
     modal.style.display = "flex"; // Hiển thị modal
 }
 
-// Xóa modal bằng nút X
-if (document.querySelector(".close")) {
-    document.querySelector(".close").onclick = () => modal.style.display = "none";
-}
+// Đảm bảo nút X (close) của modal thêm/sửa công việc luôn hoạt động
+document.addEventListener('DOMContentLoaded', function () {
+    const taskModal = document.getElementById('taskModal');
+    if (taskModal) {
+        const closeBtn = taskModal.querySelector('.close');
+        if (closeBtn) {
+            closeBtn.onclick = function (e) {
+                e.preventDefault();
+                taskModal.style.display = 'none';
+            };
+        }
+    }
+});
 
 // Xóa modal khi click bên ngoài (backdrop)
 modal.addEventListener("click", e => { if (e.target === modal) modal.style.display = "none"; });

@@ -116,10 +116,13 @@ td:last-child {
 #customAlertBody {
     background: linear-gradient(180deg, #f8fff5, #ffffff);
     border-radius: 8px;
-    padding: 12px;
-    color: #0b2f1a;
+    padding: 12px 6px;
+    color: #222;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
     line-height: 1.4;
+    overflow-y: auto;
+    max-height: 60vh;
+    font-size: 15px;
 }
 
 /* Nút OK */
@@ -311,7 +314,7 @@ td select {
     background: white;
     width: 100%;
     max-width: 500px;
-    padding: 16px 18px;
+    padding: 10px 15px 10px 15px;
     border-radius: 14px;
     position: relative;
     box-shadow: 0 18px 45px rgba(0, 0, 0, 0.25);
@@ -319,6 +322,7 @@ td select {
     display: flex;
     flex-direction: column;
     max-height: 90vh;
+    overflow-y: auto;
 }
 
 /* Modal NB - Calendar */
@@ -377,30 +381,28 @@ td select {
     display: block;
 }
 
+
 .modal-content input,
 .modal-content textarea,
 .modal-content select {
     width: 100%;
-    padding: 6px 8px;
+    padding: 10px;
     font-size: 13px;
     border-radius: 6px;
     border: 1px solid #ccc;
-    margin-bottom: 6px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
 }
 
 .modal-content textarea {
-    resize: none;
+    resize: vertical;
     height: 60px;
+    min-height: 60px;
+    max-height: 200px;
+    /* overflow-y: scroll; */
 }
 
 /* Nội dung có thể cuộn */
-#customAlertBody {
-    overflow-y: auto;
-    max-height: 60vh;
-    padding: 12px 6px;
-    font-size: 15px;
-    color: #222;
-}
 
 /* Nút lưu - canh giữa */
 #saveTaskBtn {
