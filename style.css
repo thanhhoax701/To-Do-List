@@ -105,10 +105,11 @@ th:nth-child(8) {
 
 /* Cột hành động - flex layout cho buttons */
 td:last-child {
-    display: flex;
+    /* display: flex;
     gap: 8px;
     justify-content: center;
-    flex-wrap: wrap;
+    flex-wrap: wrap; */
+    margin: 10px;
 }
 
 /* ===== MODAL TÙY CHỈNH (Alert/Confirm) ===== */
@@ -208,6 +209,7 @@ button {
     padding: 8px 14px;
     font-size: 14px;
     font-weight: 600;
+    margin: 2px;
 }
 
 /* Nút xóa - đỏ */
@@ -217,6 +219,7 @@ button {
     border: none;
     padding: 8px 14px;
     font-size: 14px;
+    margin: 2px;
 }
 
 /* Hover effects */
@@ -451,6 +454,7 @@ td select {
     border-radius: 6px;
     font-size: 14px;
     font-weight: 600;
+    margin: 2px;
 }
 
 .btn-duplicate:hover {
