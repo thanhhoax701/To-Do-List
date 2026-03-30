@@ -90,15 +90,35 @@ th {
     color: #fff;
 }
 
-/* Cột "Nội dung" (cột 3) - căn trái để dễ đọc */
-td:nth-child(3),
-th:nth-child(3) {
+/* Cột checkbox nhỏ */
+th:nth-child(1),
+td:nth-child(1) {
+    width: 40px;
+}
+
+/* Cột STT nhỏ */
+th:nth-child(2),
+td:nth-child(2) {
+    width: 50px;
+}
+
+/* Cột Công việc hẹp hơn Mô tả */
+th:nth-child(3),
+td:nth-child(3) {
+    width: 180px;
     text-align: left;
 }
 
-/* Cột "Ghi chú" (cột 8) - giữ nguyên xuống dòng, bọc text, căn trái */
-td:nth-child(8),
-th:nth-child(8) {
+/* Cột Mô tả rộng hơn */
+th:nth-child(4),
+td:nth-child(4) {
+    width: 320px;
+    text-align: left;
+}
+
+/* Cột Ghi chú rộng và wrap text */
+td:nth-child(13),
+th:nth-child(13) {
     text-align: left;
     white-space: pre-wrap;
 }
@@ -282,21 +302,39 @@ td select {
 
 /* Màu cho trạng thái công việc */
 .status-pending {
-    /* Chưa xử lý - xanh dương */
+    /* Chưa bắt đầu - xanh dương */
     background: #0891b2;
     color: #fff;
 }
 
 .status-doing {
-    /* Đang xử lý - cam */
+    /* Đang thực hiện - cam */
     background: #ea580c;
     color: #fff;
 }
 
 .status-done {
-    /* Đã xử lý - xanh lá */
+    /* Hoàn thành - xanh lá */
     background: #059669;
     color: #fff;
+}
+
+.status-delayed {
+    /* Chậm tiến độ - đỏ */
+    background: #dc2626;
+    color: #fff;
+}
+
+.status-pending,
+.status-doing,
+.status-done,
+.status-delayed {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
 }
 
 /* ===== MODAL - OVERLAY & CONTENT ===== */

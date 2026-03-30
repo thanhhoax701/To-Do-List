@@ -68,7 +68,7 @@
             <!-- Tiêu đề ngày đang chọn -->
             <h2 id="selectedDateTitle">Chọn ngày để xem công việc</h2>
             <!-- Nút thêm công việc -->
-            <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 12px;">
+            <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
                 <button id="openAddModal" class="btn-add" style="height:40px; font-size:17px; padding:0 22px; display:flex; align-items:center;">➕ Thêm công việc</button>
                 <select id="deleteSelect" style="height:40px; font-size:16px; padding:0 16px; border-radius:6px; border:1px solid #bbb; background:#fff;">
                     <option value="">Xóa...</option>
@@ -224,16 +224,20 @@
             <table>
                 <thead>
                     <tr>
-                        <!-- Cột chọn, chỗ để checkbox chọn tất cả -->
                         <th>
                             <input type="checkbox" id="selectAllCheckbox">
                         </th>
                         <th>STT</th>
-                        <th>Nội dung</th>
+                        <th>Công việc</th>
+                        <th>Mô tả</th>
+                        <th>Người yêu cầu</th>
                         <th>Đơn vị</th>
-                        <th>Thời gian</th>
-                        <th>Mức độ</th>
+                        <th>Phụ trách</th>
+                        <th>Ngày bắt đầu</th>
+                        <th>Ngày kết thúc</th>
+                        <th>Kết quả</th>
                         <th>Trạng thái</th>
+                        <th>% Hoàn thành</th>
                         <th>Ghi chú</th>
                         <th>Hành động</th>
                     </tr>
@@ -332,24 +336,49 @@
                     <span class="close">&times;</span>
                     <h2 id="modalTitle">Thêm công việc</h2>
                     <input type="hidden" id="taskId">
-                    <label>Nội dung công việc</label>
+                    <label>Công việc</label>
                     <textarea id="content"></textarea>
+                    <label>Mô tả</label>
+                    <textarea id="description"></textarea>
+                    <label>Người yêu cầu</label>
+                    <input type="text" id="requester">
                     <label>Đơn vị thực hiện</label>
                     <input type="text" id="unit">
-                    <label>Thời gian hoàn thành</label>
-                    <input type="text" id="duration">
-                    <label>Mức độ</label>
-                    <select id="priority">
-                        <option>Thấp</option>
-                        <option>Trung bình</option>
-                        <option>Cao</option>
-                    </select>
-                    <label>Trạng thái</label>
-                    <select id="status">
-                        <option>Chưa xử lý</option>
-                        <option>Đang xử lý</option>
-                        <option>Đã xử lý</option>
-                    </select>
+                    <label>Phụ trách</label>
+                    <input type="text" id="assignee">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label>Ngày bắt đầu</label>
+                            <input type="date" id="taskStartDate">
+                        </div>
+                        <div>
+                            <label>Ngày kết thúc</label>
+                            <input type="date" id="taskEndDate">
+                        </div>
+                    </div>
+                    <label>Kết quả</label>
+                    <input type="text" id="result">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items:flex-end;">
+                        <div>
+                            <label>Trạng thái</label>
+                            <select id="status">
+                                <option>Chưa bắt đầu</option>
+                                <option>Đang thực hiện</option>
+                                <option>Hoàn thành</option>
+                                <option>Chậm tiến độ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>% Hoàn thành</label>
+                            <input
+                                type="number"
+                                id="completion"
+                                min="0"
+                                max="100"
+                                placeholder="VD: 80"
+                            >
+                        </div>
+                    </div>
                     <label>Ghi chú</label>
                     <textarea id="note"></textarea>
                     <button id="saveTaskBtn" class="btn-add">💾 Lưu công việc</button>

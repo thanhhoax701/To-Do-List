@@ -40,9 +40,14 @@ const customAlertCancel = document.getElementById('customAlertCancel'); // Nút 
 
 // Input fields cho công việc trong modal thêm/sửa
 const contentInput = document.getElementById("content"); // Nội dung công việc
+const descriptionInput = document.getElementById("description"); // Mô tả
+const requesterInput = document.getElementById("requester"); // Người yêu cầu
 const unitInput = document.getElementById("unit"); // Đơn vị thực hiện
-const durationInput = document.getElementById("duration"); // Thời gian hoàn thành
-const priorityInput = document.getElementById("priority"); // Mức độ ưu tiên
+const assigneeInput = document.getElementById("assignee"); // Phụ trách
+const startDateInput = document.getElementById("taskStartDate"); // Ngày bắt đầu
+const endDateInput = document.getElementById("taskEndDate"); // Ngày kết thúc
+const resultInput = document.getElementById("result"); // Kết quả
+const completionInput = document.getElementById("completion"); // % hoàn thành
 const statusInput = document.getElementById("status"); // Trạng thái công việc
 const noteInput = document.getElementById("note"); // Ghi chú
 const saveTaskBtn = document.getElementById("saveTaskBtn"); // Nút lưu
@@ -321,7 +326,7 @@ function formatDayOnly(ds) {
 
 // ========== XUẤT XLSX ==========
 // Các cột có thể xuất (theo thứ tự trình bày trong bảng)
-const ALL_EXPORT_COLUMNS = ["STT", "Nội dung", "Đơn vị", "Thời gian", "Mức độ", "Trạng thái", "Ghi chú"];
+const ALL_EXPORT_COLUMNS = ["STT", "Công việc", "Mô tả", "Người yêu cầu", "Đơn vị", "Phụ trách", "Ngày bắt đầu", "Ngày kết thúc", "Kết quả", "Trạng thái", "% Hoàn thành", "Ghi chú"];
 
 /**
  * Viết một mảng dữ liệu (array of arrays) thành file xlsx và tải xuống.
@@ -386,11 +391,12 @@ function styleWorksheet(ws, header, rows) {
 }
 
 function writeDataToXLSX(header, rows) {
-    const data = [header, ...rows];
+    const upperHeader = header.map(h => String(h).toUpperCase());
+    const data = [upperHeader, ...rows];
     const ws = XLSX.utils.aoa_to_sheet(data);
 
     // áp dụng style: hàng đầu bold
-    for (let C = 0; C < header.length; C++) {
+    for (let C = 0; C < upperHeader.length; C++) {
         const cellRef = XLSX.utils.encode_cell({ r: 0, c: C });
         if (!ws[cellRef]) continue;
         ws[cellRef].s = ws[cellRef].s || {};
@@ -570,13 +576,18 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
                 }
 
                 const task = {
-                    content: '', unit: '', duration: '', priority: '', status: '', note: '', startDate: dateVal
+                    content: '', description: '', requester: '', unit: '', assignee: '', startDate: '', endDate: '', result: '', completion: '', status: '', note: '', taskDate: dateVal
                 };
-                if (idxMap['Nội dung'] !== undefined) task.content = String(row[idxMap['Nội dung']] || '').trim();
+                if (idxMap['Công việc'] !== undefined) task.content = String(row[idxMap['Công việc']] || '').trim();
+                if (idxMap['Mô tả'] !== undefined) task.description = String(row[idxMap['Mô tả']] || '').trim();
+                if (idxMap['Người yêu cầu'] !== undefined) task.requester = String(row[idxMap['Người yêu cầu']] || '').trim();
                 if (idxMap['Đơn vị'] !== undefined) task.unit = String(row[idxMap['Đơn vị']] || '').trim();
-                if (idxMap['Thời gian'] !== undefined) task.duration = String(row[idxMap['Thời gian']] || '').trim();
-                if (idxMap['Mức độ'] !== undefined) task.priority = String(row[idxMap['Mức độ']] || '').trim();
+                if (idxMap['Phụ trách'] !== undefined) task.assignee = String(row[idxMap['Phụ trách']] || '').trim();
+                if (idxMap['Ngày bắt đầu'] !== undefined) task.startDate = normalizeDateString(row[idxMap['Ngày bắt đầu']]);
+                if (idxMap['Ngày kết thúc'] !== undefined) task.endDate = normalizeDateString(row[idxMap['Ngày kết thúc']]);
+                if (idxMap['Kết quả'] !== undefined) task.result = String(row[idxMap['Kết quả']] || '').trim();
                 if (idxMap['Trạng thái'] !== undefined) task.status = String(row[idxMap['Trạng thái']] || '').trim();
+                if (idxMap['% Hoàn thành'] !== undefined) task.completion = String(row[idxMap['% Hoàn thành']] || '').trim();
                 if (idxMap['Ghi chú'] !== undefined) task.note = String(row[idxMap['Ghi chú']] || '').trim();
 
                 // push to firebase
@@ -763,15 +774,20 @@ async function exportTasksForCollection(taskList, includeDate) {
     for (const { date, task } of taskList) {
         const row = [];
         if (selectedCols.includes('STT')) row.push(idx++);
-        if (includeDate) row.push(formatDayOnly(date));
+        if (includeDate) row.push(formatDisplayDate(date).replace(/-/g, '/'));
         for (const c of selectedCols) {
             if (c === 'STT') continue;
             const map = {
-                'Nội dung': task.content || '',
+                'Công việc': task.content || '',
+                'Mô tả': task.description || '',
+                'Người yêu cầu': task.requester || '',
                 'Đơn vị': task.unit || '',
-                'Thời gian': task.duration || '',
-                'Mức độ': task.priority || '',
+                'Phụ trách': task.assignee || '',
+                'Ngày bắt đầu': task.startDate || '',
+                'Ngày kết thúc': task.endDate || '',
+                'Kết quả': task.result || '',
                 'Trạng thái': task.status || '',
+                '% Hoàn thành': task.completion || '',
                 'Ghi chú': task.note || ''
             };
             row.push(map[c] || '');
@@ -782,68 +798,52 @@ async function exportTasksForCollection(taskList, includeDate) {
         await showCustomAlert('Không có công việc để xuất.');
         return;
     }
-    // Nếu có nhiều ngày (ví dụ xuất tuần/tháng/khoảng), tách từng ngày ra 1 sheet
-    const grouped = {};
-    for (const { date, task } of taskList) {
-        if (!grouped[date]) grouped[date] = [];
-        grouped[date].push(task);
-    }
-    const dates = Object.keys(grouped).sort();
-
-    if (dates.length <= 1) {
-        // chỉ 1 ngày - giữ hành vi cũ (có cột Ngày nếu includeDate true)
-        writeDataToXLSX(header, rows);
-        return;
-    }
-
-    // nhiều ngày: tạo workbook với mỗi sheet là 1 ngày
+    // Nếu có nhiều ngày (ví dụ xuất tuần/tháng/khoảng), tạo workbook gồm nhiều sheet chuẩn
     const wb = XLSX.utils.book_new();
-    const usedNames = new Set();
-    for (const d of dates) {
-        const tasksOfDay = grouped[d];
-        const sheetHeader = [];
-        if (selectedCols.includes('STT')) sheetHeader.push('STT');
-        // Khi tách theo sheet, không cần cột 'Ngày' vì tên sheet đã là ngày
-        sheetHeader.push(...selectedCols.filter(c => c !== 'STT' && c !== 'Ngày'));
 
-        const sheetRows = [];
-        let i = 1;
-        for (const task of tasksOfDay) {
-            const row = [];
-            if (selectedCols.includes('STT')) row.push(i++);
-            for (const c of selectedCols) {
-                if (c === 'STT' || c === 'Ngày') continue;
-                const map = {
-                    'Nội dung': task.content || '',
-                    'Đơn vị': task.unit || '',
-                    'Thời gian': task.duration || '',
-                    'Mức độ': task.priority || '',
-                    'Trạng thái': task.status || '',
-                    'Ghi chú': task.note || ''
-                };
-                row.push(map[c] || '');
-            }
-            sheetRows.push(row);
-        }
+    const upperHeader = header.map(h => String(h).toUpperCase());
+    const mainSheet = XLSX.utils.aoa_to_sheet([upperHeader, ...rows]);
+    styleWorksheet(mainSheet, upperHeader, rows);
+    const mainSheetName = rows.length > 1 ? 'Báo cáo tuần' : 'Báo cáo';
+    XLSX.utils.book_append_sheet(wb, mainSheet, mainSheetName);
 
-        const ws = XLSX.utils.aoa_to_sheet([sheetHeader, ...sheetRows]);
-        // apply styling (bold header, widths, wrap)
-        styleWorksheet(ws, sheetHeader, sheetRows);
-        // Sheet name: format chỉ ngày (DD) để phù hợp yêu cầu mới
-        let sheetName = formatDayOnly(d);
-        // nếu tên này đã sử dụng (ví dụ cùng số ngày của tháng khác), chuyển sang định dạng đầy đủ
-        if (usedNames.has(sheetName)) {
-            sheetName = formatDisplayDate(d);
+    // Kế hoạch tuần tới: hiện chưa có dữ liệu kế hoạch, để trống chỉ với header
+    const planRows = [];
+    const planSheet = XLSX.utils.aoa_to_sheet([upperHeader, ...planRows]);
+    styleWorksheet(planSheet, upperHeader, planRows);
+    XLSX.utils.book_append_sheet(wb, planSheet, 'Kế hoạch tuần tới');
+
+    // Tổng hợp: số liệu tóm tắt
+    const summaryRows = [];
+    summaryRows.push(['Thông tin', 'Giá trị']);
+    summaryRows.push(['Tổng số công việc', rows.length]);
+
+    const statusCounts = {
+        'Hoàn thành': 0,
+        'Đang thực hiện': 0,
+        'Chưa bắt đầu': 0,
+        'Chậm tiến độ': 0,
+    };
+    taskList.forEach(({ task }) => {
+        const key = task.status || 'Chưa bắt đầu';
+        if (!statusCounts.hasOwnProperty(key)) {
+            statusCounts[key] = 0;
         }
-        usedNames.add(sheetName);
-        // đảm bảo tên sheet không quá 31 ký tự và loại bỏ các ký tự không hợp lệ
-        sheetName = sheetName.replace(/[\\/*?:\[\]]/g, '_').slice(0, 31);
-        XLSX.utils.book_append_sheet(wb, ws, sheetName);
-    }
+        statusCounts[key] = (statusCounts[key] || 0) + 1;
+    });
+
+    summaryRows.push(['Hoàn thành', statusCounts['Hoàn thành'] || 0]);
+    summaryRows.push(['Đang thực hiện', statusCounts['Đang thực hiện'] || 0]);
+    summaryRows.push(['Chưa bắt đầu', statusCounts['Chưa bắt đầu'] || 0]);
+    summaryRows.push(['Chậm tiến độ', statusCounts['Chậm tiến độ'] || 0]);
+
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+    summarySheet['!cols'] = [{ wch: 30 }, { wch: 15 }];
+    XLSX.utils.book_append_sheet(wb, summarySheet, 'Tổng hợp');
 
     const now = new Date();
     const filename = `tasks_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}.xlsx`;
-    XLSX.writeFile(wb, filename);
+    XLSX.writeFile(wb, filename, { bookType: 'xlsx', cellStyles: true });
 }
 
 // Hàm chính gọi theo loại
@@ -1093,13 +1093,14 @@ const priorityClass = v =>
 
 /**
  * Trả về class CSS tương ứng với trạng thái công việc để quy định màu sắc
- * @param {string} v - Trạng thái công việc ("Chưa xử lý", "Đang xử lý", "Đã xử lý")
- * @returns {string} Class CSS ("status-pending", "status-doing", "status-done")
+ * @param {string} v - Trạng thái công việc ("Chưa bắt đầu", "Đang thực hiện", "Hoàn thành", "Chậm tiến độ")
+ * @returns {string} Class CSS ("status-pending", "status-doing", "status-done", "status-delayed")
  */
 const statusClass = v =>
-    v === "Chưa xử lý" ? "status-pending" : // Màu xám (chưa bắt đầu)
-        v === "Đang xử lý" ? "status-doing" : // Màu cam (đang làm)
-            "status-done"; // Màu xanh (hoàn thành)
+    v === "Chưa bắt đầu" || v === "Chưa xử lý" ? "status-pending" : // Màu xám / xanh dương (chưa bắt đầu)
+        v === "Đang thực hiện" || v === "Đang xử lý" ? "status-doing" : // Màu cam (đang thực hiện)
+            v === "Chậm tiến độ" ? "status-delayed" : // Màu đỏ (chậm tiến độ)
+                "status-done"; // Màu xanh (hoàn thành)
 
 /**
  * Tạo dropdown select với các tùy chọn và áp dụng class CSS năng động
@@ -1185,11 +1186,16 @@ function loadTasks(ds) {
                 <td><input type="checkbox" class="task-checkbox" data-key="${k}" data-year="${y}" data-month="${m}" data-week="${w}" data-date="${ds}"></td>
                 <td>${i++}</td>
                 <td>${t.content}</td>
-                <td>${t.unit}</td>
-                <td>${t.duration}</td>
+                <td>${t.description || ''}</td>
+                <td>${t.requester || ''}</td>
+                <td>${t.unit || ''}</td>
+                <td>${t.assignee || ''}</td>
+                <td>${t.startDate ? formatDisplayDate(t.startDate) : ''}</td>
+                <td>${t.endDate ? formatDisplayDate(t.endDate) : ''}</td>
+                <td>${t.result || ''}</td>
                 <td></td>
-                <td></td>
-                <td>${t.note.replace(/\./g, '.<br>')}</td>
+                <td>${t.completion || ''}</td>
+                <td>${t.note ? t.note.replace(/\./g, '.<br>') : ''}</td>
                 <td>
                     <button class="btn-duplicate">🔁 Nhân bản</button>
                     <button class="btn-edit">✏️ Sửa</button>
@@ -1197,17 +1203,9 @@ function loadTasks(ds) {
                 </td>
             `;
 
-            // Tạo dropdown chọn mức độ ưu tiên với màu sắc
-            const prSelect = createColorSelect(
-                ["Thấp", "Trung bình", "Cao"],
-                t.priority,
-                priorityClass,
-                v => update(tasksRef(y, m, w, ds, k), { priority: v })
-            );
-
             // Tạo dropdown chọn trạng thái công việc với màu sắc
             const stSelect = createColorSelect(
-                ["Chưa xử lý", "Đang xử lý", "Đã xử lý"],
+                ["Chưa bắt đầu", "Đang thực hiện", "Hoàn thành", "Chậm tiến độ"],
                 t.status,
                 statusClass,
                 v => update(tasksRef(y, m, w, ds, k), { status: v })
@@ -1215,13 +1213,11 @@ function loadTasks(ds) {
 
             // Vô hiệu hóa select cho member (họ không được phép sửa)
             if (isMember()) {
-                prSelect.disabled = true;
                 stSelect.disabled = true;
             }
 
-            // Thêm dropdown vào cột mức độ ưu tiên và trạng thái
-            row.children[5].appendChild(prSelect);
-            row.children[6].appendChild(stSelect);
+            // Thêm dropdown vào cột trạng thái
+            row.children[10].appendChild(stSelect);
 
             // Nút nhân bản công việc
             row.querySelector(".btn-duplicate").onclick = async () => {
@@ -1236,12 +1232,17 @@ function loadTasks(ds) {
                 // Sao chép thông tin công việc cần thiết
                 const newTask = {
                     content: t.content,
-                    unit: t.unit,
-                    duration: t.duration,
-                    priority: t.priority,
-                    status: t.status,
-                    note: t.note,
-                    startDate: t.startDate
+                    description: t.description || '',
+                    requester: t.requester || '',
+                    unit: t.unit || '',
+                    assignee: t.assignee || '',
+                    startDate: t.startDate || '',
+                    endDate: t.endDate || '',
+                    result: t.result || '',
+                    completion: t.completion || '',
+                    status: t.status || '',
+                    note: t.note || '',
+                    taskDate: t.taskDate || ds
                 };
                 showLoading();
                 try {
@@ -1301,12 +1302,19 @@ function openModal(title, id = "", t = {}) {
     modalTitle.innerText = title; // Đậu Để modal: "Thêm công việc" hoặc "Chỉnh sửa công việc"
     taskIdField.value = id; // Nếu có ID, tức là sửa; nếu trống là thêm mới
 
-    // Đập đặt giá trị đặn các input field nếu đang sửa
+    // Đặt giá trị đặn các input field nếu đang sửa
     contentInput.value = t.content || "";
+    descriptionInput.value = t.description || "";
+    requesterInput.value = t.requester || "";
     unitInput.value = t.unit || "";
-    durationInput.value = t.duration || "";
-    priorityInput.value = t.priority || "Thấp";
-    statusInput.value = t.status || "Chưa xử lý";
+    assigneeInput.value = t.assignee || "";
+    const today = new Date().toISOString().slice(0, 10);
+    const defaultDate = selectedDate || today;
+    startDateInput.value = t.startDate || defaultDate;
+    endDateInput.value = t.endDate || t.startDate || defaultDate;
+    resultInput.value = t.result || "";
+    statusInput.value = t.status || "Chưa bắt đầu";
+    completionInput.value = t.completion ? String(t.completion).replace('%', '') : "";
     noteInput.value = t.note || "";
 
     modal.style.display = "flex"; // Hiển thị modal
@@ -1323,6 +1331,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 taskModal.style.display = 'none';
             };
         }
+    }
+
+    // Nếu người dùng chọn Ngày bắt đầu, auto đồng bộ Ngày kết thúc cùng giá trị
+    if (startDateInput && endDateInput) {
+        startDateInput.addEventListener('change', () => {
+            if (startDateInput.value) {
+                endDateInput.value = startDateInput.value;
+            }
+        });
     }
 });
 
@@ -1351,14 +1368,21 @@ if (saveTaskBtn) {
         }
         const [y, m] = selectedDate.split("-");
         const w = getWeekNumber(selectedDate);
+        const completionValue = completionInput.value.trim();
+        const normalizedCompletion = completionValue ? (completionValue.toString().endsWith('%') ? completionValue.toString() : `${completionValue}%`) : '';
         const data = {
-            content: contentInput.value,
-            unit: unitInput.value,
-            duration: durationInput.value,
-            priority: priorityInput.value,
+            content: contentInput.value.trim(),
+            description: descriptionInput.value.trim(),
+            requester: requesterInput.value.trim(),
+            unit: unitInput.value.trim(),
+            assignee: assigneeInput.value.trim(),
+            startDate: startDateInput.value || '',
+            endDate: endDateInput.value || '',
+            result: resultInput.value.trim(),
+            completion: normalizedCompletion,
             status: statusInput.value,
-            note: noteInput.value,
-            startDate: selectedDate
+            note: noteInput.value.trim(),
+            taskDate: selectedDate
         };
         showLoading();
         try {
@@ -2417,11 +2441,16 @@ function loadTasksForWeek(y, m, weekId) {
                         <td><input type="checkbox" class="task-checkbox" data-key="${k}" data-year="${y}" data-month="${m}" data-week="${weekId}" data-date="${dateKey}"></td>
                         <td>${i++}</td>
                         <td>${t.content}</td>
-                        <td>${t.unit}</td>
-                        <td>${t.duration}</td>
-                        <td>${formatDisplayDate(dateKey)}</td>
-                        <td></td>
-                        <td>${t.note}</td>
+                        <td>${t.description || ''}</td>
+                        <td>${t.requester || ''}</td>
+                        <td>${t.unit || ''}</td>
+                        <td>${t.assignee || ''}</td>
+                        <td>${t.startDate ? formatDisplayDate(t.startDate) : ''}</td>
+                        <td>${t.endDate ? formatDisplayDate(t.endDate) : ''}</td>
+                        <td>${t.result || ''}</td>
+                        <td><span class="${statusClass(t.status || 'Chưa bắt đầu')}">${t.status || 'Chưa bắt đầu'}</span></td>
+                        <td>${t.completion || ''}</td>
+                        <td>${t.note || ''}</td>
                         <td>
                             <button class="btn-duplicate">🔁 Nhân bản</button>
                             <button class="btn-edit">✏️ Sửa</button>
