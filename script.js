@@ -366,8 +366,8 @@ function styleWorksheet(ws, header, rows) {
         ws[cellRef].s.font = ws[cellRef].s.font || {};
         ws[cellRef].s.font.bold = true;
     }
-    // wrap text ở cột Nội dung (thường là cột B)
-    const contentColIndex = header.findIndex(h => h === 'Nội dung');
+    // wrap text ở cột Công việc (thường là cột B)
+    const contentColIndex = header.findIndex(h => h === 'Công việc');
     if (contentColIndex !== -1) {
         for (let r = 1; r < rows.length + 1; r++) {
             const cellRef = XLSX.utils.encode_cell({ r, c: contentColIndex });
@@ -404,8 +404,8 @@ function writeDataToXLSX(header, rows) {
         ws[cellRef].s.font.bold = true;
     }
 
-    // bọc văn bản ở cột "Nội dung"
-    const contentColIndex = header.findIndex(h => h === 'Nội dung');
+    // bọc văn bản ở cột "Công việc"
+    const contentColIndex = header.findIndex(h => h === 'Công việc');
     if (contentColIndex !== -1) {
         for (let r = 1; r < data.length; r++) {
             const cellRef = XLSX.utils.encode_cell({ r, c: contentColIndex });
@@ -488,7 +488,7 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
             // get rows as arrays
             const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
             if (!aoa || aoa.length < 2) continue; // no data
-            const header = aoa[0].map(h => String(h).trim());
+            const header = aoa[0].map(h => String(h).trim().toLowerCase());
             const idxMap = {};
             header.forEach((h, i) => { idxMap[h] = i; });
 
@@ -535,10 +535,10 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
                 if (!row || row.every(c => (c === null || c === undefined || String(c).trim() === ''))) continue;
                 // determine date for this row: prefer 'Ngày' column
                 let dateVal = null;
-                if (idxMap['Ngày'] !== undefined) dateVal = normalizeDateString(row[idxMap['Ngày']]);
+                if (idxMap['ngày'] !== undefined) dateVal = normalizeDateString(row[idxMap['ngày']]);
                 // nếu vẫn chưa có ngày và giá trị cột/ngày sheet chỉ có ngày, cố ghép với tháng/năm từ context
                 if (!dateVal) {
-                    const rawCell = row[idxMap['Ngày']];
+                    const rawCell = row[idxMap['ngày']];
                     const cellTrim = String(rawCell || '').trim();
                     const sheetTrim = String(sheetDate || '').trim();
                     // ngày chỉ gồm 1-2 chữ số trong cell hoặc sheet name
@@ -578,17 +578,17 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
                 const task = {
                     content: '', description: '', requester: '', unit: '', assignee: '', startDate: '', endDate: '', result: '', completion: '', status: '', note: '', taskDate: dateVal
                 };
-                if (idxMap['Công việc'] !== undefined) task.content = String(row[idxMap['Công việc']] || '').trim();
-                if (idxMap['Mô tả'] !== undefined) task.description = String(row[idxMap['Mô tả']] || '').trim();
-                if (idxMap['Người yêu cầu'] !== undefined) task.requester = String(row[idxMap['Người yêu cầu']] || '').trim();
-                if (idxMap['Đơn vị'] !== undefined) task.unit = String(row[idxMap['Đơn vị']] || '').trim();
-                if (idxMap['Phụ trách'] !== undefined) task.assignee = String(row[idxMap['Phụ trách']] || '').trim();
-                if (idxMap['Ngày bắt đầu'] !== undefined) task.startDate = normalizeDateString(row[idxMap['Ngày bắt đầu']]);
-                if (idxMap['Ngày kết thúc'] !== undefined) task.endDate = normalizeDateString(row[idxMap['Ngày kết thúc']]);
-                if (idxMap['Kết quả'] !== undefined) task.result = String(row[idxMap['Kết quả']] || '').trim();
-                if (idxMap['Trạng thái'] !== undefined) task.status = String(row[idxMap['Trạng thái']] || '').trim();
-                if (idxMap['% Hoàn thành'] !== undefined) task.completion = String(row[idxMap['% Hoàn thành']] || '').trim();
-                if (idxMap['Ghi chú'] !== undefined) task.note = String(row[idxMap['Ghi chú']] || '').trim();
+                if (idxMap['công việc'] !== undefined) task.content = String(row[idxMap['công việc']] || '').trim();
+                if (idxMap['mô tả'] !== undefined) task.description = String(row[idxMap['mô tả']] || '').trim();
+                if (idxMap['người yêu cầu'] !== undefined) task.requester = String(row[idxMap['người yêu cầu']] || '').trim();
+                if (idxMap['đơn vị'] !== undefined) task.unit = String(row[idxMap['đơn vị']] || '').trim();
+                if (idxMap['phụ trách'] !== undefined) task.assignee = String(row[idxMap['phụ trách']] || '').trim();
+                if (idxMap['ngày bắt đầu'] !== undefined) task.startDate = normalizeDateString(row[idxMap['ngày bắt đầu']]);
+                if (idxMap['ngày kết thúc'] !== undefined) task.endDate = normalizeDateString(row[idxMap['ngày kết thúc']]);
+                if (idxMap['kết quả'] !== undefined) task.result = String(row[idxMap['kết quả']] || '').trim();
+                if (idxMap['trạng thái'] !== undefined) task.status = String(row[idxMap['trạng thái']] || '').trim();
+                if (idxMap['% hoàn thành'] !== undefined) task.completion = String(row[idxMap['% hoàn thành']] || '').trim();
+                if (idxMap['ghi chú'] !== undefined) task.note = String(row[idxMap['ghi chú']] || '').trim();
 
                 // push to firebase
                 const [y, m] = dateVal.split('-');
@@ -703,7 +703,11 @@ async function exportTasksForDay() {
         await showCustomAlert('Không có công việc để xuất.');
         return;
     }
-    writeDataToXLSX(selectedCols, rows);
+    // Thêm cột "Ngày" để có thể import lại
+    const header = ['Ngày', ...selectedCols];
+    const formattedDate = formatDisplayDate(selectedDate).replace(/-/g, '/');
+    const newRows = rows.map(row => [formattedDate, ...row]);
+    writeDataToXLSX(header, newRows);
 }
 
 // ===========================
@@ -881,6 +885,12 @@ async function performExport(type) {
 function parseYMD(ds) {
     const [yy, mm, dd] = ds.split("-").map(s => parseInt(s, 10));
     return new Date(yy, mm - 1, dd);
+}
+
+// Chuyển Date object về chuỗi YYYY-MM-DD theo timezone local
+function toYMDLocal(date) {
+    if (!(date instanceof Date)) return null;
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 // ===== HÀM TÍNH TUẦN =====
