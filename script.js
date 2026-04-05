@@ -1154,17 +1154,20 @@ function loadTasks(ds) {
     // Kiểm tra nếu ngày đặc biệt: NL trước, NB tiếp theo
     const addBtn = document.getElementById('openAddModal');
     const expBtn = document.getElementById('exportBtn');
+    const deleteDropdown = document.getElementById('deleteSelect');
     if (isNlDay(ds)) {
         document.querySelector('table').style.display = 'none';
         taskTable.innerHTML = `<tr><td colspan="100" style="text-align: center; padding: 20px; background: #dceeff; border: 2px solid #6f42c1;"><strong style="font-size: 18px; color: #2e59d9;">🎉 Hôm nay là ngày Nghỉ Lễ (NL)</strong></td></tr>`;
         if (addBtn) addBtn.style.display = 'none';
         if (expBtn) expBtn.style.display = 'none';
+        if (deleteDropdown) deleteDropdown.style.display = 'none';
         return;
     } else if (isNbDay(ds)) {
         document.querySelector('table').style.display = 'none';
         taskTable.innerHTML = `<tr><td colspan="100" style="text-align: center; padding: 20px; background: #fff3cd; border: 2px solid #ffc107;"><strong style="font-size: 18px; color: #856404;">🏷️ Hôm nay là ngày Nghỉ Bù (NB)</strong></td></tr>`;
         if (addBtn) addBtn.style.display = 'none';
         if (expBtn) expBtn.style.display = 'none';
+        if (deleteDropdown) deleteDropdown.style.display = 'none';
         return;
     } else {
         document.querySelector('table').style.display = 'table';
@@ -1172,6 +1175,7 @@ function loadTasks(ds) {
         if (menuToggleBtn) menuToggleBtn.style.display = isMemberRole ? 'none' : 'inline-block';
         if (addBtn) addBtn.style.display = isMemberRole ? 'none' : 'inline-block';
         if (expBtn) expBtn.style.display = 'inline-block';
+        if (deleteDropdown) deleteDropdown.style.display = 'inline-block';
     }
 
     const [y, m] = ds.split("-");
@@ -2325,9 +2329,25 @@ confirmAdvBtn.onclick = async () => {
                     const ntw = getWeekNumber(newTargetDateStr);
 
                     for (const task of tasksArr) {
+                        const sourceTaskStart = task.startDate || sourceDateKey;
+                        const sourceStartDate = parseYMD(sourceTaskStart);
+                        const targetStartDate = parseYMD(newTargetDateStr);
+
+                        let newEndDate = newTargetDateStr;
+                        if (task.endDate) {
+                            const originalEndDate = parseYMD(task.endDate);
+                            const durationDays = Math.round((originalEndDate - sourceStartDate) / (1000 * 60 * 60 * 24));
+                            if (durationDays > 0) {
+                                const shiftedEnd = new Date(targetStartDate);
+                                shiftedEnd.setDate(shiftedEnd.getDate() + durationDays);
+                                newEndDate = toYMDLocal(shiftedEnd);
+                            }
+                        }
+
                         await push(tasksRef(nty, ntm, ntw, newTargetDateStr), {
                             ...task,
-                            startDate: newTargetDateStr
+                            startDate: newTargetDateStr,
+                            endDate: newEndDate
                         });
                     }
                 }
@@ -2335,9 +2355,25 @@ confirmAdvBtn.onclick = async () => {
                 // Nhân bản ngày: dùng công việc từ selectedDate
                 const tasksArr = allSourceTasks[selectedDate] || [];
                 for (const task of tasksArr) {
+                    const sourceTaskStart = task.startDate || selectedDate;
+                    const sourceStartDate = parseYMD(sourceTaskStart);
+                    const targetStartDate = parseYMD(targetDate);
+
+                    let newEndDate = targetDate;
+                    if (task.endDate) {
+                        const originalEndDate = parseYMD(task.endDate);
+                        const durationDays = Math.round((originalEndDate - sourceStartDate) / (1000 * 60 * 60 * 24));
+                        if (durationDays > 0) {
+                            const shiftedEnd = new Date(targetStartDate);
+                            shiftedEnd.setDate(shiftedEnd.getDate() + durationDays);
+                            newEndDate = toYMDLocal(shiftedEnd);
+                        }
+                    }
+
                     await push(tasksRef(ty, tm, tw, targetDate), {
                         ...task,
-                        startDate: targetDate
+                        startDate: targetDate,
+                        endDate: newEndDate
                     });
                 }
             }
