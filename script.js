@@ -813,35 +813,29 @@ async function exportTasksForCollection(taskList, includeDate) {
 
     // Kế hoạch tuần tới: hiện chưa có dữ liệu kế hoạch, để trống chỉ với header
     const planRows = [];
-    const planSheet = XLSX.utils.aoa_to_sheet([upperHeader, ...planRows]);
-    styleWorksheet(planSheet, upperHeader, planRows);
+    const planHeader = ['STT', 'Công việc', 'Mô tả', 'Mục tiêu', 'Phụ trách', 'Deadline', 'Độ ưu tiên', 'Trạng thái', 'Ghi chú'];
+    const upperPlanHeader = planHeader.map(h => String(h).toUpperCase());
+    const planSheet = XLSX.utils.aoa_to_sheet([upperPlanHeader, ...planRows]);
+    styleWorksheet(planSheet, upperPlanHeader, planRows);
     XLSX.utils.book_append_sheet(wb, planSheet, 'Kế hoạch tuần tới');
 
     // Tổng hợp: số liệu tóm tắt
     const summaryRows = [];
-    summaryRows.push(['Thông tin', 'Giá trị']);
-    summaryRows.push(['Tổng số công việc', rows.length]);
-
-    const statusCounts = {
-        'Hoàn thành': 0,
-        'Đang thực hiện': 0,
-        'Chưa bắt đầu': 0,
-        'Chậm tiến độ': 0,
-    };
-    taskList.forEach(({ task }) => {
-        const key = task.status || 'Chưa bắt đầu';
-        if (!statusCounts.hasOwnProperty(key)) {
-            statusCounts[key] = 0;
-        }
-        statusCounts[key] = (statusCounts[key] || 0) + 1;
-    });
-
-    summaryRows.push(['Hoàn thành', statusCounts['Hoàn thành'] || 0]);
-    summaryRows.push(['Đang thực hiện', statusCounts['Đang thực hiện'] || 0]);
-    summaryRows.push(['Chưa bắt đầu', statusCounts['Chưa bắt đầu'] || 0]);
-    summaryRows.push(['Chậm tiến độ', statusCounts['Chậm tiến độ'] || 0]);
+    summaryRows.push(['Tổng số công việc', '=COUNTA(\'Báo cáo tuần\'!C2:C82)']);
+    summaryRows.push(['Hoàn thành', '=COUNTIF(\'Báo cáo tuần\'!K2:K82, "Hoàn thành")']);
+    summaryRows.push(['Đang thực hiện', '=COUNTIF(\'Báo cáo tuần\'!K2:K82, "Đang thực hiện")']);
+    summaryRows.push(['Chưa bắt đầu', '=COUNTIF(\'Báo cáo tuần\'!K2:K82, "Chưa bắt đầu")']);
+    summaryRows.push(['Chậm tiến độ', '=COUNTIF(\'Báo cáo tuần\'!K2:K82, "Chậm tiến độ")']);
 
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+    // In đậm hàng đầu tiên của sheet Tổng hợp
+    for (let c = 0; c < summaryRows[0].length; c++) {
+        const cellRef = XLSX.utils.encode_cell({ r: 0, c });
+        if (!summarySheet[cellRef]) continue;
+        summarySheet[cellRef].s = summarySheet[cellRef].s || {};
+        summarySheet[cellRef].s.font = summarySheet[cellRef].s.font || {};
+        summarySheet[cellRef].s.font.bold = true;
+    }
     summarySheet['!cols'] = [{ wch: 30 }, { wch: 15 }];
     XLSX.utils.book_append_sheet(wb, summarySheet, 'Tổng hợp');
 
