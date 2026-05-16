@@ -107,6 +107,7 @@ const searchMonth = document.getElementById("searchMonth");
 const searchYear = document.getElementById("searchYear");
 const searchBtn = document.getElementById("searchBtn");
 const clearSearchBtn = document.getElementById("clearSearchBtn");
+const searchFilterSection = document.getElementById("searchFilterSection");
 
 // Current search state
 let currentSearch = {
@@ -1173,6 +1174,7 @@ function loadTasks(ds) {
         if (addBtn) addBtn.style.display = 'none';
         if (expBtn) expBtn.style.display = 'none';
         if (deleteDropdown) deleteDropdown.style.display = 'none';
+        if (searchFilterSection) searchFilterSection.style.display = 'none';
         return;
     } else if (isNbDay(ds)) {
         document.querySelector('table').style.display = 'none';
@@ -1180,11 +1182,13 @@ function loadTasks(ds) {
         if (addBtn) addBtn.style.display = 'none';
         if (expBtn) expBtn.style.display = 'none';
         if (deleteDropdown) deleteDropdown.style.display = 'none';
+        if (searchFilterSection) searchFilterSection.style.display = 'none';
         return;
     } else {
         document.querySelector('table').style.display = 'table';
         const isMemberRole = isMember();
         syncMenuToggleVisibility();
+        if (searchFilterSection) searchFilterSection.style.display = '';
         if (addBtn) addBtn.style.display = isMemberRole ? 'none' : 'inline-block';
         if (expBtn) expBtn.style.display = 'inline-block';
         if (deleteDropdown) deleteDropdown.style.display = 'inline-block';
@@ -3400,6 +3404,8 @@ async function loadSearchedTasks() {
 }
 
 function renderSearchedTasks(tasks) {
+    if (searchFilterSection) searchFilterSection.style.display = '';
+
     taskTable.innerHTML = '';
 
     if (tasks.length === 0) {
