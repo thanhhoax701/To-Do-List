@@ -482,6 +482,61 @@ td select {
     transform: rotate(90deg);
 }
 
+/* ===== SEARCH & FILTER SECTION ===== */
+#searchFilterSection {
+    margin-bottom: 12px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+#searchFilterSection input,
+#searchFilterSection select {
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+#searchFilterSection input:focus,
+#searchFilterSection select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+#searchBtn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 0 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+#searchBtn:hover {
+    background: #218838;
+}
+
+#clearSearchBtn {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 0 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+#clearFilterBtn:hover {
+    background: #545b62;
+}
+
 /* ===== NÚT NHÂN BẢN & NHÂN BẢN NGÀY ===== */
 /* Nút nhân bản công việc - tím */
 .btn-duplicate {
@@ -635,15 +690,18 @@ td select {
 .loading-overlay {
     display: none;
     position: fixed;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.6);
-    justify-content: center;
-    align-items: center;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 100000;
 }
 
 .loading-overlay.active {
-    display: flex;
+    display: block;
 }
 
 .loading-spinner {
@@ -719,7 +777,8 @@ td select {
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    z-index: 999;
+    /* Cao hơn .side-menu-panel để vẫn bấm được khi sidebar đang mở */
+    z-index: 1001;
 }
 
 .menu-toggle-btn:hover {

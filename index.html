@@ -67,6 +67,41 @@
             <div id="calendar"></div>
             <!-- Tiêu đề ngày đang chọn -->
             <h2 id="selectedDateTitle">Chọn ngày để xem công việc</h2>
+            <!-- Search và Filter Section -->
+            <div id="searchFilterSection" style="margin-bottom: 12px; padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Tìm kiếm công việc..."
+                        style="flex: 1; min-width: 200px; height: 36px; padding: 0 12px; border: 1px solid #ccc; border-radius: 4px;"
+                    >
+                    <select id="searchPeriod" style="height: 36px; padding: 0 12px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="all">Tất cả</option>
+                        <option value="day">Theo ngày</option>
+                        <option value="week">Theo tuần</option>
+                        <option value="month">Theo tháng</option>
+                        <option value="year">Theo năm</option>
+                    </select>
+                    <input type="date" id="searchDate" style="height: 36px; padding: 0 12px; border: 1px solid #ccc; border-radius: 4px; display: none;">
+                    <input type="month" id="searchMonth" style="height: 36px; padding: 0 12px; border: 1px solid #ccc; border-radius: 4px; display: none;">
+                    <input
+                        type="number"
+                        id="searchYear"
+                        placeholder="Năm"
+                        min="2000"
+                        max="2100"
+                        style="height: 36px; padding: 0 12px; border: 1px solid #ccc; border-radius: 4px; width: 80px; display: none;"
+                    >
+                    <button
+                        type="button"
+                        id="searchBtn"
+                        class="btn-add"
+                        style="height: 36px; padding: 0 16px;"
+                    >🔍 Tìm kiếm</button>
+                    <button type="button" id="clearSearchBtn" style="height: 36px; padding: 0 16px; background: #6c757d; border: none; color: white; border-radius: 4px;">🗑️ Xóa</button>
+                </div>
+            </div>
             <!-- Nút thêm công việc -->
             <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
                 <button id="openAddModal" class="btn-add" style="height:40px; font-size:17px; padding:0 22px; display:flex; align-items:center;">➕ Thêm công việc</button>

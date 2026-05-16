@@ -99,6 +99,24 @@ let nlTempSelectedDates = []; // Danh sách ngày NL tạm thời
 let nlSelectedYear = null;
 let nlSelectedMonth = null;
 
+// ========== SEARCH & FILTER VARIABLES ==========
+const searchInput = document.getElementById("searchInput");
+const searchPeriod = document.getElementById("searchPeriod");
+const searchDate = document.getElementById("searchDate");
+const searchMonth = document.getElementById("searchMonth");
+const searchYear = document.getElementById("searchYear");
+const searchBtn = document.getElementById("searchBtn");
+const clearSearchBtn = document.getElementById("clearSearchBtn");
+
+// Current search state
+let currentSearch = {
+    search: '',
+    period: 'all',
+    date: null,
+    month: null,
+    year: null
+};
+
 /* ========== BIẾN TOÀN CỤC ========== */
 // Ngày hiện tại đang hiển thị trên lịch
 let currentDate = new Date();
@@ -1166,7 +1184,7 @@ function loadTasks(ds) {
     } else {
         document.querySelector('table').style.display = 'table';
         const isMemberRole = isMember();
-        if (menuToggleBtn) menuToggleBtn.style.display = isMemberRole ? 'none' : 'inline-block';
+        syncMenuToggleVisibility();
         if (addBtn) addBtn.style.display = isMemberRole ? 'none' : 'inline-block';
         if (expBtn) expBtn.style.display = 'inline-block';
         if (deleteDropdown) deleteDropdown.style.display = 'inline-block';
@@ -1347,6 +1365,31 @@ document.addEventListener('DOMContentLoaded', function () {
             if (startDateInput.value) {
                 endDateInput.value = startDateInput.value;
             }
+        });
+    }
+
+    // ========== SEARCH EVENT LISTENERS ==========
+    if (searchPeriod) {
+        searchPeriod.addEventListener('change', function () {
+            const period = this.value;
+            searchDate.style.display = period === 'day' ? 'inline-block' : 'none';
+            searchMonth.style.display = period === 'month' ? 'inline-block' : 'none';
+            searchYear.style.display = period === 'year' ? 'inline-block' : 'none';
+        });
+    }
+
+    if (searchBtn) {
+        searchBtn.addEventListener('click', searchTasks);
+    }
+
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', clearSearch);
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            currentSearch.search = this.value.toLowerCase();
+            searchTasks();
         });
     }
 });
@@ -3054,6 +3097,17 @@ function getLoggedInUserRole() {
 function isMember() { return getLoggedInUserRole() === 'member'; }
 function isAdmin() { const r = getLoggedInUserRole(); return r === 'admin' || r === 'superadmin'; }
 
+/** Ẩn nút ☰ Menu khi sidebar đang mở (không đè chữ tiêu đề); member không thấy nút. */
+function syncMenuToggleVisibility() {
+    if (!menuToggleBtn) return;
+    if (isMember()) {
+        menuToggleBtn.style.display = 'none';
+        return;
+    }
+    const panelOpen = sideMenuPanel && sideMenuPanel.classList.contains('show');
+    menuToggleBtn.style.display = panelOpen ? 'none' : 'inline-block';
+}
+
 // Lấy chuỗi ngày hôm nay (YYYY-MM-DD)
 function getTodayString() {
     const today = new Date();
@@ -3076,8 +3130,8 @@ function checkMemberAccess(dateStr) {
 function applyRolePermissions() {
     const isMemberRole = isMember();
 
-    // Ẩn nút toggle menu cho member
-    if (menuToggleBtn) menuToggleBtn.style.display = isMemberRole ? 'none' : 'inline-block';
+    // Ẩn nút toggle menu cho member; khi sidebar mở cũng ẩn để không đè tiêu đề
+    syncMenuToggleVisibility();
 
     // Ẩn nút lựa chọn NB cho member
     if (selectNbDayBtn) selectNbDayBtn.style.display = isMemberRole ? 'none' : 'inline-block';
@@ -3131,27 +3185,437 @@ function logout() {
 const logoutBtn = document.getElementById('logoutBtn');
 if (logoutBtn) logoutBtn.onclick = logout;
 
-// ========== MENU SIDEBAR ==========
-// Toggle menu
-if (menuToggleBtn) {
-    menuToggleBtn.onclick = () => {
-        sideMenuPanel.classList.add('show');
-    };
+// ========== SEARCH & FILTER FUNCTIONS ==========
+async function searchTasks() {
+    // Always use the latest search input value on button click
+    currentSearch.search = searchInput.value.trim().toLowerCase();
+    currentSearch.period = searchPeriod.value;
+    currentSearch.date = searchDate.value;
+    currentSearch.month = searchMonth.value;
+    currentSearch.year = searchYear.value;
+
+    if (currentSearch.period === 'all' && !currentSearch.search) {
+        // If no search, load normal selected date
+        if (selectedDate) {
+            loadTasks(selectedDate);
+        }
+        return;
+    }
+
+    // Load searched tasks
+    await loadSearchedTasks();
 }
 
-// Đóng menu
-if (menuCloseBtn) {
-    menuCloseBtn.onclick = () => {
+async function clearSearch() {
+    // Reset search state
+    currentSearch = {
+        search: '',
+        period: 'all',
+        date: null,
+        month: null,
+        year: null
+    };
+
+    // Reset UI
+    searchInput.value = '';
+    searchPeriod.value = 'all';
+    searchDate.value = '';
+    searchMonth.value = '';
+    searchYear.value = '';
+    searchDate.style.display = 'none';
+    searchMonth.style.display = 'none';
+    searchYear.style.display = 'none';
+
+    // Load normal view
+    if (selectedDate) {
+        loadTasks(selectedDate);
+    }
+
+    // Show add and delete controls
+    const addBtn = document.getElementById('openAddModal');
+    const expBtn = document.getElementById('exportBtn');
+    const deleteDropdown = document.getElementById('deleteSelect');
+    const isMemberRole = isMember();
+    if (addBtn) addBtn.style.display = isMemberRole ? 'none' : 'inline-block';
+    if (expBtn) expBtn.style.display = 'inline-block';
+    if (deleteDropdown) deleteDropdown.style.display = 'inline-block';
+}
+
+async function loadSearchedTasks() {
+    // Show loading
+    loadingIndicator.style.display = 'block';
+
+    try {
+        const uid = getCurrentUserId();
+        if (!uid) return;
+
+        let tasks = [];
+
+        if (currentSearch.period === 'all') {
+            // Load all tasks
+            const r = ref(db, `tasks/${uid}`);
+            const snap = await get(r);
+            if (snap.exists()) {
+                snap.forEach(yearSnap => {
+                    const year = yearSnap.key;
+                    yearSnap.forEach(monthSnap => {
+                        const month = monthSnap.key;
+                        monthSnap.forEach(weekSnap => {
+                            const week = weekSnap.key;
+                            weekSnap.forEach(dateSnap => {
+                                const date = dateSnap.key;
+                                dateSnap.forEach(taskSnap => {
+                                    const task = taskSnap.val();
+                                    tasks.push({
+                                        id: taskSnap.key,
+                                        ...task,
+                                        date: date,
+                                        week: week,
+                                        month: month,
+                                        year: year
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
+            }
+        } else {
+            // Load tasks for specific period
+            let paths = [];
+            if (currentSearch.period === 'day' && currentSearch.date) {
+                const [y, m, d] = currentSearch.date.split('-');
+                const w = getWeekNumber(currentSearch.date);
+                const directPath = `${y}/${m}/${w}/${currentSearch.date}`;
+                paths = [directPath];
+
+                // Nếu không có dữ liệu tại đường dẫn theo tuần chuẩn, quét toàn bộ tháng để tìm ngày đó.
+                const directSnap = await get(ref(db, `tasks/${uid}/${directPath}`));
+                if (!directSnap.exists()) {
+                    const monthSnap = await get(ref(db, `tasks/${uid}/${y}/${m}`));
+                    if (monthSnap.exists()) {
+                        monthSnap.forEach(weekSnap => {
+                            weekSnap.forEach(dateSnap => {
+                                if (dateSnap.key === currentSearch.date) {
+                                    paths.push(`${y}/${m}/${weekSnap.key}/${dateSnap.key}`);
+                                }
+                            });
+                        });
+                    }
+                }
+            } else if (currentSearch.period === 'week' && currentSearch.date) {
+                // For week, use the week containing the selected date
+                const [y, m, d] = currentSearch.date.split('-');
+                const w = getWeekNumber(currentSearch.date);
+                paths = [`${y}/${m}/${w}`];
+            } else if (currentSearch.period === 'month' && currentSearch.month) {
+                const [y, m] = currentSearch.month.split('-');
+                // Load all weeks in month
+                const r = ref(db, `tasks/${uid}/${y}/${m}`);
+                const snap = await get(r);
+                if (snap.exists()) {
+                    snap.forEach(weekSnap => {
+                        paths.push(`${y}/${m}/${weekSnap.key}`);
+                    });
+                }
+            } else if (currentSearch.period === 'year' && currentSearch.year) {
+                const y = currentSearch.year;
+                // Load all months in year
+                const r = ref(db, `tasks/${uid}/${y}`);
+                const snap = await get(r);
+                if (snap.exists()) {
+                    snap.forEach(monthSnap => {
+                        const m = monthSnap.key;
+                        monthSnap.forEach(weekSnap => {
+                            paths.push(`${y}/${m}/${weekSnap.key}`);
+                        });
+                    });
+                }
+            }
+
+            // Load tasks from paths
+            for (const path of paths) {
+                const r = ref(db, `tasks/${uid}/${path}`);
+                const snap = await get(r);
+                if (!snap.exists()) continue;
+
+                const levels = path.split('/');
+                if (levels.length === 4) {
+                    // path: year/month/week/date -> snapshot contains task entries
+                    const [y, m, w, date] = levels;
+                    snap.forEach(taskSnap => {
+                        const task = taskSnap.val();
+                        tasks.push({
+                            id: taskSnap.key,
+                            ...task,
+                            date: date,
+                            week: w,
+                            month: m,
+                            year: y
+                        });
+                    });
+                } else if (levels.length === 3) {
+                    // path: year/month/week -> snapshot contains dates
+                    const [y, m, w] = levels;
+                    snap.forEach(dateSnap => {
+                        const date = dateSnap.key;
+                        dateSnap.forEach(taskSnap => {
+                            const task = taskSnap.val();
+                            tasks.push({
+                                id: taskSnap.key,
+                                ...task,
+                                date: date,
+                                week: w,
+                                month: m,
+                                year: y
+                            });
+                        });
+                    });
+                }
+            }
+        }
+
+        // Apply text search filter
+        if (currentSearch.search) {
+            tasks = tasks.filter(task =>
+                (task.content && task.content.toLowerCase().includes(currentSearch.search)) ||
+                (task.description && task.description.toLowerCase().includes(currentSearch.search)) ||
+                (task.requester && task.requester.toLowerCase().includes(currentSearch.search)) ||
+                (task.unit && task.unit.toLowerCase().includes(currentSearch.search)) ||
+                (task.assignee && task.assignee.toLowerCase().includes(currentSearch.search)) ||
+                (task.result && task.result.toLowerCase().includes(currentSearch.search)) ||
+                (task.note && task.note.toLowerCase().includes(currentSearch.search))
+            );
+        }
+
+        // Render searched tasks
+        renderSearchedTasks(tasks);
+
+    } catch (error) {
+        console.error('Error loading searched tasks:', error);
+        await showCustomAlert('Lỗi khi tải công việc đã tìm kiếm');
+    } finally {
+        loadingIndicator.style.display = 'none';
+    }
+}
+
+function renderSearchedTasks(tasks) {
+    taskTable.innerHTML = '';
+
+    if (tasks.length === 0) {
+        taskTable.innerHTML = '<tr><td colspan="100" style="text-align: center; padding: 20px;">Không có công việc nào phù hợp với tìm kiếm</td></tr>';
+        return;
+    }
+
+    let i = 1;
+    tasks.forEach(task => {
+        const row = document.createElement('tr');
+
+        // Checkbox
+        const checkboxCell = document.createElement('td');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'task-checkbox';
+        checkbox.setAttribute('data-key', task.id);
+        checkbox.setAttribute('data-year', task.year);
+        checkbox.setAttribute('data-month', task.month);
+        checkbox.setAttribute('data-week', task.week);
+        checkbox.setAttribute('data-date', task.date);
+        checkboxCell.appendChild(checkbox);
+        row.appendChild(checkboxCell);
+
+        // STT
+        const sttCell = document.createElement('td');
+        sttCell.textContent = i++;
+        row.appendChild(sttCell);
+
+        // Content
+        const contentCell = document.createElement('td');
+        contentCell.textContent = task.content || '';
+        row.appendChild(contentCell);
+
+        // Description
+        const descCell = document.createElement('td');
+        descCell.textContent = task.description || '';
+        row.appendChild(descCell);
+
+        // Requester
+        const reqCell = document.createElement('td');
+        reqCell.textContent = task.requester || '';
+        row.appendChild(reqCell);
+
+        // Unit
+        const unitCell = document.createElement('td');
+        unitCell.textContent = task.unit || '';
+        row.appendChild(unitCell);
+
+        // Assignee
+        const assignCell = document.createElement('td');
+        assignCell.textContent = task.assignee || '';
+        row.appendChild(assignCell);
+
+        // Start Date
+        const startCell = document.createElement('td');
+        startCell.textContent = task.startDate || '';
+        row.appendChild(startCell);
+
+        // End Date
+        const endCell = document.createElement('td');
+        endCell.textContent = task.endDate || '';
+        row.appendChild(endCell);
+
+        // Result
+        const resultCell = document.createElement('td');
+        resultCell.textContent = task.result || '';
+        row.appendChild(resultCell);
+
+        // Completion
+        const compCell = document.createElement('td');
+        compCell.textContent = task.completion || '';
+        row.appendChild(compCell);
+
+        // Status
+        const statusCell = document.createElement('td');
+        statusCell.textContent = task.status || '';
+        row.appendChild(statusCell);
+
+        // Note
+        const noteCell = document.createElement('td');
+        noteCell.textContent = task.note || '';
+        row.appendChild(noteCell);
+
+        // Actions
+        const actionsCell = document.createElement('td');
+        const isMemberRole = isMember();
+        if (!isMemberRole) {
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn-edit';
+            editBtn.textContent = '✏️ Sửa';
+            editBtn.onclick = async () => {
+                if (isMember()) {
+                    await showCustomAlert('👤 Thành viên không có quyền chỉnh sửa công việc');
+                    return;
+                }
+                openModal("Chỉnh sửa công việc", task.id, task);
+            };
+            actionsCell.appendChild(editBtn);
+
+            const duplicateBtn = document.createElement('button');
+            duplicateBtn.className = 'btn-duplicate';
+            duplicateBtn.textContent = '🔁 Nhân bản';
+            duplicateBtn.onclick = async () => {
+                if (isMember()) {
+                    await showCustomAlert('👤 Thành viên không có quyền nhân bản công việc');
+                    return;
+                }
+
+                const confirmDup = await showCustomConfirm("Bạn có muốn nhân bản công việc này không?");
+                if (!confirmDup) return;
+
+                // Sao chép thông tin công việc cần thiết
+                const newTask = {
+                    content: task.content,
+                    description: task.description || '',
+                    requester: task.requester || '',
+                    unit: task.unit || '',
+                    assignee: task.assignee || '',
+                    startDate: task.startDate || '',
+                    endDate: task.endDate || '',
+                    result: task.result || '',
+                    completion: task.completion || '',
+                    status: task.status || '',
+                    note: task.note || '',
+                    taskDate: task.taskDate || task.date
+                };
+                showLoading();
+                try {
+                    const [y, m] = task.date.split("-");
+                    const w = getWeekNumber(task.date);
+                    await push(tasksRef(y, m, w, task.date), newTask);
+                    await showCustomAlert("🔁 Đã nhân bản công việc!");
+                } catch (e) {
+                    console.error(e);
+                    await showCustomAlert("❌ Lỗi khi nhân bản");
+                } finally {
+                    hideLoading();
+                }
+            };
+            actionsCell.appendChild(duplicateBtn);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn-delete';
+            deleteBtn.textContent = '🗑️ Xóa';
+            deleteBtn.onclick = async () => {
+                if (isMember()) {
+                    await showCustomAlert('👤 Thành viên không có quyền xóa công việc');
+                    return;
+                }
+
+                const confirmDelete = await showCustomConfirm("Bạn có chắc muốn xóa công việc này không?");
+
+                if (!confirmDelete) return;
+                showLoading();
+
+                try {
+                    await remove(tasksRef(task.year, task.month, task.week, task.date, task.id));
+                    hideLoading();
+                    // Reload searched tasks
+                    await loadSearchedTasks();
+                    await showCustomAlert("✅ Xóa công việc thành công!");
+                } catch (error) {
+                    hideLoading();
+                    await showCustomAlert("❌ Có lỗi xảy ra khi xóa!");
+                    console.error(error);
+                }
+            };
+            actionsCell.appendChild(deleteBtn);
+        }
+        row.appendChild(actionsCell);
+
+        taskTable.appendChild(row);
+    });
+
+    // Update title
+    let title = 'Kết quả tìm kiếm';
+    if (currentSearch.period !== 'all') {
+        if (currentSearch.period === 'day' && currentSearch.date) {
+            title = `Công việc ngày ${formatDisplayDate(currentSearch.date)}`;
+        } else if (currentSearch.period === 'week') {
+            title = 'Công việc trong tuần';
+        } else if (currentSearch.period === 'month' && currentSearch.month) {
+            const [y, m] = currentSearch.month.split('-');
+            title = `Công việc tháng ${m}/${y}`;
+        } else if (currentSearch.period === 'year' && currentSearch.year) {
+            title = `Công việc năm ${currentSearch.year}`;
+        }
+    }
+    if (currentSearch.search) {
+        title += ` (tìm: "${currentSearch.search}")`;
+    }
+    selectedDateTitle.innerText = title;
+
+    // Hide add and delete controls when filtered
+    const addBtn = document.getElementById('openAddModal');
+    const expBtn = document.getElementById('exportBtn');
+    const deleteDropdown = document.getElementById('deleteSelect');
+    if (addBtn) addBtn.style.display = 'none';
+    if (expBtn) expBtn.style.display = 'none';
+    if (deleteDropdown) deleteDropdown.style.display = 'none';
+}
+
+// Mở / đóng sidebar menu (☰ Menu)
+if (menuToggleBtn && sideMenuPanel) {
+    menuToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sideMenuPanel.classList.toggle('show');
+        syncMenuToggleVisibility();
+    });
+}
+if (menuCloseBtn && sideMenuPanel) {
+    menuCloseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         sideMenuPanel.classList.remove('show');
-    };
-}
-
-// Đóng menu khi click vào nút trong menu
-if (sideMenuPanel) {
-    Array.from(sideMenuPanel.querySelectorAll('.menu-btn')).forEach(btn => {
-        btn.addEventListener('click', () => {
-            sideMenuPanel.classList.remove('show');
-        });
+        syncMenuToggleVisibility();
     });
 }
 
@@ -3160,6 +3624,7 @@ document.addEventListener('click', (e) => {
     if (sideMenuPanel && sideMenuPanel.classList.contains('show')) {
         if (!sideMenuPanel.contains(e.target) && e.target !== menuToggleBtn) {
             sideMenuPanel.classList.remove('show');
+            syncMenuToggleVisibility();
         }
     }
 });
@@ -3183,6 +3648,10 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         if (nbSelectModal && nbSelectModal.style.display === 'flex') {
             nbSelectModal.style.display = 'none';
+        }
+        if (sideMenuPanel && sideMenuPanel.classList.contains('show')) {
+            sideMenuPanel.classList.remove('show');
+            syncMenuToggleVisibility();
         }
     }
 });
