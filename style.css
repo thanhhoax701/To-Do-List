@@ -88,6 +88,256 @@ th {
     background: #007bff;
     /* Nền xanh đậm */
     color: #fff;
+    text-transform: uppercase;
+}
+
+.task-table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 12px;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(25, 42, 62, 0.07);
+}
+
+table.task-list-table {
+    width: 100%;
+    min-width: 1180px;
+    margin: 0;
+    table-layout: fixed;
+    border: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #fff;
+}
+
+.task-list-table th {
+    height: 48px;
+    padding: 10px 7px;
+    border: 0;
+    border-right: 1px solid rgba(255, 255, 255, 0.28);
+    border-bottom: 1px solid #c9151c;
+    background: #df171f;
+    color: #fff;
+    text-align: left;
+    font-size: 12px;
+    line-height: 1.25;
+    letter-spacing: 0.01em;
+}
+
+.task-list-table th:first-child {
+    border-top-left-radius: 12px;
+}
+
+.task-list-table th:last-child {
+    border-top-right-radius: 12px;
+    border-right: 0;
+}
+
+.task-list-table td {
+    padding: 12px 7px;
+    border: 0;
+    border-right: 1px solid #e5e9ef;
+    border-bottom: 1px solid #e5e9ef;
+    background: #fff;
+    color: #29323d;
+    text-align: left;
+    vertical-align: middle;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.task-list-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.task-list-table td:last-child {
+    border-right: 0;
+}
+
+.task-list-table tbody tr:hover td {
+    background: #fcfcfd;
+}
+
+.task-list-table th:nth-child(1),
+.task-list-table td:nth-child(1) {
+    width: 3%;
+    text-align: center;
+}
+
+.task-list-table th:nth-child(2),
+.task-list-table td:nth-child(2) {
+    width: 3%;
+    text-align: center;
+}
+
+.task-list-table th:nth-child(3),
+.task-list-table td:nth-child(3) {
+    width: 9%;
+    text-align: left;
+}
+
+.task-list-table td:nth-child(3) {
+    font-weight: 600;
+}
+
+.task-list-table th:nth-child(4),
+.task-list-table td:nth-child(4) {
+    width: 15%;
+    text-align: left;
+}
+
+.task-list-table th:nth-child(5),
+.task-list-table td:nth-child(5) {
+    width: 6%;
+}
+
+.task-list-table th:nth-child(6),
+.task-list-table td:nth-child(6) {
+    width: 5%;
+}
+
+.task-list-table th:nth-child(7),
+.task-list-table td:nth-child(7) {
+    width: 6%;
+}
+
+.task-list-table th:nth-child(8),
+.task-list-table td:nth-child(8),
+.task-list-table th:nth-child(9),
+.task-list-table td:nth-child(9) {
+    width: 6%;
+}
+
+.task-list-table th:nth-child(10),
+.task-list-table td:nth-child(10) {
+    width: 6%;
+}
+
+.task-list-table th:nth-child(11),
+.task-list-table td:nth-child(11) {
+    width: 8%;
+    white-space: pre-wrap;
+}
+
+.task-list-table th:nth-child(12),
+.task-list-table td:nth-child(12) {
+    width: 10%;
+    text-align: center;
+}
+
+.task-list-table td:nth-child(12) select {
+    min-width: 0;
+}
+
+.task-list-table th:nth-child(13),
+.task-list-table td:nth-child(13) {
+    width: 5%;
+    text-align: center;
+}
+
+.task-list-table th:nth-child(14),
+.task-list-table td:nth-child(14) {
+    width: 6%;
+    text-align: left;
+    white-space: pre-wrap;
+}
+
+.task-list-table th:nth-child(15),
+.task-list-table td:nth-child(15) {
+    width: 11%;
+    text-align: center;
+}
+
+.task-list-table td:last-child {
+    padding: 10px 6px;
+    white-space: nowrap;
+}
+
+.task-list-table .task-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.task-list-table td:last-child button.btn-duplicate,
+.task-list-table td:last-child button.btn-edit,
+.task-list-table td:last-child button.btn-delete {
+    display: inline-flex;
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+    margin: 2px;
+    padding: 4px;
+    border-radius: 7px;
+    font-size: 0;
+    line-height: 1;
+}
+
+.task-list-table td:last-child button.btn-duplicate::before,
+.task-list-table td:last-child button.btn-edit::before,
+.task-list-table td:last-child button.btn-delete::before {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.task-list-table td:last-child button.btn-duplicate::before {
+    content: "🔁";
+}
+
+.task-list-table td:last-child button.btn-edit::before {
+    content: "✏️";
+}
+
+.task-list-table td:last-child button.btn-delete::before {
+    content: "🗑️";
+}
+
+.task-list-table td:last-child .btn-duplicate,
+.task-list-table td:last-child .btn-edit,
+.task-list-table td:last-child .btn-delete {
+    border: 1px solid #e0e6ed;
+    background: #fff;
+    color: #334155;
+}
+
+.task-list-table td:last-child .btn-delete {
+    border-color: #f2c7ca;
+    color: #d71920;
+}
+
+.task-list-table td:last-child button:hover {
+    background: #f5f7fa;
+    transform: translateY(-1px);
+}
+
+#searchFilterSection {
+    border-color: #e7ebf0 !important;
+    border-radius: 12px !important;
+    background: #fff !important;
+    box-shadow: 0 4px 16px rgba(25, 42, 62, 0.04);
+}
+
+#searchBtn {
+    background: #df171f;
+    border-radius: 9px;
+}
+
+#searchBtn:hover {
+    background: #c9151c;
+}
+
+#openAddModal {
+    background: #28a745;
+    border-radius: 9px;
+}
+
+#openAddModal:hover {
+    background: #218838;
 }
 
 /* Cột checkbox nhỏ */
@@ -116,9 +366,10 @@ td:nth-child(4) {
     text-align: left;
 }
 
-/* Cột Ghi chú rộng và wrap text */
-td:nth-child(13),
-th:nth-child(13) {
+/* Cột Hướng xử lý và Ghi chú cần wrap text */
+td:nth-child(11),
+td:nth-child(14),
+th:nth-child(14) {
     text-align: left;
     white-space: pre-wrap;
 }
@@ -852,26 +1103,159 @@ td select {
     padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
-}
-
-/* Menu section */
-.menu-section {
-    display: flex;
-    flex-direction: column;
     gap: 12px;
 }
 
-/* Title của section */
+.menu-category-btn {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 34px 1fr 18px;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 14px;
+    border: 1px solid #dce4ee;
+    border-radius: 10px;
+    background: #fff;
+    color: #17324f;
+    text-align: left;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.4;
+    cursor: pointer;
+    box-shadow: 0 2px 7px rgba(15, 23, 42, 0.06);
+    transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.menu-category-btn:hover,
+.menu-category-btn:focus-visible {
+    border-color: #0056b3;
+    background: #f5f9ff;
+    box-shadow: 0 5px 14px rgba(0, 86, 179, 0.12);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.menu-category-icon {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: #eaf3ff;
+    font-size: 18px;
+}
+
+.menu-category-arrow {
+    color: #64748b;
+    font-size: 24px;
+    font-weight: 400;
+    text-align: right;
+}
+
+.menu-detail-modal {
+    z-index: 9995;
+}
+
+.menu-detail-content {
+    width: min(100%, 650px);
+    max-width: 650px;
+    max-height: min(88vh, 850px);
+    padding: 26px;
+    gap: 20px;
+    box-sizing: border-box;
+}
+
+.menu-detail-content > h2 {
+    margin: 0;
+    padding: 0 34px 14px 0;
+    border-bottom: 1px solid #e2e8f0;
+    color: #123d68;
+    font-size: 21px;
+    text-align: left;
+}
+
+.menu-detail-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 25px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.menu-detail-close:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.menu-detail-sections {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    align-items: start;
+}
+
+.menu-section {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+}
+
 .menu-section-title {
     margin: 0;
+    padding-bottom: 9px;
+    border-bottom: 2px solid #dbeafe;
+    color: #0056b3;
     font-size: 14px;
     font-weight: 700;
-    color: #0056b3;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #0056b3;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.35px;
+}
+
+.menu-conditional-field {
+    display: none;
+    margin-top: 4px;
+}
+
+.menu-help-text {
+    display: block;
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.schedule-danger-action {
+    width: 100%;
+    padding: 10px;
+    border: 0;
+    border-radius: 6px;
+    background: #dc3545;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+@media (max-width: 620px) {
+    .menu-detail-content {
+        padding: 22px 16px;
+    }
+
+    .menu-detail-sections {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
 }
 
 /* Button trong menu */
@@ -935,6 +1319,141 @@ td select {
     outline: none;
     border-color: #0056b3;
     box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
+}
+
+.schedule-form {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.schedule-form .menu-form-input {
+    margin-bottom: 8px;
+}
+
+.schedule-note {
+    min-height: 74px;
+    resize: vertical;
+    font-family: inherit;
+    cursor: text;
+}
+
+.schedule-form input[type="text"] {
+    cursor: text;
+}
+
+.schedule-form-actions,
+.schedule-card-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.schedule-form-actions > button {
+    flex: 1;
+    min-height: 38px;
+    border: 0;
+    border-radius: 6px;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.schedule-form-actions #saveScheduleBtn {
+    background: #198754;
+}
+
+.schedule-form-actions #cancelScheduleEditBtn {
+    background: #64748b;
+}
+
+.schedule-list-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+    color: #334155;
+}
+
+.schedule-refresh-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #334155;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.schedule-list {
+    display: grid;
+    gap: 8px;
+}
+
+.schedule-card {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    border-left: 4px solid #0f766e;
+    border-radius: 7px;
+    background: #f8fafc;
+}
+
+.schedule-card-title {
+    display: block;
+    overflow-wrap: anywhere;
+    color: #1e293b;
+    font-size: 13px;
+}
+
+.schedule-card-details,
+.schedule-card-note {
+    margin: 6px 0 0;
+    color: #475569;
+    font-size: 12px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.schedule-card-note {
+    white-space: pre-wrap;
+}
+
+.schedule-card-actions {
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+.schedule-action-btn {
+    padding: 5px 10px;
+    border: 0;
+    border-radius: 5px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.schedule-edit-btn {
+    background: #475569;
+}
+
+.schedule-delete-btn {
+    background: #b42318;
+}
+
+.schedule-empty {
+    margin: 0;
+    padding: 10px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 6px;
+    color: #64748b;
+    font-size: 12px;
+    text-align: center;
+}
+
+.schedule-error {
+    color: #b42318;
 }
 
 /* Lớp phủ khi menu mở */

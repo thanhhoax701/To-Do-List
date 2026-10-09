@@ -429,6 +429,7 @@ function renderTasksForDate(year, month, week, date) {
             <th style="padding:8px;border:1px solid #ddd;">Đơn vị</th>
             <th style="padding:8px;border:1px solid #ddd;">Thời gian</th>
             <th style="padding:8px;border:1px solid #ddd;">Mức độ</th>
+            <th style="padding:8px;border:1px solid #ddd;">Hướng xử lý</th>
             <th style="padding:8px;border:1px solid #ddd;">Trạng thái</th>
             <th style="padding:8px;border:1px solid #ddd;">Ghi chú</th>
         </tr>`;
@@ -444,6 +445,7 @@ function renderTasksForDate(year, month, week, date) {
             <td style="padding:6px;vertical-align:top;">${task.unit || ''}</td>
             <td style="padding:6px;vertical-align:top;">${task.duration || ''}</td>
             <td style="padding:6px;vertical-align:top;">${task.priority || ''}</td>
+            <td style="padding:6px;vertical-align:top;">${task.direction || ''}</td>
             <td style="padding:6px;vertical-align:top;">${task.status || ''}</td>
             <td style="padding:6px;vertical-align:top;">${task.note || ''}</td>
         `;
@@ -487,6 +489,7 @@ function buildTasksTable(obj) {
                             duration: task.duration || '',
                             status: task.status || '',
                             priority: task.priority || '',
+                            direction: task.direction || '',
                             unit: task.unit || '',
                             startDate: task.startDate || '',
                             note: task.note || ''
@@ -504,7 +507,7 @@ function buildTasksTable(obj) {
     // Header
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
-    const headers = ['Năm', 'Tháng', 'Tuần', 'Ngày', 'Nội dung', 'Thời gian', 'Trạng thái', 'Ưu tiên', 'Đơn vị', 'Ghi chú'];
+    const headers = ['Năm', 'Tháng', 'Tuần', 'Ngày', 'Nội dung', 'Thời gian', 'Trạng thái', 'Ưu tiên', 'Hướng xử lý', 'Đơn vị', 'Ghi chú'];
     headers.forEach(h => {
         const th = document.createElement('th');
         th.textContent = h;
@@ -526,6 +529,7 @@ function buildTasksTable(obj) {
             <td>${row.duration}</td>
             <td><span class="status-badge status-${row.status.toLowerCase().replace(/\s+/g, '-')}">${row.status}</span></td>
             <td><span class="priority-badge priority-${row.priority.toLowerCase().replace(/\s+/g, '-')}">${row.priority}</span></td>
+            <td>${row.direction}</td>
             <td>${row.unit}</td>
             <td>${row.note}</td>
         `;

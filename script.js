@@ -8,6 +8,7 @@ import { ref, push, onValue, remove, update, get, set } from "https://www.gstati
 const calendarDiv = document.getElementById("calendar");
 const monthYear = document.getElementById("monthYear");
 const taskTable = document.getElementById("taskTable");
+const taskTableContainer = document.querySelector(".task-table-scroll");
 const selectedDateTitle = document.getElementById("selectedDateTitle");
 
 // Nút chuyển tháng
@@ -47,6 +48,7 @@ const assigneeInput = document.getElementById("assignee"); // Phụ trách
 const startDateInput = document.getElementById("taskStartDate"); // Ngày bắt đầu
 const endDateInput = document.getElementById("taskEndDate"); // Ngày kết thúc
 const resultInput = document.getElementById("result"); // Kết quả
+const directionInput = document.getElementById("direction"); // Hướng xử lý
 const completionInput = document.getElementById("completion"); // % hoàn thành
 const statusInput = document.getElementById("status"); // Trạng thái công việc
 const noteInput = document.getElementById("note"); // Ghi chú
@@ -59,6 +61,19 @@ const loadingIndicator = document.getElementById("loadingIndicator");
 const menuToggleBtn = document.getElementById("menuToggleBtn");
 const menuCloseBtn = document.getElementById("menuCloseBtn");
 const sideMenuPanel = document.getElementById("sideMenuPanel");
+const scheduleForm = document.getElementById('scheduleForm');
+const scheduleDateInput = document.getElementById('scheduleDate');
+const scheduleTypeInput = document.getElementById('scheduleType');
+const scheduleTypeField = document.getElementById('scheduleTypeField');
+const scheduleManagementTitle = document.getElementById('scheduleManagementTitle');
+const scheduleLocationInput = document.getElementById('scheduleLocation');
+const scheduleAssigneeInput = document.getElementById('scheduleAssignee');
+const scheduleStatusInput = document.getElementById('scheduleStatus');
+const scheduleNoteInput = document.getElementById('scheduleNote');
+const scheduleList = document.getElementById('scheduleList');
+const saveScheduleBtn = document.getElementById('saveScheduleBtn');
+const cancelScheduleEditBtn = document.getElementById('cancelScheduleEditBtn');
+const refreshScheduleBtn = document.getElementById('refreshScheduleBtn');
 
 // Modal lựa chọn ngày NB
 const nbSelectModal = document.getElementById("nbSelectModal");
@@ -149,6 +164,10 @@ function nbRef(...parts) {
 function nlRef(...parts) {
     const uid = getCurrentUserId();
     return ref(db, `nlDays/${uid}${parts.length ? '/' + parts.join('/') : ''}`);
+}
+function scheduleRef(...parts) {
+    const uid = getCurrentUserId();
+    return ref(db, `storeMaintenanceSchedules/${uid}${parts.length ? '/' + parts.join('/') : ''}`);
 }
 
 /* ========== LỊCH ========== */
@@ -345,7 +364,11 @@ function formatDayOnly(ds) {
 
 // ========== XUẤT XLSX ==========
 // Các cột có thể xuất (theo thứ tự trình bày trong bảng)
-const ALL_EXPORT_COLUMNS = ["STT", "Công việc", "Mô tả", "Người yêu cầu", "Đơn vị", "Phụ trách", "Ngày bắt đầu", "Ngày kết thúc", "Kết quả", "Trạng thái", "% Hoàn thành", "Ghi chú"];
+const ALL_EXPORT_COLUMNS = ["STT", "Công việc", "Mô tả", "Người yêu cầu", "Đơn vị", "Phụ trách", "Ngày bắt đầu", "Ngày kết thúc", "Kết quả", "Hướng xử lý", "Trạng thái", "% Hoàn thành", "Ghi chú"];
+
+function formatExportHeader(header) {
+    return String(header).toUpperCase();
+}
 
 /**
  * Viết một mảng dữ liệu (array of arrays) thành file xlsx và tải xuống.
@@ -410,7 +433,7 @@ function styleWorksheet(ws, header, rows) {
 }
 
 function writeDataToXLSX(header, rows) {
-    const upperHeader = header.map(h => String(h).toUpperCase());
+    const upperHeader = header.map(formatExportHeader);
     const data = [upperHeader, ...rows];
     const ws = XLSX.utils.aoa_to_sheet(data);
 
@@ -485,6 +508,30 @@ function normalizeDateString(s) {
     return null;
 }
 
+function isValidYmd(dateStr) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || '')) return false;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.getFullYear() === year &&
+        date.getMonth() === month - 1 &&
+        date.getDate() === day;
+}
+
+function inferUniqueDayInRange(day, startDate, endDate) {
+    if (!isValidYmd(startDate) || !isValidYmd(endDate) || startDate > endDate) return null;
+    const candidates = [];
+    const cursor = parseYMD(`${startDate.slice(0, 7)}-01`);
+    const rangeLast = parseYMD(endDate);
+    while (cursor <= rangeLast) {
+        const candidate = `${toYMDLocal(cursor).slice(0, 7)}-${day}`;
+        if (isValidYmd(candidate) && candidate >= startDate && candidate <= endDate) {
+            candidates.push(candidate);
+        }
+        cursor.setMonth(cursor.getMonth() + 1);
+    }
+    return candidates.length === 1 ? candidates[0] : null;
+}
+
 // Parse date from sheet name like '24-02-2026' or '2026-02-24'
 function parseDateFromSheetName(name) {
     if (!name) return null;
@@ -501,6 +548,16 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
     try {
         const wb = XLSX.read(ab, { type: 'array' });
         let total = 0;
+        let skipped = 0;
+        const range = importType === 'range' && importValue
+            ? importValue.split('|')
+            : null;
+        const rangeStart = range && range.length === 2 ? range[0] : null;
+        const rangeEnd = range && range.length === 2 ? range[1] : null;
+        if (importType === 'range' &&
+            (!isValidYmd(rangeStart) || !isValidYmd(rangeEnd) || rangeStart > rangeEnd)) {
+            throw new Error('Khoảng ngày nhập không hợp lệ.');
+        }
         // iterate sheets
         for (const sheetName of wb.SheetNames) {
             const ws = wb.Sheets[sheetName];
@@ -519,10 +576,10 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
                 if (m) sheetDate = `${m[1]}-${m[2]}-${m[3]}`;
             }
 
-            // If importType defines a default date (week/month/range) and no per-row date,
+            // If importType defines a default date (week/month) and no per-row date,
             // use importValue to compute a default date for rows without 'Ngày'
             let importDefaultDate = null;
-            if (!sheetDate && importType) {
+            if ((!sheetDate || /^\d{1,2}$/.test(sheetDate)) && importType) {
                 if (importType === 'week' && importValue) {
                     // importValue expected as 'YYYY|MM|weekN'
                     const parts = importValue.split('|');
@@ -541,10 +598,6 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
                     // importValue expected as 'YYYY-MM'
                     const [yy, mm] = importValue.split('-');
                     if (yy && mm) importDefaultDate = `${yy}-${mm}-01`;
-                } else if (importType === 'range' && importValue) {
-                    // importValue expected as 'START|END'
-                    const parts2 = importValue.split('|');
-                    if (parts2.length === 2) importDefaultDate = parts2[0];
                 }
             }
 
@@ -554,7 +607,10 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
                 if (!row || row.every(c => (c === null || c === undefined || String(c).trim() === ''))) continue;
                 // determine date for this row: prefer 'Ngày' column
                 let dateVal = null;
-                if (idxMap['ngày'] !== undefined) dateVal = normalizeDateString(row[idxMap['ngày']]);
+                if (idxMap['ngày'] !== undefined) {
+                    const normalizedDate = normalizeDateString(row[idxMap['ngày']]);
+                    if (normalizedDate && !/^\d{2}$/.test(normalizedDate)) dateVal = normalizedDate;
+                }
                 // nếu vẫn chưa có ngày và giá trị cột/ngày sheet chỉ có ngày, cố ghép với tháng/năm từ context
                 if (!dateVal) {
                     const rawCell = row[idxMap['ngày']];
@@ -565,37 +621,47 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
                     if (/^\d{1,2}$/.test(cellTrim)) dayOnly = pad(Number(cellTrim));
                     else if (/^\d{1,2}$/.test(sheetTrim)) dayOnly = pad(Number(sheetTrim));
                     if (dayOnly) {
-                        // xác định tháng/năm từ giá trị khả thi
-                        let base = null;
-                        if (sheetDate && /^\d{4}-\d{2}-\d{2}$/.test(sheetDate)) base = sheetDate;
-                        else if (importDefaultDate && /^\d{4}-\d{2}-\d{2}$/.test(importDefaultDate)) base = importDefaultDate;
-                        else {
-                            // try infer month/year from filename if possible (e.g. tasks_20260205.xlsx)
-                            if (!base && filename) {
-                                const m2 = filename.match(/(\d{4})(\d{2})/);
-                                if (m2) {
-                                    base = `${m2[1]}-${m2[2]}-01`;
+                        const hasFullSheetDate = /^\d{4}-\d{2}-\d{2}$/.test(sheetDate || '');
+                        if (rangeStart && !hasFullSheetDate && !importDefaultDate) {
+                            dateVal = inferUniqueDayInRange(dayOnly, rangeStart, rangeEnd);
+                        } else {
+                            // xác định tháng/năm từ giá trị khả thi
+                            let base = null;
+                            if (hasFullSheetDate) base = sheetDate;
+                            else if (importDefaultDate && /^\d{4}-\d{2}-\d{2}$/.test(importDefaultDate)) base = importDefaultDate;
+                            else {
+                                // try infer month/year from filename if possible (e.g. tasks_20260205.xlsx)
+                                if (filename) {
+                                    const m2 = filename.match(/(\d{4})(\d{2})/);
+                                    if (m2) {
+                                        base = `${m2[1]}-${m2[2]}-01`;
+                                    }
+                                }
+                                if (!base) {
+                                    const now = new Date();
+                                    base = toYMDLocal(now);
                                 }
                             }
-                            if (!base) {
-                                const now = new Date();
-                                base = toYMDLocal(now);
-                            }
+                            const [yy, mm] = base.split('-');
+                            dateVal = `${yy}-${mm}-${dayOnly}`;
                         }
-                        const [yy, mm] = base.split('-');
-                        dateVal = `${yy}-${mm}-${dayOnly}`;
                     }
                 }
                 if (!dateVal && importDefaultDate) dateVal = importDefaultDate;
                 if (!dateVal && sheetDate) dateVal = sheetDate;
                 if (!dateVal && importDefaultDate) dateVal = importDefaultDate;
                 if (!dateVal) {
-                    // skip rows without date
+                    skipped++;
+                    continue;
+                }
+                if (!isValidYmd(dateVal) ||
+                    (rangeStart && (dateVal < rangeStart || dateVal > rangeEnd))) {
+                    skipped++;
                     continue;
                 }
 
                 const task = {
-                    content: '', description: '', requester: '', unit: '', assignee: '', startDate: '', endDate: '', result: '', completion: '', status: '', note: '', taskDate: dateVal
+                        content: '', description: '', requester: '', unit: '', assignee: '', startDate: '', endDate: '', result: '', direction: '', completion: '', status: '', note: '', taskDate: dateVal
                 };
                 if (idxMap['công việc'] !== undefined) task.content = String(row[idxMap['công việc']] || '').trim();
                 if (idxMap['mô tả'] !== undefined) task.description = String(row[idxMap['mô tả']] || '').trim();
@@ -605,6 +671,7 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
                 if (idxMap['ngày bắt đầu'] !== undefined) task.startDate = normalizeDateString(row[idxMap['ngày bắt đầu']]);
                 if (idxMap['ngày kết thúc'] !== undefined) task.endDate = normalizeDateString(row[idxMap['ngày kết thúc']]);
                 if (idxMap['kết quả'] !== undefined) task.result = String(row[idxMap['kết quả']] || '').trim();
+                if (idxMap['hướng xử lý'] !== undefined) task.direction = String(row[idxMap['hướng xử lý']] || '').trim();
                 if (idxMap['trạng thái'] !== undefined) task.status = String(row[idxMap['trạng thái']] || '').trim();
                 if (idxMap['% hoàn thành'] !== undefined) task.completion = String(row[idxMap['% hoàn thành']] || '').trim();
                 if (idxMap['ghi chú'] !== undefined) task.note = String(row[idxMap['ghi chú']] || '').trim();
@@ -617,7 +684,8 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
             }
         }
         hideLoading();
-        await showCustomAlert(`✅ Đã nhập ${total} công việc từ file`);
+        const skippedMessage = skipped ? `, bỏ qua ${skipped} dòng không có ngày hợp lệ/trong phạm vi` : '';
+        await showCustomAlert(`✅ Đã nhập ${total} công việc từ file${skippedMessage}`);
     } catch (e) {
         hideLoading();
         console.error(e);
@@ -648,6 +716,7 @@ if (document.getElementById('importConfirmBtn')) {
             const s = document.getElementById('importRangeStart').value;
             const e = document.getElementById('importRangeEnd').value;
             if (!s || !e) { await showCustomAlert('Vui lòng chọn cả ngày bắt đầu và kết thúc cho import range!'); return; }
+            if (s > e) { await showCustomAlert('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc!'); return; }
             importValue = `${s}|${e}`; // START|END
         }
 
@@ -656,6 +725,10 @@ if (document.getElementById('importConfirmBtn')) {
         reader.onload = async (ev) => {
             const ab = ev.target.result;
             await importWorkbookArrayBuffer(ab, f.name, importType, importValue);
+        };
+        reader.onerror = async () => {
+            console.error('Không đọc được file import:', reader.error);
+            await showCustomAlert('Không thể đọc file đã chọn. Vui lòng thử lại.');
         };
         reader.readAsArrayBuffer(f);
     };
@@ -668,7 +741,7 @@ if (document.getElementById('importPreviewBtn')) {
         if (!fi || !fi.files || fi.files.length === 0) { await showCustomAlert('Vui lòng chọn file .xlsx'); return; }
         const f = fi.files[0];
         const reader = new FileReader();
-        reader.onload = (ev) => {
+        reader.onload = async (ev) => {
             try {
                 const ab = ev.target.result;
                 const wb = XLSX.read(ab, { type: 'array' });
@@ -678,10 +751,15 @@ if (document.getElementById('importPreviewBtn')) {
                     const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
                     msg += `${sn}: ${Math.max(0, aoa.length - 1)} dòng` + '\n';
                 });
-                showCustomAlert(msg.replace(/\n/g, '<br>'));
+                await showCustomAlert(msg.replace(/\n/g, '<br>'));
             } catch (e) {
-                showCustomAlert('Không đọc được file này');
+                console.error('Không thể xem trước file import:', e);
+                await showCustomAlert(`Không thể xem trước file này: ${e && e.message ? e.message : String(e)}`);
             }
+        };
+        reader.onerror = async () => {
+            console.error('Không đọc được file xem trước:', reader.error);
+            await showCustomAlert('Không thể đọc file đã chọn. Vui lòng thử lại.');
         };
         reader.readAsArrayBuffer(f);
     };
@@ -704,19 +782,31 @@ async function exportTasksForDay() {
         await showCustomAlert('Vui lòng chọn ít nhất một cột để xuất.');
         return;
     }
-    const colIndices = ALL_EXPORT_COLUMNS.map((c, i) => selectedCols.includes(c) ? i : -1).filter(i => i >= 0);
     const rows = [];
     document.querySelectorAll('#taskTable tr').forEach(tr => {
         const cells = tr.querySelectorAll('td');
-        if (!cells || cells.length === 0) return;
-        const rowCells = [];
-        for (let i = 1; i < cells.length - 1; i++) {
-            const cell = cells[i];
-            const sel = cell.querySelector('select');
-            if (sel) rowCells.push(sel.value);
-            else rowCells.push(cell.innerText.replace(/\r?\n/g, ' ').trim());
-        }
-        rows.push(rowCells.filter((_, idx) => colIndices.includes(idx)));
+        if (!cells || cells.length < 4) return;
+        const cellValue = cell => {
+            if (!cell) return '';
+            const select = cell.querySelector('select');
+            return select ? select.value : cell.innerText.replace(/\r?\n/g, ' ').trim();
+        };
+        const rowValues = {
+            'STT': cellValue(cells[1]),
+            'Công việc': cellValue(cells[2]),
+            'Mô tả': cellValue(cells[3]),
+            'Người yêu cầu': cellValue(cells[4]),
+            'Đơn vị': cellValue(cells[5]),
+            'Phụ trách': cellValue(cells[6]),
+            'Ngày bắt đầu': cellValue(cells[7]),
+            'Ngày kết thúc': cellValue(cells[8]),
+            'Kết quả': cellValue(cells[9]),
+            'Hướng xử lý': cellValue(cells[10]),
+            'Trạng thái': cellValue(cells[11]),
+            '% Hoàn thành': cellValue(cells[12]),
+            'Ghi chú': cellValue(cells[13])
+        };
+        rows.push(selectedCols.map(column => rowValues[column] || ''));
     });
     if (rows.length === 0) {
         await showCustomAlert('Không có công việc để xuất.');
@@ -809,6 +899,7 @@ async function exportTasksForCollection(taskList, includeDate) {
                 'Ngày bắt đầu': task.startDate || '',
                 'Ngày kết thúc': task.endDate || '',
                 'Kết quả': task.result || '',
+                'Hướng xử lý': task.direction || '',
                 'Trạng thái': task.status || '',
                 '% Hoàn thành': task.completion || '',
                 'Ghi chú': task.note || ''
@@ -824,7 +915,7 @@ async function exportTasksForCollection(taskList, includeDate) {
     // Nếu có nhiều ngày (ví dụ xuất tuần/tháng/khoảng), tạo workbook gồm nhiều sheet chuẩn
     const wb = XLSX.utils.book_new();
 
-    const upperHeader = header.map(h => String(h).toUpperCase());
+    const upperHeader = header.map(formatExportHeader);
     const mainSheet = XLSX.utils.aoa_to_sheet([upperHeader, ...rows]);
     styleWorksheet(mainSheet, upperHeader, rows);
     const mainSheetName = rows.length > 1 ? 'Báo cáo tuần' : 'Báo cáo';
@@ -832,19 +923,19 @@ async function exportTasksForCollection(taskList, includeDate) {
 
     // Kế hoạch tuần tới: hiện chưa có dữ liệu kế hoạch, để trống chỉ với header
     const planRows = [];
-    const planHeader = ['STT', 'Công việc', 'Mô tả', 'Mục tiêu', 'Phụ trách', 'Deadline', 'Độ ưu tiên', 'Trạng thái', 'Ghi chú'];
-    const upperPlanHeader = planHeader.map(h => String(h).toUpperCase());
+    const planHeader = ['STT', 'Công việc', 'Mô tả', 'Hướng xử lý', 'Mục tiêu', 'Phụ trách', 'Deadline', 'Độ ưu tiên', 'Trạng thái', 'Ghi chú'];
+    const upperPlanHeader = planHeader.map(formatExportHeader);
     const planSheet = XLSX.utils.aoa_to_sheet([upperPlanHeader, ...planRows]);
     styleWorksheet(planSheet, upperPlanHeader, planRows);
     XLSX.utils.book_append_sheet(wb, planSheet, 'Kế hoạch tuần tới');
 
     // Tổng hợp: số liệu tóm tắt
     const summaryRows = [];
-    summaryRows.push(['Tổng số công việc', '=COUNTA(\'Báo cáo tuần\'!C2:C82)']);
-    summaryRows.push(['Hoàn thành', '=COUNTIF(\'Báo cáo tuần\'!K2:K82, "Hoàn thành")']);
-    summaryRows.push(['Đang thực hiện', '=COUNTIF(\'Báo cáo tuần\'!K2:K82, "Đang thực hiện")']);
-    summaryRows.push(['Chưa bắt đầu', '=COUNTIF(\'Báo cáo tuần\'!K2:K82, "Chưa bắt đầu")']);
-    summaryRows.push(['Chậm tiến độ', '=COUNTIF(\'Báo cáo tuần\'!K2:K82, "Chậm tiến độ")']);
+    summaryRows.push(['Tổng số công việc', rows.length]);
+    const statuses = ['Hoàn thành', 'Đang thực hiện', 'Chưa bắt đầu', 'Chậm tiến độ'];
+    statuses.forEach(status => {
+        summaryRows.push([status, taskList.filter(({ task }) => task.status === status).length]);
+    });
 
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
     // In đậm hàng đầu tiên của sheet Tổng hợp
@@ -868,7 +959,7 @@ async function performExport(type) {
     showLoading();
     try {
         if (type === 'day') {
-            exportTasksForDay();
+            await exportTasksForDay();
         } else if (type === 'week') {
             const sel = document.getElementById('exportWeekSelect');
             if (!sel || !sel.value) { await showCustomAlert('Vui lòng chọn tuần!'); return; }
@@ -889,6 +980,9 @@ async function performExport(type) {
             const tasks = await fetchTasksForRange(s, e);
             await exportTasksForCollection(tasks, true);
         }
+    } catch (e) {
+        console.error('Lỗi khi xuất công việc:', e);
+        await showCustomAlert(`❌ Không thể xuất công việc: ${e && e.message ? e.message : String(e)}`);
     } finally {
         hideLoading();
     }
@@ -1169,7 +1263,7 @@ function loadTasks(ds) {
     const expBtn = document.getElementById('exportBtn');
     const deleteDropdown = document.getElementById('deleteSelect');
     if (isNlDay(ds)) {
-        document.querySelector('table').style.display = 'none';
+        taskTableContainer.style.display = 'none';
         taskTable.innerHTML = `<tr><td colspan="100" style="text-align: center; padding: 20px; background: #dceeff; border: 2px solid #6f42c1;"><strong style="font-size: 18px; color: #2e59d9;">🎉 Hôm nay là ngày Nghỉ Lễ (NL)</strong></td></tr>`;
         if (addBtn) addBtn.style.display = 'none';
         if (expBtn) expBtn.style.display = 'none';
@@ -1177,7 +1271,7 @@ function loadTasks(ds) {
         if (searchFilterSection) searchFilterSection.style.display = 'none';
         return;
     } else if (isNbDay(ds)) {
-        document.querySelector('table').style.display = 'none';
+        taskTableContainer.style.display = 'none';
         taskTable.innerHTML = `<tr><td colspan="100" style="text-align: center; padding: 20px; background: #fff3cd; border: 2px solid #ffc107;"><strong style="font-size: 18px; color: #856404;">🏷️ Hôm nay là ngày Nghỉ Bù (NB)</strong></td></tr>`;
         if (addBtn) addBtn.style.display = 'none';
         if (expBtn) expBtn.style.display = 'none';
@@ -1185,13 +1279,13 @@ function loadTasks(ds) {
         if (searchFilterSection) searchFilterSection.style.display = 'none';
         return;
     } else {
-        document.querySelector('table').style.display = 'table';
-        const isMemberRole = isMember();
+        taskTableContainer.style.display = '';
+        const isReadOnlyRole = !isAdmin();
         syncMenuToggleVisibility();
         if (searchFilterSection) searchFilterSection.style.display = '';
-        if (addBtn) addBtn.style.display = isMemberRole ? 'none' : 'inline-block';
+        if (addBtn) addBtn.style.display = isReadOnlyRole ? 'none' : 'inline-block';
         if (expBtn) expBtn.style.display = 'inline-block';
-        if (deleteDropdown) deleteDropdown.style.display = 'inline-block';
+        if (deleteDropdown) deleteDropdown.style.display = isReadOnlyRole ? 'none' : 'inline-block';
     }
 
     const [y, m] = ds.split("-");
@@ -1223,13 +1317,16 @@ function loadTasks(ds) {
                 <td>${t.startDate ? formatDisplayDate(t.startDate) : ''}</td>
                 <td>${t.endDate ? formatDisplayDate(t.endDate) : ''}</td>
                 <td>${t.result || ''}</td>
+                <td>${t.direction || ''}</td>
                 <td></td>
                 <td>${t.completion || ''}</td>
                 <td>${t.note ? t.note.replace(/\./g, '.<br>') : ''}</td>
                 <td>
-                    <button class="btn-duplicate">🔁 Nhân bản</button>
-                    <button class="btn-edit">✏️ Sửa</button>
-                    <button class="btn-delete">🗑️ Xóa</button>
+                    <div class="task-actions">
+                        <button class="btn-duplicate icon-action" aria-label="Nhân bản"></button>
+                        <button class="btn-edit icon-action" aria-label="Sửa"></button>
+                        <button class="btn-delete icon-action" aria-label="Xóa"></button>
+                    </div>
                 </td>
             `;
 
@@ -1242,17 +1339,17 @@ function loadTasks(ds) {
             );
 
             // Vô hiệu hóa select cho member (họ không được phép sửa)
-            if (isMember()) {
+            if (!isAdmin()) {
                 stSelect.disabled = true;
             }
 
             // Thêm dropdown vào cột trạng thái
-            row.children[10].appendChild(stSelect);
+            row.children[11].appendChild(stSelect);
 
             // Nút nhân bản công việc
             row.querySelector(".btn-duplicate").onclick = async () => {
-                if (isMember()) {
-                    await showCustomAlert('👤 Thành viên không có quyền nhân bản công việc');
+                if (!isAdmin()) {
+                    await showCustomAlert('Bạn không có quyền nhân bản công việc');
                     return;
                 }
 
@@ -1269,6 +1366,7 @@ function loadTasks(ds) {
                     startDate: t.startDate || '',
                     endDate: t.endDate || '',
                     result: t.result || '',
+                    direction: t.direction || '',
                     completion: t.completion || '',
                     status: t.status || '',
                     note: t.note || '',
@@ -1288,8 +1386,8 @@ function loadTasks(ds) {
 
             // Nút xóa công việc
             row.querySelector(".btn-delete").onclick = async () => {
-                if (isMember()) {
-                    await showCustomAlert('👤 Thành viên không có quyền xóa công việc');
+                if (!isAdmin()) {
+                    await showCustomAlert('Bạn không có quyền xóa công việc');
                     return;
                 }
 
@@ -1314,8 +1412,8 @@ function loadTasks(ds) {
 
             // Nút sửa công việc
             row.querySelector(".btn-edit").onclick = async () => {
-                if (isMember()) {
-                    await showCustomAlert('👤 Thành viên không có quyền chỉnh sửa công việc');
+                if (!isAdmin()) {
+                    await showCustomAlert('Bạn không có quyền chỉnh sửa công việc');
                     return;
                 }
                 openModal("Chỉnh sửa công việc", k, t);
@@ -1343,6 +1441,7 @@ function openModal(title, id = "", t = {}) {
     startDateInput.value = t.startDate || defaultDate;
     endDateInput.value = t.endDate || t.startDate || defaultDate;
     resultInput.value = t.result || "";
+    directionInput.value = t.direction || "";
     statusInput.value = t.status || "Chưa bắt đầu";
     completionInput.value = t.completion ? String(t.completion).replace('%', '') : "";
     noteInput.value = t.note || "";
@@ -1417,6 +1516,10 @@ if (document.getElementById("openAddModal")) {
 // Nút lưu trong modal thêm/sửa
 if (saveTaskBtn) {
     saveTaskBtn.onclick = async () => {
+        if (!isAdmin()) {
+            await showCustomAlert('Bạn không có quyền thêm hoặc chỉnh sửa công việc.');
+            return;
+        }
         if (!selectedDate) {
             await showCustomAlert("Vui lòng chọn ngày trước!");
             return;
@@ -1434,6 +1537,7 @@ if (saveTaskBtn) {
             startDate: startDateInput.value || '',
             endDate: endDateInput.value || '',
             result: resultInput.value.trim(),
+            direction: directionInput.value.trim(),
             completion: normalizedCompletion,
             status: statusInput.value,
             note: noteInput.value.trim(),
@@ -1995,12 +2099,66 @@ const manageNbDateInput = document.getElementById('manageNbDate');
 const deleteNbBtn = document.getElementById('deleteNbBtn');
 const changeNbBtn = document.getElementById('changeNbBtn');
 
+async function removeManagedDay(type, dateStr) {
+    const [year, month, day] = dateStr.split('-');
+    const dayCache = type === 'NB' ? nbDays : nlDays;
+    const dayRef = type === 'NB' ? nbRef(year, month, day) : nlRef(year, month, day);
+    try {
+        await remove(dayRef);
+        delete dayCache[dateStr];
+        return true;
+    } catch (e) {
+        console.error(`Lỗi xóa ngày ${type}:`, e);
+        await showCustomAlert(`❌ Không thể xóa ngày ${type}: ${e && e.message ? e.message : String(e)}`);
+        return false;
+    }
+}
+
+async function moveManagedDay(type, oldDate, newDate) {
+    if (!isValidYmd(newDate)) {
+        await showCustomAlert('Ngày mới không hợp lệ. Vui lòng nhập ngày theo định dạng YYYY-MM-DD.');
+        return false;
+    }
+    if (newDate === oldDate) {
+        await showCustomAlert('Ngày mới phải khác ngày hiện tại.');
+        return false;
+    }
+
+    const targetAlreadyMarked = type === 'NB' ? isNbDay(newDate) : isNlDay(newDate);
+    const targetConflicts = type === 'NB' ? isNlDay(newDate) : isNbDay(newDate);
+    if (targetAlreadyMarked || targetConflicts) {
+        await showCustomAlert('Ngày mới đã được đánh dấu NB/NL, vui lòng chọn ngày khác.');
+        return false;
+    }
+
+    const [oldYear, oldMonth, oldDay] = oldDate.split('-');
+    const [newYear, newMonth, newDay] = newDate.split('-');
+    const collection = type === 'NB' ? 'nbDays' : 'nlDays';
+    const uid = getCurrentUserId();
+    const updates = {
+        [`${collection}/${uid}/${oldYear}/${oldMonth}/${oldDay}`]: null,
+        [`${collection}/${uid}/${newYear}/${newMonth}/${newDay}`]: true
+    };
+    try {
+        await update(ref(db), updates);
+        const dayCache = type === 'NB' ? nbDays : nlDays;
+        delete dayCache[oldDate];
+        dayCache[newDate] = true;
+        return true;
+    } catch (e) {
+        console.error(`Lỗi đổi ngày ${type}:`, e);
+        await showCustomAlert(`❌ Không thể đổi ngày ${type}: ${e && e.message ? e.message : String(e)}`);
+        return false;
+    }
+}
+
 if (deleteNbBtn) {
     deleteNbBtn.onclick = async () => {
+        if (!isAdmin()) { await showCustomAlert('Bạn không có quyền quản lý ngày NB.'); return; }
         if (!manageNbDateInput.value) { await showCustomAlert('Vui lòng chọn ngày NB!'); return; }
         const ds = manageNbDateInput.value;
         if (!isNbDay(ds)) { await showCustomAlert('Ngày này không phải NB'); return; }
-        await toggleNbDay(ds);
+        if (!await removeManagedDay('NB', ds)) return;
         await showCustomAlert('✅ Đã xóa NB ' + formatDisplayDate(ds));
         renderCalendar();
         if (selectedDate === ds) loadTasks(ds);
@@ -2009,15 +2167,13 @@ if (deleteNbBtn) {
 
 if (changeNbBtn) {
     changeNbBtn.onclick = async () => {
+        if (!isAdmin()) { await showCustomAlert('Bạn không có quyền quản lý ngày NB.'); return; }
         if (!manageNbDateInput.value) { await showCustomAlert('Vui lòng chọn ngày NB cần đổi!'); return; }
         const oldDate = manageNbDateInput.value;
         if (!isNbDay(oldDate)) { await showCustomAlert('Ngày này không phải NB'); return; }
-        const newDate = prompt('Nhập ngày mới (YYYY-MM-DD):');
+        const newDate = prompt('Nhập ngày mới (YYYY-MM-DD):')?.trim();
         if (!newDate) return;
-        if (isNlDay(newDate)) { await showCustomAlert('Ngày mới trùng với NL, chọn ngày khác'); return; }
-        // xóa cũ và thêm mới
-        await toggleNbDay(oldDate);
-        await toggleNbDay(newDate);
+        if (!await moveManagedDay('NB', oldDate, newDate)) return;
         await showCustomAlert('🔄 Đã đổi NB từ ' + formatDisplayDate(oldDate) + ' sang ' + formatDisplayDate(newDate));
         renderCalendar();
         if (selectedDate === oldDate || selectedDate === newDate) loadTasks(selectedDate);
@@ -2031,10 +2187,11 @@ const changeNlBtn = document.getElementById('changeNlBtn');
 
 if (deleteNlBtn) {
     deleteNlBtn.onclick = async () => {
+        if (!isAdmin()) { await showCustomAlert('Bạn không có quyền quản lý ngày NL.'); return; }
         if (!manageNlDateInput.value) { await showCustomAlert('Vui lòng chọn ngày NL!'); return; }
         const ds = manageNlDateInput.value;
         if (!isNlDay(ds)) { await showCustomAlert('Ngày này không phải NL'); return; }
-        await toggleNlDay(ds);
+        if (!await removeManagedDay('NL', ds)) return;
         await showCustomAlert('✅ Đã xóa NL ' + formatDisplayDate(ds));
         renderCalendar();
         if (selectedDate === ds) loadTasks(ds);
@@ -2043,18 +2200,248 @@ if (deleteNlBtn) {
 
 if (changeNlBtn) {
     changeNlBtn.onclick = async () => {
+        if (!isAdmin()) { await showCustomAlert('Bạn không có quyền quản lý ngày NL.'); return; }
         if (!manageNlDateInput.value) { await showCustomAlert('Vui lòng chọn ngày NL cần đổi!'); return; }
         const oldDate = manageNlDateInput.value;
         if (!isNlDay(oldDate)) { await showCustomAlert('Ngày này không phải NL'); return; }
-        const newDate = prompt('Nhập ngày mới (YYYY-MM-DD):');
+        const newDate = prompt('Nhập ngày mới (YYYY-MM-DD):')?.trim();
         if (!newDate) return;
-        if (isNbDay(newDate)) { await showCustomAlert('Ngày mới trùng với NB, chọn ngày khác'); return; }
-        await toggleNlDay(oldDate);
-        await toggleNlDay(newDate);
+        if (!await moveManagedDay('NL', oldDate, newDate)) return;
         await showCustomAlert('🔄 Đã đổi NL từ ' + formatDisplayDate(oldDate) + ' sang ' + formatDisplayDate(newDate));
         renderCalendar();
         if (selectedDate === oldDate || selectedDate === newDate) loadTasks(selectedDate);
     };
+}
+
+let editingScheduleId = null;
+let editingScheduleDate = null;
+let editingScheduleCreatedAt = null;
+let scheduleLoadToken = 0;
+let activeScheduleType = 'storeVisit';
+
+function setScheduleTypeMode(type) {
+    activeScheduleType = type === 'maintenance' ? 'maintenance' : 'storeVisit';
+    scheduleTypeInput.value = activeScheduleType;
+    scheduleTypeField.style.display = 'none';
+    scheduleManagementTitle.textContent = activeScheduleType === 'maintenance'
+        ? 'Quản lý lịch bảo trì'
+        : 'Quản lý lịch đi cửa hàng';
+}
+
+function setScheduleFormMode(schedule = null) {
+    const selectedDateValue = scheduleDateInput.value || getTodayString();
+    if (!schedule) {
+        editingScheduleId = null;
+        editingScheduleDate = null;
+        editingScheduleCreatedAt = null;
+        scheduleForm.reset();
+        scheduleDateInput.value = selectedDateValue;
+        scheduleTypeInput.value = activeScheduleType;
+        scheduleStatusInput.value = 'Chưa bắt đầu';
+        saveScheduleBtn.textContent = 'Thêm lịch';
+        cancelScheduleEditBtn.style.display = 'none';
+        return;
+    }
+
+    editingScheduleId = schedule.id;
+    editingScheduleDate = schedule.date;
+    editingScheduleCreatedAt = schedule.createdAt || null;
+    scheduleDateInput.value = schedule.date;
+    scheduleTypeInput.value = schedule.type === 'maintenance' ? 'maintenance' : 'storeVisit';
+    scheduleLocationInput.value = schedule.location || '';
+    scheduleAssigneeInput.value = schedule.assignee || '';
+    scheduleStatusInput.value = schedule.status || 'Chưa bắt đầu';
+    scheduleNoteInput.value = schedule.note || '';
+    saveScheduleBtn.textContent = 'Lưu thay đổi';
+    cancelScheduleEditBtn.style.display = 'inline-block';
+}
+
+async function loadScheduleList() {
+    if (!scheduleDateInput || !scheduleList || !isAdmin()) return;
+    const date = scheduleDateInput.value;
+    const requestUserId = getCurrentUserId();
+    const requestToken = ++scheduleLoadToken;
+    scheduleList.replaceChildren();
+    if (!isValidYmd(date)) {
+        const message = document.createElement('p');
+        message.className = 'schedule-empty';
+        message.textContent = 'Vui lòng chọn ngày hợp lệ.';
+        scheduleList.appendChild(message);
+        return;
+    }
+
+    const [year, month, day] = date.split('-');
+    try {
+        const snapshot = await get(scheduleRef(year, month, day));
+        if (requestToken !== scheduleLoadToken || date !== scheduleDateInput.value ||
+            !isAdmin() || requestUserId !== getCurrentUserId()) return;
+        const records = [];
+        if (snapshot.exists()) {
+            snapshot.forEach(child => {
+                const schedule = child.val();
+                if (schedule && typeof schedule === 'object' && schedule.type === activeScheduleType) {
+                    records.push({ ...schedule, id: child.key, date });
+                }
+            });
+        }
+        records.sort((a, b) => Number(b.updatedAt || b.createdAt || 0) - Number(a.updatedAt || a.createdAt || 0));
+
+        if (records.length === 0) {
+            const message = document.createElement('p');
+            message.className = 'schedule-empty';
+            message.textContent = activeScheduleType === 'maintenance'
+                ? 'Chưa có lịch bảo trì trong ngày này.'
+                : 'Chưa có lịch đi cửa hàng trong ngày này.';
+            scheduleList.appendChild(message);
+            return;
+        }
+
+        for (const schedule of records) {
+            const card = document.createElement('article');
+            card.className = 'schedule-card';
+
+            const title = document.createElement('strong');
+            title.className = 'schedule-card-title';
+            title.textContent = schedule.location || 'Chưa có địa điểm';
+            card.appendChild(title);
+
+            const details = document.createElement('p');
+            details.className = 'schedule-card-details';
+            details.textContent = `${schedule.assignee || 'Chưa có người phụ trách'} · ${schedule.status || 'Chưa bắt đầu'}`;
+            card.appendChild(details);
+
+            if (schedule.note) {
+                const note = document.createElement('p');
+                note.className = 'schedule-card-note';
+                note.textContent = schedule.note;
+                card.appendChild(note);
+            }
+
+            const actions = document.createElement('div');
+            actions.className = 'schedule-card-actions';
+            const editButton = document.createElement('button');
+            editButton.type = 'button';
+            editButton.className = 'schedule-action-btn schedule-edit-btn';
+            editButton.textContent = 'Sửa';
+            editButton.setAttribute('aria-label', 'Sửa lịch');
+            editButton.onclick = async () => {
+                if (!isAdmin()) { await showCustomAlert('Bạn không có quyền chỉnh sửa lịch.'); return; }
+                setScheduleFormMode(schedule);
+            };
+
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'schedule-action-btn schedule-delete-btn';
+            deleteButton.textContent = 'Xóa';
+            deleteButton.setAttribute('aria-label', 'Xóa lịch');
+            deleteButton.onclick = async () => {
+                if (!isAdmin()) { await showCustomAlert('Bạn không có quyền xóa lịch.'); return; }
+                if (!await showCustomConfirm('Bạn có chắc muốn xóa lịch này không?')) return;
+                deleteButton.disabled = true;
+                showLoading();
+                try {
+                    await remove(scheduleRef(year, month, day, schedule.id));
+                    if (editingScheduleId === schedule.id && editingScheduleDate === date) {
+                        setScheduleFormMode();
+                    }
+                    await loadScheduleList();
+                    await showCustomAlert('Đã xóa lịch thành công.');
+                } catch (e) {
+                    console.error('Lỗi xóa lịch cửa hàng/bảo trì:', e);
+                    await showCustomAlert(`Không thể xóa lịch: ${e && e.message ? e.message : String(e)}`);
+                } finally {
+                    deleteButton.disabled = false;
+                    hideLoading();
+                }
+            };
+            actions.append(editButton, deleteButton);
+            card.appendChild(actions);
+            scheduleList.appendChild(card);
+        }
+    } catch (e) {
+        if (requestToken !== scheduleLoadToken || !isAdmin() || requestUserId !== getCurrentUserId()) return;
+        console.error('Lỗi tải lịch cửa hàng/bảo trì:', e);
+        const message = document.createElement('p');
+        message.className = 'schedule-empty schedule-error';
+        message.textContent = 'Không thể tải lịch. Vui lòng thử tải lại.';
+        scheduleList.appendChild(message);
+        await showCustomAlert(`Không thể tải lịch: ${e && e.message ? e.message : String(e)}`);
+    }
+}
+
+if (scheduleForm) {
+    scheduleDateInput.value = getTodayString();
+    scheduleForm.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (!isAdmin()) { await showCustomAlert('Bạn không có quyền quản lý lịch.'); return; }
+
+        const date = scheduleDateInput.value;
+        const location = scheduleLocationInput.value.trim();
+        const assignee = scheduleAssigneeInput.value.trim();
+        const type = scheduleTypeInput.value;
+        const status = scheduleStatusInput.value;
+        if (!isValidYmd(date) || !location || !assignee) {
+            await showCustomAlert('Vui lòng nhập ngày hợp lệ, cửa hàng/địa điểm và người phụ trách.');
+            return;
+        }
+        if (type !== activeScheduleType ||
+            !['Chưa bắt đầu', 'Đang thực hiện', 'Hoàn thành', 'Đã hủy'].includes(status)) {
+            await showCustomAlert('Loại lịch không khớp hoặc trạng thái không hợp lệ.');
+            return;
+        }
+
+        const [year, month, day] = date.split('-');
+        const now = Date.now();
+        const isEditing = Boolean(editingScheduleId);
+        const schedule = {
+            date,
+            type,
+            location,
+            assignee,
+            status,
+            note: scheduleNoteInput.value.trim(),
+            createdAt: editingScheduleCreatedAt || now,
+            updatedAt: now
+        };
+
+        const scheduleControls = [
+            ...Array.from(scheduleForm.elements),
+            ...scheduleList.querySelectorAll('button')
+        ];
+        const previousDisabledStates = scheduleControls.map(control => control.disabled);
+        scheduleControls.forEach(control => { control.disabled = true; });
+        showLoading();
+        try {
+            if (editingScheduleId) {
+                const [oldYear, oldMonth, oldDay] = editingScheduleDate.split('-');
+                if (editingScheduleDate === date) {
+                    await update(scheduleRef(oldYear, oldMonth, oldDay, editingScheduleId), schedule);
+                } else {
+                    await update(ref(db), {
+                        [`storeMaintenanceSchedules/${getCurrentUserId()}/${oldYear}/${oldMonth}/${oldDay}/${editingScheduleId}`]: null,
+                        [`storeMaintenanceSchedules/${getCurrentUserId()}/${year}/${month}/${day}/${editingScheduleId}`]: schedule
+                    });
+                }
+            } else {
+                await push(scheduleRef(year, month, day), schedule);
+            }
+            setScheduleFormMode();
+            await loadScheduleList();
+            await showCustomAlert(isEditing ? 'Đã cập nhật lịch thành công.' : 'Đã thêm lịch thành công.');
+        } catch (e) {
+            console.error('Lỗi lưu lịch cửa hàng/bảo trì:', e);
+            await showCustomAlert(`Không thể lưu lịch: ${e && e.message ? e.message : String(e)}`);
+        } finally {
+            scheduleControls.forEach((control, index) => {
+                control.disabled = previousDisabledStates[index];
+            });
+            hideLoading();
+        }
+    });
+
+    scheduleDateInput.addEventListener('change', loadScheduleList);
+    refreshScheduleBtn.onclick = loadScheduleList;
+    cancelScheduleEditBtn.onclick = () => setScheduleFormMode();
 }
 
 // conflict prevention wrappers
@@ -2181,18 +2568,21 @@ if (nlCalendarBack) {
 // Xác nhận lựa chọn ngày NB
 if (nbConfirmButton) {
     nbConfirmButton.onclick = async () => {
+        if (!isAdmin()) { await showCustomAlert('Bạn không có quyền quản lý ngày NB.'); return; }
         if (nbTempSelectedDates.length === 0) {
             await showCustomAlert('Vui lòng chọn ít nhất một ngày!');
             return;
         }
 
         try {
-            // Lưu tất cả ngày được chọn vào Firebase (cấu trúc: nbDays/YYYY/MM/DD)
+            const updates = {};
             for (const dateStr of nbTempSelectedDates) {
                 if (isNlDay(dateStr)) throw new Error('Ngày ' + dateStr + ' đã là NL');
                 const [year, month, day] = dateStr.split('-');
-                const r = nbRef(year, month, day);
-                await set(r, true);
+                updates[`nbDays/${getCurrentUserId()}/${year}/${month}/${day}`] = true;
+            }
+            await update(ref(db), updates);
+            for (const dateStr of nbTempSelectedDates) {
                 nbDays[dateStr] = true;
             }
 
@@ -2217,6 +2607,7 @@ if (nbConfirmButton) {
 // Xác nhận lựa chọn ngày NL
 if (nlConfirmButton) {
     nlConfirmButton.onclick = async () => {
+        if (!isAdmin()) { await showCustomAlert('Bạn không có quyền quản lý ngày NL.'); return; }
         if (nlTempSelectedDates.length === 0) {
             await showCustomAlert('Vui lòng chọn ít nhất một ngày!');
             return;
@@ -2227,10 +2618,13 @@ if (nlConfirmButton) {
             for (const dateStr of nlTempSelectedDates) {
                 if (isNbDay(dateStr)) throw new Error('Ngày ' + formatDisplayDate(dateStr) + ' đã được đánh dấu NB');
             }
+            const updates = {};
             for (const dateStr of nlTempSelectedDates) {
                 const [year, month, day] = dateStr.split('-');
-                const r = nlRef(year, month, day);
-                await set(r, true);
+                updates[`nlDays/${getCurrentUserId()}/${year}/${month}/${day}`] = true;
+            }
+            await update(ref(db), updates);
+            for (const dateStr of nlTempSelectedDates) {
                 nlDays[dateStr] = true;
             }
             await showCustomAlert('✔️ Đã lựa chọn ' + nlTempSelectedDates.length + ' ngày NL thành công!');
@@ -2250,7 +2644,7 @@ if (nlConfirmButton) {
 const duplicateDayBtn = document.getElementById("duplicateDayBtn");
 if (duplicateDayBtn) {
     duplicateDayBtn.onclick = async () => {
-        if (isMember()) { await showCustomAlert('👤 Thành viên không có quyền sử dụng tính năng này'); return; }
+        if (!isAdmin()) { await showCustomAlert('Bạn không có quyền sử dụng tính năng này'); return; }
         if (!selectedDate) { await showCustomAlert("Vui lòng chọn ngày trước!"); return; }
         advancedDates = [];
         dateList.innerHTML = "";
@@ -2535,13 +2929,16 @@ function loadTasksForWeek(y, m, weekId) {
                         <td>${t.startDate ? formatDisplayDate(t.startDate) : ''}</td>
                         <td>${t.endDate ? formatDisplayDate(t.endDate) : ''}</td>
                         <td>${t.result || ''}</td>
+                        <td>${t.direction || ''}</td>
                         <td><span class="${statusClass(t.status || 'Chưa bắt đầu')}">${t.status || 'Chưa bắt đầu'}</span></td>
                         <td>${t.completion || ''}</td>
                         <td>${t.note || ''}</td>
                         <td>
-                            <button class="btn-duplicate">🔁 Nhân bản</button>
-                            <button class="btn-edit">✏️ Sửa</button>
-                            <button class="btn-delete">🗑️ Xóa</button>
+                            <div class="task-actions">
+                                <button class="btn-duplicate icon-action" aria-label="Nhân bản"></button>
+                                <button class="btn-edit icon-action" aria-label="Sửa"></button>
+                                <button class="btn-delete icon-action" aria-label="Xóa"></button>
+                            </div>
                         </td>
                     `;
                     taskTable.appendChild(row);
@@ -2761,8 +3158,8 @@ deleteSelectMain.onchange = () => {
 if (document.getElementById('deleteDayBtn')) {
     document.getElementById('deleteDayBtn').onclick = async () => {
         // Kiểm tra quyền: Chỉ admin mới có quyền xóa
-        if (isMember()) {
-            await showCustomAlert('👤 Thành viên không có quyền xóa công việc');
+        if (!isAdmin()) {
+            await showCustomAlert('Bạn không có quyền xóa công việc');
             return;
         }
 
@@ -2798,8 +3195,8 @@ if (document.getElementById('deleteDayBtn')) {
 if (document.getElementById('deleteWeekBtn')) {
     document.getElementById('deleteWeekBtn').onclick = async () => {
         // Kiểm tra quyền: Chỉ admin mới có quyền xóa
-        if (isMember()) {
-            await showCustomAlert('👤 Thành viên không có quyền xóa công việc');
+        if (!isAdmin()) {
+            await showCustomAlert('Bạn không có quyền xóa công việc');
             return;
         }
 
@@ -2858,8 +3255,8 @@ if (document.getElementById('deleteWeekBtn')) {
 if (document.getElementById('deleteMonthBtn')) {
     document.getElementById('deleteMonthBtn').onclick = async () => {
         // Kiểm tra quyền: Chỉ admin mới có quyền xóa
-        if (isMember()) {
-            await showCustomAlert('👤 Thành viên không có quyền xóa công việc');
+        if (!isAdmin()) {
+            await showCustomAlert('Bạn không có quyền xóa công việc');
             return;
         }
 
@@ -2931,8 +3328,8 @@ if (deleteSelect) {
         if (type === "selected") {
             // ========== XÓA CÔNG VIỆC ĐÃ CHỌN ==========
             // Kiểm tra quyền: Chỉ admin mới có quyền xóa
-            if (isMember()) {
-                await showCustomAlert('👤 Thành viên không có quyền xóa công việc');
+            if (!isAdmin()) {
+                await showCustomAlert('Bạn không có quyền xóa công việc');
                 return;
             }
 
@@ -3104,8 +3501,11 @@ function isAdmin() { const r = getLoggedInUserRole(); return r === 'admin' || r 
 /** Ẩn nút ☰ Menu khi sidebar đang mở (không đè chữ tiêu đề); member không thấy nút. */
 function syncMenuToggleVisibility() {
     if (!menuToggleBtn) return;
-    if (isMember()) {
+    if (!isAdmin()) {
         menuToggleBtn.style.display = 'none';
+        if (sideMenuPanel) sideMenuPanel.classList.remove('show');
+        menuDetailModals.forEach(closeMenuDetailModal);
+        scheduleLoadToken++;
         return;
     }
     const panelOpen = sideMenuPanel && sideMenuPanel.classList.contains('show');
@@ -3132,44 +3532,45 @@ function checkMemberAccess(dateStr) {
 
 // Ẩn/Hiện UI dựa trên role khi app khởi động
 function applyRolePermissions() {
-    const isMemberRole = isMember();
+    const isReadOnlyRole = !isAdmin();
 
     // Ẩn nút toggle menu cho member; khi sidebar mở cũng ẩn để không đè tiêu đề
     syncMenuToggleVisibility();
 
     // Ẩn nút lựa chọn NB cho member
-    if (selectNbDayBtn) selectNbDayBtn.style.display = isMemberRole ? 'none' : 'inline-block';
+    if (selectNbDayBtn) selectNbDayBtn.style.display = isReadOnlyRole ? 'none' : 'inline-block';
     // Ẩn nút lựa chọn NL cho member
-    if (selectNlDayBtn) selectNlDayBtn.style.display = isMemberRole ? 'none' : 'inline-block';
+    if (selectNlDayBtn) selectNlDayBtn.style.display = isReadOnlyRole ? 'none' : 'inline-block';
 
     // Ẩn nút nhân bản công việc cho member
     const duplicateDayBtn = document.getElementById('duplicateDayBtn');
-    if (duplicateDayBtn) duplicateDayBtn.style.display = isMemberRole ? 'none' : 'inline-block';
+    if (duplicateDayBtn) duplicateDayBtn.style.display = isReadOnlyRole ? 'none' : 'inline-block';
 
     // Ẩn dropdown xóa cho member
     const deleteSelectMain = document.getElementById('deleteSelectMain');
-    if (deleteSelectMain) deleteSelectMain.style.display = isMemberRole ? 'none' : 'inline-block';
+    if (deleteSelectMain) deleteSelectMain.style.display = isReadOnlyRole ? 'none' : 'inline-block';
+    if (deleteSelect) deleteSelect.style.display = isReadOnlyRole ? 'none' : 'inline-block';
 
     // Ẩn label + dropdown chọn tuần cho member
     const weekLabel = Array.from(document.querySelectorAll('label')).find(l => l.textContent.includes('Chọn tuần'));
     const weekSelect = document.getElementById('weekSelect');
-    if (weekLabel) weekLabel.style.display = isMemberRole ? 'none' : '';
-    if (weekSelect) weekSelect.style.display = isMemberRole ? 'none' : '';
+    if (weekLabel) weekLabel.style.display = isReadOnlyRole ? 'none' : '';
+    if (weekSelect) weekSelect.style.display = isReadOnlyRole ? 'none' : '';
 
     // Ẩn label + select chọn tháng cho member
     const monthPickerLabel = Array.from(document.querySelectorAll('label')).find(l => l.textContent.includes('Chọn tháng'));
     const monthPicker = document.getElementById('monthPicker');
-    if (monthPickerLabel) monthPickerLabel.style.display = isMemberRole ? 'none' : '';
-    if (monthPicker) monthPicker.style.display = isMemberRole ? 'none' : '';
+    if (monthPickerLabel) monthPickerLabel.style.display = isReadOnlyRole ? 'none' : '';
+    if (monthPicker) monthPicker.style.display = isReadOnlyRole ? 'none' : '';
 
     // Ẩn nút chuyển tháng cho member
     const prevBtn = document.getElementById('prevMonth');
     const nextBtn = document.getElementById('nextMonth');
-    if (prevBtn) prevBtn.style.display = isMemberRole ? 'none' : '';
-    if (nextBtn) nextBtn.style.display = isMemberRole ? 'none' : '';
+    if (prevBtn) prevBtn.style.display = isReadOnlyRole ? 'none' : '';
+    if (nextBtn) nextBtn.style.display = isReadOnlyRole ? 'none' : '';
 
     // Ẩn nút action trong bảng công việc cho member
-    if (isMemberRole) {
+    if (isReadOnlyRole) {
         document.querySelectorAll('.btn-edit, .btn-duplicate, .btn-delete').forEach(btn => {
             btn.style.display = 'none';
         });
@@ -3181,6 +3582,12 @@ function logout() {
     sessionStorage.removeItem('user');
     enteredPin = '';
     updatePinDots();
+    if (sideMenuPanel) sideMenuPanel.classList.remove('show');
+    menuDetailModals.forEach(menuModal => closeMenuDetailModal(menuModal, false));
+    scheduleLoadToken++;
+    if (scheduleList) scheduleList.replaceChildren();
+    if (scheduleForm) setScheduleFormMode();
+    if (scheduleDateInput) scheduleDateInput.value = getTodayString();
     document.getElementById('mainContent').style.display = 'none';
     loginOverlay.classList.remove('hidden');
 }
@@ -3239,10 +3646,10 @@ async function clearSearch() {
     const addBtn = document.getElementById('openAddModal');
     const expBtn = document.getElementById('exportBtn');
     const deleteDropdown = document.getElementById('deleteSelect');
-    const isMemberRole = isMember();
-    if (addBtn) addBtn.style.display = isMemberRole ? 'none' : 'inline-block';
+    const isReadOnlyRole = !isAdmin();
+    if (addBtn) addBtn.style.display = isReadOnlyRole ? 'none' : 'inline-block';
     if (expBtn) expBtn.style.display = 'inline-block';
-    if (deleteDropdown) deleteDropdown.style.display = 'inline-block';
+    if (deleteDropdown) deleteDropdown.style.display = isReadOnlyRole ? 'none' : 'inline-block';
 }
 
 async function loadSearchedTasks() {
@@ -3388,6 +3795,7 @@ async function loadSearchedTasks() {
                 (task.unit && task.unit.toLowerCase().includes(currentSearch.search)) ||
                 (task.assignee && task.assignee.toLowerCase().includes(currentSearch.search)) ||
                 (task.result && task.result.toLowerCase().includes(currentSearch.search)) ||
+                (task.direction && task.direction.toLowerCase().includes(currentSearch.search)) ||
                 (task.note && task.note.toLowerCase().includes(currentSearch.search))
             );
         }
@@ -3475,15 +3883,20 @@ function renderSearchedTasks(tasks) {
         resultCell.textContent = task.result || '';
         row.appendChild(resultCell);
 
-        // Completion
-        const compCell = document.createElement('td');
-        compCell.textContent = task.completion || '';
-        row.appendChild(compCell);
+        // Hướng xử lý
+        const directionCell = document.createElement('td');
+        directionCell.textContent = task.direction || '';
+        row.appendChild(directionCell);
 
         // Status
         const statusCell = document.createElement('td');
         statusCell.textContent = task.status || '';
         row.appendChild(statusCell);
+
+        // Completion
+        const compCell = document.createElement('td');
+        compCell.textContent = task.completion || '';
+        row.appendChild(compCell);
 
         // Note
         const noteCell = document.createElement('td');
@@ -3492,26 +3905,27 @@ function renderSearchedTasks(tasks) {
 
         // Actions
         const actionsCell = document.createElement('td');
-        const isMemberRole = isMember();
-        if (!isMemberRole) {
+        const actionButtons = document.createElement('div');
+        actionButtons.className = 'task-actions';
+        if (isAdmin()) {
             const editBtn = document.createElement('button');
-            editBtn.className = 'btn-edit';
-            editBtn.textContent = '✏️ Sửa';
+            editBtn.className = 'btn-edit icon-action';
+            editBtn.setAttribute('aria-label', 'Sửa');
             editBtn.onclick = async () => {
-                if (isMember()) {
-                    await showCustomAlert('👤 Thành viên không có quyền chỉnh sửa công việc');
+                if (!isAdmin()) {
+                    await showCustomAlert('Bạn không có quyền chỉnh sửa công việc');
                     return;
                 }
                 openModal("Chỉnh sửa công việc", task.id, task);
             };
-            actionsCell.appendChild(editBtn);
+            actionButtons.appendChild(editBtn);
 
             const duplicateBtn = document.createElement('button');
-            duplicateBtn.className = 'btn-duplicate';
-            duplicateBtn.textContent = '🔁 Nhân bản';
+            duplicateBtn.className = 'btn-duplicate icon-action';
+            duplicateBtn.setAttribute('aria-label', 'Nhân bản');
             duplicateBtn.onclick = async () => {
-                if (isMember()) {
-                    await showCustomAlert('👤 Thành viên không có quyền nhân bản công việc');
+                if (!isAdmin()) {
+                    await showCustomAlert('Bạn không có quyền nhân bản công việc');
                     return;
                 }
 
@@ -3528,6 +3942,7 @@ function renderSearchedTasks(tasks) {
                     startDate: task.startDate || '',
                     endDate: task.endDate || '',
                     result: task.result || '',
+                    direction: task.direction || '',
                     completion: task.completion || '',
                     status: task.status || '',
                     note: task.note || '',
@@ -3546,14 +3961,14 @@ function renderSearchedTasks(tasks) {
                     hideLoading();
                 }
             };
-            actionsCell.appendChild(duplicateBtn);
+            actionButtons.appendChild(duplicateBtn);
 
             const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'btn-delete';
-            deleteBtn.textContent = '🗑️ Xóa';
+            deleteBtn.className = 'btn-delete icon-action';
+            deleteBtn.setAttribute('aria-label', 'Xóa');
             deleteBtn.onclick = async () => {
-                if (isMember()) {
-                    await showCustomAlert('👤 Thành viên không có quyền xóa công việc');
+                if (!isAdmin()) {
+                    await showCustomAlert('Bạn không có quyền xóa công việc');
                     return;
                 }
 
@@ -3574,8 +3989,9 @@ function renderSearchedTasks(tasks) {
                     console.error(error);
                 }
             };
-            actionsCell.appendChild(deleteBtn);
+            actionButtons.appendChild(deleteBtn);
         }
+        actionsCell.appendChild(actionButtons);
         row.appendChild(actionsCell);
 
         taskTable.appendChild(row);
@@ -3612,6 +4028,7 @@ function renderSearchedTasks(tasks) {
 // Mở / đóng sidebar menu (☰ Menu)
 if (menuToggleBtn && sideMenuPanel) {
     menuToggleBtn.addEventListener('click', (e) => {
+        if (!isAdmin()) return;
         e.stopPropagation();
         sideMenuPanel.classList.toggle('show');
         syncMenuToggleVisibility();
@@ -3624,6 +4041,45 @@ if (menuCloseBtn && sideMenuPanel) {
         syncMenuToggleVisibility();
     });
 }
+
+const menuDetailModals = Array.from(document.querySelectorAll('.menu-detail-modal'));
+
+function closeMenuDetailModal(menuModal, restoreFocus = true) {
+    if (!menuModal) return;
+    menuModal.classList.remove('show');
+    menuModal.setAttribute('aria-hidden', 'true');
+    if (restoreFocus && menuToggleBtn && menuToggleBtn.style.display !== 'none') menuToggleBtn.focus();
+}
+
+document.querySelectorAll('.menu-category-btn[data-menu-modal]').forEach(button => {
+    button.addEventListener('click', () => {
+        if (!isAdmin()) return;
+        const menuModal = document.getElementById(button.dataset.menuModal);
+        if (!menuModal) {
+            console.error(`Không tìm thấy modal menu: ${button.dataset.menuModal}`);
+            return;
+        }
+        if (menuModal.id === 'scheduleManagementModal') {
+            setScheduleTypeMode(button.dataset.scheduleType);
+            setScheduleFormMode();
+        }
+        if (sideMenuPanel) sideMenuPanel.classList.remove('show');
+        syncMenuToggleVisibility();
+        menuModal.classList.add('show');
+        menuModal.setAttribute('aria-hidden', 'false');
+        const closeButton = menuModal.querySelector('.menu-detail-close');
+        if (closeButton) closeButton.focus();
+        if (menuModal.id === 'scheduleManagementModal') loadScheduleList();
+    });
+});
+
+menuDetailModals.forEach(menuModal => {
+    const closeButton = menuModal.querySelector('.menu-detail-close');
+    if (closeButton) closeButton.addEventListener('click', () => closeMenuDetailModal(menuModal));
+    menuModal.addEventListener('click', event => {
+        if (event.target === menuModal) closeMenuDetailModal(menuModal);
+    });
+});
 
 // Đóng menu khi click ngoài (click vào lược đồ bên ngoài)
 document.addEventListener('click', (e) => {
@@ -3652,6 +4108,8 @@ if (savedUser) {
 // Keyboard shortcut to close modals
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+        const openMenuModal = menuDetailModals.find(menuModal => menuModal.classList.contains('show'));
+        if (openMenuModal) closeMenuDetailModal(openMenuModal);
         if (nbSelectModal && nbSelectModal.style.display === 'flex') {
             nbSelectModal.style.display = 'none';
         }
