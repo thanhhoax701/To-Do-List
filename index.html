@@ -2,6 +2,7 @@
 <html lang="vi">
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
         <title>Quản Lý Công Việc</title>
         <link rel="stylesheet" href="style.css">
     </head>
@@ -39,12 +40,14 @@
         <div id="mainContent" style="display:none">
             <!-- ========== NỘI DUNG CHÍNH ========== -->
             <!-- Hiển thị sau khi đăng nhập thành công -->
-            <!-- Nút Menu - góc trái trên -->
-            <button id="menuToggleBtn" class="menu-toggle-btn">☰ Menu</button>
-            <!-- THÔNG TIN USER + ĐĂNG XUẤT -->
-            <div id="userInfo" class="user-info">
-                <span id="userName">User</span>
-                <button id="logoutBtn" class="btn-logout">🚪 Đăng xuất</button>
+            <div class="topbar">
+                <!-- Nút Menu - góc trái trên -->
+                <button id="menuToggleBtn" class="menu-toggle-btn">☰ Menu</button>
+                <!-- THÔNG TIN USER + ĐĂNG XUẤT -->
+                <div id="userInfo" class="user-info">
+                    <span id="userName">User</span>
+                    <button id="logoutBtn" class="btn-logout">🚪 Đăng xuất</button>
+                </div>
             </div>
             <!-- ========== LỊch ========== -->
             <!-- Header lịch và các nút chuyển tháng -->

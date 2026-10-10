@@ -1,10 +1,24 @@
 /* ===== BODY & TỔNG QUAN ===== */
-/* Cấu hình font và nền cho toàn trang */
+html {
+    box-sizing: border-box;
+    scroll-behavior: smooth;
+}
+
+*, *::before, *::after {
+    box-sizing: inherit;
+}
+
 body {
+    margin: 0;
     font-family: Arial, sans-serif;
     background: #f4f6f9;
-    /* Nền nhạt */
+    min-height: 100vh;
     padding: 20px;
+    overflow-x: hidden;
+}
+
+#mainContent {
+    max-width: 100%;
 }
 
 /* ===== HEADER LỊCH ===== */
@@ -1152,9 +1166,44 @@ td select {
 }
 
 /* Responsive - Mobile */
+@media (max-width: 620px) {
+    .login-overlay {
+        padding: 16px 12px;
+    }
+
+    .login-box {
+        width: min(92vw, 360px);
+        padding: 18px 14px 12px;
+        border-radius: 18px;
+    }
+
+    .login-box h2 {
+        font-size: 22px;
+    }
+
+    .pin-dots {
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .pin-dots .dot {
+        width: 12px;
+        height: 12px;
+    }
+
+    .keypad {
+        gap: 8px;
+    }
+
+    .kp {
+        min-height: 54px;
+        font-size: 18px;
+    }
+}
+
 @media (max-width:420px) {
     .login-box {
-        width: 92%;
+        width: min(92vw, 340px);
     }
 }
 
@@ -1197,7 +1246,18 @@ td select {
 }
 
 /* ===== THÔNG TIN USER + LOGOUT ===== */
-/* Box hiển thị tên user và nút đăng xuất (góc phải trên) */
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 12px;
+    padding-top: 4px;
+}
+
 .user-info {
     position: fixed;
     top: 12px;
@@ -2679,6 +2739,305 @@ td select {
 }
 
 @media (max-width: 620px) {
+    body {
+        padding: 10px 8px 18px;
+        background: #f3f5f9;
+    }
+
+    .topbar {
+        position: sticky;
+        top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin: -10px -8px 12px;
+        padding: calc(8px + env(safe-area-inset-top)) 8px 8px;
+        background: rgba(243, 245, 249, 0.94);
+        backdrop-filter: blur(12px);
+    }
+
+    .menu-toggle-btn {
+        position: static;
+        min-height: 40px;
+        padding: 8px 12px;
+        border-radius: 12px;
+        background: #df171f;
+        font-size: 12px;
+        min-width: 92px;
+        flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(223, 23, 31, 0.18);
+    }
+
+    .user-info {
+        position: static;
+        flex: 1 1 auto;
+        justify-content: space-between;
+        padding: 6px 8px;
+        gap: 8px;
+        max-width: 100%;
+        min-width: 0;
+        min-height: 40px;
+        border-color: #e7ebf0;
+        border-radius: 12px;
+        box-shadow: 0 4px 14px rgba(25, 42, 62, 0.06);
+    }
+
+    .user-info #userName {
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .btn-logout {
+        min-height: 30px;
+        padding: 5px 8px;
+        border-radius: 8px;
+        font-size: 11px;
+        white-space: nowrap;
+    }
+
+    .calendar-header {
+        gap: 12px;
+        margin: 0;
+        padding: 12px 10px 8px;
+        border: 1px solid #e7ebf0;
+        border-bottom: 0;
+        border-radius: 16px 16px 0 0;
+        background: #fff;
+    }
+
+    #monthYear {
+        flex: 1;
+        margin: 0;
+        color: #1f2937;
+        font-size: 16px;
+        line-height: 1.3;
+    }
+
+    .calendar-header button {
+        width: 38px;
+        min-width: 38px;
+        height: 38px;
+        border: 1px solid #e5eaf0;
+        border-radius: 12px;
+        background: #f7f8fa;
+        color: #344054;
+        font-size: 15px;
+    }
+
+    .calendar-header button:hover {
+        background: #fff0f1;
+        color: #c9151c;
+    }
+
+    .weekdays,
+    #calendar {
+        gap: 5px;
+        padding-right: 10px;
+        padding-left: 10px;
+        border-right: 1px solid #e7ebf0;
+        border-left: 1px solid #e7ebf0;
+        background: #fff;
+    }
+
+    .weekdays {
+        padding-top: 2px;
+        padding-bottom: 7px;
+    }
+
+    .weekdays div {
+        min-width: 0;
+        padding: 5px 1px;
+        border-radius: 7px;
+        color: #8491a3;
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 1.15;
+    }
+
+    #calendar {
+        padding-top: 2px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e7ebf0;
+        border-radius: 0 0 16px 16px;
+    }
+
+    .day {
+        height: clamp(42px, 12vw, 58px);
+        padding: 2px;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        background: #f7f8fa;
+        color: #344054;
+        font-size: clamp(12px, 3.8vw, 16px);
+        font-weight: 600;
+        transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+    }
+
+    .day:hover {
+        border-color: #f6c8cb;
+        background: #fff0f1;
+        color: #c9151c;
+    }
+
+    .day.selected-day,
+    .day.selected-day:hover {
+        border-color: #df171f;
+        background: #df171f !important;
+        color: #fff;
+        box-shadow: 0 4px 10px rgba(223, 23, 31, 0.22);
+    }
+
+    .day.nb-day,
+    .day.nl-day {
+        border-width: 1px;
+    }
+
+    .day.nb-day.selected-day,
+    .day.nl-day.selected-day {
+        border-color: #df171f;
+    }
+
+    #selectedDateTitle {
+        margin: 14px 0 10px;
+        padding: 11px 13px;
+        border: 1px solid #e7ebf0;
+        border-left: 4px solid #df171f;
+        border-radius: 12px;
+        background: #fff;
+        color: #253247;
+        font-size: 16px;
+        line-height: 1.4;
+    }
+
+    #searchFilterSection {
+        margin-bottom: 10px !important;
+        padding: 12px !important;
+        border-radius: 16px !important;
+    }
+
+    #searchFilterSection > div {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 9px !important;
+    }
+
+    #searchInput,
+    #searchPeriod,
+    #searchDate,
+    #searchMonth,
+    #searchYear,
+    #searchBtn,
+    #clearSearchBtn {
+        width: 100% !important;
+        min-width: 0 !important;
+        flex: 1 1 auto;
+    }
+
+    #searchFilterSection input,
+    #searchFilterSection select {
+        min-height: 42px;
+        padding: 0 12px;
+        border-color: #e0e6ed;
+        border-radius: 10px;
+        background-color: #fbfcfd;
+        color: #253247;
+        font-size: 14px;
+    }
+
+    #searchFilterSection input:focus,
+    #searchFilterSection select:focus {
+        border-color: #df171f;
+        box-shadow: 0 0 0 3px rgba(223, 23, 31, 0.1);
+    }
+
+    #searchBtn,
+    #clearSearchBtn {
+        min-height: 42px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    #searchBtn {
+        background: #df171f;
+        box-shadow: 0 4px 10px rgba(223, 23, 31, 0.16);
+    }
+
+    #clearSearchBtn {
+        background: #eef1f5 !important;
+        color: #526174 !important;
+    }
+
+    #taskActions {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 8px !important;
+        margin-bottom: 10px !important;
+    }
+
+    #taskActions > * {
+        width: 100%;
+        min-height: 44px !important;
+        border-radius: 11px !important;
+        font-size: 14px !important;
+    }
+
+    #openAddModal {
+        justify-content: center;
+        box-shadow: 0 5px 12px rgba(40, 167, 69, 0.18);
+    }
+
+    #deleteSelect {
+        border-color: #e0e6ed !important;
+        background-color: #fff !important;
+        color: #526174;
+    }
+
+    .side-menu-panel {
+        width: min(86vw, 320px);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .menu-category-btn {
+        grid-template-columns: 28px 1fr 18px;
+        padding: 12px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+    }
+
+    .task-table-scroll {
+        margin-top: 10px;
+        border: 1px solid #e7ebf0;
+        border-radius: 14px;
+        box-shadow: 0 5px 18px rgba(25, 42, 62, 0.06);
+        -webkit-overflow-scrolling: touch;
+        scrollbar-color: #c4cbd5 #f3f5f9;
+        scrollbar-width: thin;
+    }
+
+    .task-table-scroll::-webkit-scrollbar {
+        height: 7px;
+    }
+
+    .task-table-scroll::-webkit-scrollbar-thumb {
+        border: 2px solid #f3f5f9;
+        border-radius: 999px;
+        background: #c4cbd5;
+    }
+
+    .task-list-table th {
+        height: 44px;
+        font-size: 11px;
+    }
+
+    .task-list-table td {
+        padding: 10px 7px;
+        font-size: 12px;
+    }
+
     #taskModal {
         padding: 12px 8px;
     }
@@ -2806,6 +3165,11 @@ td select {
         border-radius: 13px;
     }
 
+    .schedule-page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
     .schedule-page-header h2 {
         font-size: 24px;
     }
@@ -2814,6 +3178,7 @@ td select {
         min-height: 44px;
         padding: 0 14px;
         font-size: 14px;
+        width: 100%;
     }
 
     .schedule-form:not([hidden]) {
@@ -2841,6 +3206,55 @@ td select {
 
     .maintenance-stat-card {
         min-height: 72px;
+    }
+
+    .login-box {
+        width: min(92vw, 340px);
+        padding: 16px 14px;
+    }
+
+    .keypad {
+        gap: 8px;
+    }
+
+    .kp {
+        min-height: 52px;
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 420px) {
+    .topbar {
+        gap: 6px;
+        padding-top: 0;
+    }
+
+    .menu-toggle-btn {
+        min-width: 78px;
+        padding: 8px 10px;
+    }
+
+    .user-info {
+        gap: 6px;
+        padding: 6px 8px;
+    }
+
+    .user-info #userName {
+        max-width: 70px;
+    }
+
+    #searchFilterSection {
+        padding: 8px !important;
+    }
+
+    #searchInput,
+    #searchPeriod,
+    #searchDate,
+    #searchMonth,
+    #searchYear,
+    #searchBtn,
+    #clearSearchBtn {
+        min-height: 42px;
     }
 }
 
