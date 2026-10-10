@@ -93,6 +93,10 @@ const saveScheduleBtn = document.getElementById('saveScheduleBtn');
 const cancelScheduleEditBtn = document.getElementById('cancelScheduleEditBtn');
 const refreshScheduleBtn = document.getElementById('refreshScheduleBtn');
 const openScheduleFormBtn = document.getElementById('openScheduleFormBtn');
+const importScheduleBtn = document.getElementById('importScheduleBtn');
+const downloadScheduleTemplateBtn = document.getElementById('downloadScheduleTemplateBtn');
+const exportScheduleBtn = document.getElementById('exportScheduleBtn');
+const scheduleImportFile = document.getElementById('scheduleImportFile');
 const scheduleCount = document.getElementById('scheduleCount');
 const maintenanceDashboard = document.getElementById('maintenanceDashboard');
 const maintenanceDueCount = document.getElementById('maintenanceDueCount');
@@ -2316,6 +2320,7 @@ function setScheduleTypeMode(type) {
             ['Đang bảo trì', 'ĐANG BẢO TRÌ'],
             ['Hoàn thành', 'ĐÃ HOÀN TẤT'],
             ['Cần chú ý', 'CẦN CHÚ Ý'],
+            ['Chờ', 'CHỜ'],
             ['Đã hủy', 'ĐÃ HỦY']
         ]
         : [
@@ -2324,6 +2329,7 @@ function setScheduleTypeMode(type) {
             ['Chậm tiến độ', 'CHẬM TIẾN ĐỘ'],
             ['Đã lên lịch', 'ĐÃ LÊN LỊCH'],
             ['Hoàn thành', 'ĐÃ XỬ LÝ'],
+            ['Chờ', 'CHỜ'],
             ['Đã hủy', 'ĐÃ HỦY']
         ];
     scheduleStatusInput.replaceChildren(...statuses.map(([value, label]) => {
@@ -2541,17 +2547,24 @@ async function loadScheduleList() {
                 'Đang bảo trì': 'ĐANG BẢO TRÌ',
                 'Hoàn thành': 'ĐÃ XỬ LÝ',
                 'Cần chú ý': 'CẦN CHÚ Ý',
+                'Chờ': 'CHỜ',
                 'Đã hủy': 'ĐÃ HỦY'
             };
-            const statusKey = ['Hoàn thành'].includes(schedule.status) ? 'done'
+            const statusKey = requestType === 'maintenance' &&
+                ['Chưa bắt đầu', 'Đã lên lịch'].includes(schedule.status) ? 'scheduled'
+                : schedule.status === 'Hoàn thành' ? 'done'
                 : ['Đang thực hiện', 'Đang bảo trì'].includes(schedule.status) ? 'active'
-                    : ['Cần chú ý', 'Chậm tiến độ'].includes(schedule.status) ? 'attention'
-                        : schedule.status === 'Đã hủy' ? 'cancelled' : 'pending';
+                    : schedule.status === 'Chậm tiến độ' ? 'delayed'
+                        : schedule.status === 'Đã lên lịch' ? 'scheduled'
+                            : ['Chưa bắt đầu', 'Chưa xử lý'].includes(schedule.status) ? 'not-started'
+                                : schedule.status === 'Chờ' ? 'waiting'
+                                    : ['Cần chú ý', 'Đã hủy'].includes(schedule.status) ? 'cancelled' : 'pending';
             const maintenanceStatusLabels = {
                 'Đã lên lịch': 'ĐÃ LÊN LỊCH',
                 'Đang bảo trì': 'ĐANG BẢO TRÌ',
                 'Hoàn thành': 'ĐÃ HOÀN TẤT',
                 'Cần chú ý': 'CẦN CHÚ Ý',
+                'Chờ': 'CHỜ',
                 'Đã hủy': 'ĐÃ HỦY',
                 'Chưa bắt đầu': 'ĐÃ LÊN LỊCH',
                 'Đang thực hiện': 'ĐANG BẢO TRÌ'
@@ -2917,6 +2930,10 @@ function positionEmployeeAutocomplete() {
     popup.style.top = `${openAbove ? Math.max(margin, rect.top - availableHeight - 6) : rect.bottom + 6}px`;
 }
 
+function parseScheduleAssignees(value) {
+    return String(value ?? '').split(',').map(name => name.trim()).filter(Boolean);
+}
+
 function renderEmployeeAutocomplete() {
     if (!activeEmployeeAutocomplete) return;
     const { input, popup, type } = activeEmployeeAutocomplete;
@@ -2924,6 +2941,8 @@ function renderEmployeeAutocomplete() {
     const isScheduleAssignee = type === 'scheduleAssignee';
     const queryValue = isScheduleAssignee ? input.value.split(',').pop().trim() : input.value;
     const query = normalizeEmployeeText(queryValue);
+    const hasReachedAssigneeLimit = isScheduleAssignee &&
+        parseScheduleAssignees(input.value.split(',').slice(0, -1).join(',')).length >= 5;
     const source = isUnitField
         ? employeeUnitOptions.filter(item => !isExcludedEmployeeUnit(item.value))
         : type === 'assignee' || isScheduleAssignee
@@ -2933,10 +2952,12 @@ function renderEmployeeAutocomplete() {
     const visibleItems = [];
     popup.replaceChildren();
 
-    if (!matches.length) {
+    if (!matches.length || hasReachedAssigneeLimit) {
         const empty = document.createElement('div');
         empty.className = 'employee-autocomplete-empty';
-        empty.textContent = query ? 'Không tìm thấy kết quả phù hợp' : 'Chưa có dữ liệu gợi ý';
+        empty.textContent = hasReachedAssigneeLimit
+            ? 'Đã chọn tối đa 5 người'
+            : query ? 'Không tìm thấy kết quả phù hợp' : 'Chưa có dữ liệu gợi ý';
         popup.appendChild(empty);
         positionEmployeeAutocomplete();
         return;
@@ -2979,9 +3000,14 @@ function renderEmployeeAutocomplete() {
         option.addEventListener('mousedown', event => event.preventDefault());
         option.addEventListener('click', () => {
             if (isScheduleAssignee) {
-                const assignees = input.value.split(',');
-                assignees[assignees.length - 1] = item.value;
-                input.value = assignees.map(value => value.trim()).filter(Boolean).join(', ');
+                const assignees = parseScheduleAssignees(input.value.split(',').slice(0, -1).join(','));
+                const alreadySelected = assignees.some(name => normalizeEmployeeText(name) === normalizeEmployeeText(item.value));
+                if (!alreadySelected && assignees.length >= 5) {
+                    showCustomAlert('Chỉ được chọn tối đa 5 người thực hiện.');
+                    return;
+                }
+                if (!alreadySelected) assignees.push(item.value);
+                input.value = assignees.join(', ');
             } else {
                 input.value = item.value;
             }
@@ -3702,6 +3728,342 @@ function initializeEmployeeDirectory() {
 
 initializeEmployeeDirectory();
 
+const scheduleImportFields = {
+    storeVisit: {
+        date: ['ngay', 'ngaylich', 'date', 'scheduledate'],
+        time: ['gio', 'thoigian', 'time'],
+        content: ['noidungxuly', 'noidung', 'content', 'location'],
+        unit: ['donvi', 'cuahang', 'donvicuahang', 'department', 'unit', 'store'],
+        assignee: ['nguoithuchien', 'nguoiphutrach', 'assignee', 'personincharge'],
+        status: ['trangthai', 'status'],
+        note: ['ghichu', 'note']
+    },
+    maintenance: {
+        startDate: ['tungay', 'ngaybatdau', 'startdate', 'fromdate', 'ngay'],
+        endDate: ['denngay', 'ngayketthuc', 'enddate', 'todate'],
+        dueDate: ['ngaydenhan', 'denhan', 'duedate'],
+        content: ['noidungbaotri', 'noidung', 'maintenancecontent', 'content'],
+        equipment: ['doituong', 'thietbi', 'hethong', 'equipment', 'object'],
+        unit: ['donviphongban', 'donvi', 'phongban', 'department', 'unit'],
+        assignee: ['nguoithuchien', 'nguoiphutrach', 'assignee', 'personincharge'],
+        cycle: ['chuky', 'cycle', 'period'],
+        status: ['trangthai', 'status'],
+        result: ['ketqua', 'result'],
+        note: ['ghichu', 'note'],
+        link: ['lienket', 'link', 'evidence', 'evidenceurl']
+    }
+};
+
+function normalizeScheduleImportDate(value) {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        const date = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+        return isValidYmd(date) ? date : '';
+    }
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+        const parsed = XLSX.SSF.parse_date_code(value);
+        if (parsed) {
+            const date = `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
+            return isValidYmd(date) ? date : '';
+        }
+    }
+    const normalized = normalizeDateString(value);
+    return normalized && isValidYmd(normalized) ? normalized : '';
+}
+
+function normalizeScheduleImportTime(value) {
+    if (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value < 1) {
+        const minutes = Math.round(value * 24 * 60) % (24 * 60);
+        return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+    }
+    const time = String(value ?? '').trim();
+    const hourSuffixMatch = time.match(/^(\d{1,2})\s*h(?:\s*([0-5]\d))?$/i);
+    if (hourSuffixMatch && Number(hourSuffixMatch[1]) <= 23) {
+        return `${String(Number(hourSuffixMatch[1])).padStart(2, '0')}:${hourSuffixMatch[2] || '00'}`;
+    }
+    const match = time.match(/^(\d{1,2}):([0-5]\d)(?::[0-5]\d)?$/);
+    if (!match || Number(match[1]) > 23) return '';
+    return `${String(Number(match[1])).padStart(2, '0')}:${match[2]}`;
+}
+
+function getScheduleImportStatus(value, type) {
+    const normalized = normalizeEmployeeText(value).replace(/\s+/g, ' ').trim();
+    if (!normalized) return type === 'maintenance' ? 'Đã lên lịch' : 'Chưa bắt đầu';
+    const statuses = type === 'maintenance'
+        ? [
+            [['chua bat dau', 'chua xu ly', 'da len lich', 'len lich', 'scheduled', 'pending'], 'Đã lên lịch'],
+            [['dang bao tri', 'dang thuc hien', 'dang xu ly', 'in progress'], 'Đang bảo trì'],
+            [['hoan thanh', 'da xu ly', 'da hoan tat', 'completed', 'done'], 'Hoàn thành'],
+            [['cham tien do', 'can chu y', 'delayed', 'overdue', 'attention'], 'Cần chú ý'],
+            [['cho', 'waiting', 'wait'], 'Chờ'],
+            [['da huy', 'cancelled', 'canceled'], 'Đã hủy']
+        ]
+        : [
+            [['chua bat dau', 'chua xu ly', 'pending'], 'Chưa bắt đầu'],
+            [['dang thuc hien', 'dang xu ly', 'in progress'], 'Đang thực hiện'],
+            [['cham tien do', 'delayed', 'overdue'], 'Chậm tiến độ'],
+            [['da len lich', 'scheduled'], 'Đã lên lịch'],
+            [['hoan thanh', 'da xu ly', 'completed', 'done'], 'Hoàn thành'],
+            [['cho', 'waiting', 'wait'], 'Chờ'],
+            [['da huy', 'cancelled', 'canceled'], 'Đã hủy']
+        ];
+    const match = statuses.find(([aliases]) => aliases.includes(normalized));
+    return match ? match[1] : null;
+}
+
+function parseScheduleImportRows(rows, type) {
+    if (!Array.isArray(rows) || rows.length < 2) {
+        throw new Error('File Excel cần có dòng tiêu đề và ít nhất một dòng dữ liệu.');
+    }
+    const aliases = scheduleImportFields[type];
+    const headerIndexes = new Map();
+    rows[0].forEach((header, index) => {
+        const normalized = normalizeEmployeeText(header).replace(/[^a-z0-9]/g, '');
+        if (normalized) headerIndexes.set(normalized, index);
+    });
+    const columnIndexes = Object.fromEntries(Object.entries(aliases).map(([field, names]) => [
+        field,
+        names.map(name => headerIndexes.get(name)).find(index => index !== undefined) ?? -1
+    ]));
+    const requiredFields = type === 'maintenance'
+        ? ['startDate', 'endDate', 'content', 'equipment', 'unit', 'assignee', 'cycle']
+        : ['date', 'time', 'content', 'unit', 'assignee'];
+    const missingHeaders = requiredFields.filter(field => columnIndexes[field] < 0);
+    if (missingHeaders.length) {
+        const labels = {
+            date: 'Ngày',
+            time: 'Giờ',
+            startDate: 'Từ ngày',
+            endDate: 'Đến ngày',
+            content: type === 'maintenance' ? 'Nội dung bảo trì' : 'Nội dung xử lý',
+            equipment: 'Đối tượng / thiết bị',
+            unit: 'Đơn vị / cửa hàng',
+            assignee: 'Người thực hiện',
+            cycle: 'Chu kỳ'
+        };
+        throw new Error(`Thiếu cột bắt buộc: ${missingHeaders.map(field => labels[field]).join(', ')}.`);
+    }
+
+    const imported = [];
+    const rowErrors = [];
+    let previousStoreVisitDate = '';
+    for (const [index, row] of rows.slice(1).entries()) {
+        if (!row.some(value => String(value ?? '').trim())) continue;
+        const getCell = field => columnIndexes[field] >= 0 ? row[columnIndexes[field]] : '';
+        const excelRow = index + 2;
+        const unit = String(getCell('unit') ?? '').trim();
+        const assignee = String(getCell('assignee') ?? '').trim();
+        const content = String(getCell('content') ?? '').trim();
+        const status = getScheduleImportStatus(getCell('status'), type);
+        const link = String(getCell('link') ?? '').trim();
+        const record = {
+            type,
+            content,
+            unit,
+            assignee,
+            status,
+            note: String(getCell('note') ?? '').trim(),
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        };
+
+        if (type === 'maintenance') {
+            const rawDueDate = getCell('dueDate');
+            const hasDueDate = String(rawDueDate ?? '').trim() !== '';
+            const cycleOptions = ['Hàng tuần', 'Hàng tháng', 'Hàng quý', '6 tháng', 'Hàng năm', 'Không định kỳ'];
+            const rawCycle = String(getCell('cycle') ?? '').trim();
+            record.startDate = normalizeScheduleImportDate(getCell('startDate'));
+            record.endDate = normalizeScheduleImportDate(getCell('endDate'));
+            record.date = record.startDate;
+            record.dueDate = hasDueDate ? normalizeScheduleImportDate(rawDueDate) : '';
+            record.maintenanceContent = content;
+            record.equipment = String(getCell('equipment') ?? '').trim();
+            record.cycle = cycleOptions.find(option => normalizeEmployeeText(option) === normalizeEmployeeText(rawCycle)) || rawCycle;
+            record.result = String(getCell('result') ?? '').trim();
+            record.location = unit;
+            record.link = link;
+            if (link) {
+                try {
+                    const parsedLink = new URL(link);
+                    if (!['http:', 'https:'].includes(parsedLink.protocol)) throw new Error('invalid protocol');
+                } catch {
+                    rowErrors.push(`Dòng ${excelRow}: liên kết phải bắt đầu bằng http:// hoặc https://.`);
+                }
+            }
+            if (!record.startDate || !record.endDate || record.endDate < record.startDate ||
+                (hasDueDate && (!record.dueDate || !isValidYmd(record.dueDate) || record.dueDate < record.startDate))) {
+                rowErrors.push(`Dòng ${excelRow}: ngày bắt đầu, ngày kết thúc hoặc ngày đến hạn không hợp lệ.`);
+            }
+            if (!record.equipment) rowErrors.push(`Dòng ${excelRow}: cần nhập đối tượng / thiết bị.`);
+            if (!cycleOptions.includes(record.cycle)) rowErrors.push(`Dòng ${excelRow}: chu kỳ bảo trì không hợp lệ.`);
+        } else {
+            const rawDate = getCell('date');
+            const parsedDate = String(rawDate ?? '').trim()
+                ? normalizeScheduleImportDate(rawDate)
+                : previousStoreVisitDate;
+            record.date = parsedDate;
+            if (parsedDate) previousStoreVisitDate = parsedDate;
+            record.time = normalizeScheduleImportTime(getCell('time'));
+            record.location = content;
+            if (!record.date || !record.time) {
+                rowErrors.push(`Dòng ${excelRow}: ngày hoặc giờ không hợp lệ.`);
+            }
+        }
+
+        if (!unit || !assignee || !content) {
+            rowErrors.push(`Dòng ${excelRow}: cần nhập nội dung, đơn vị và người thực hiện.`);
+        }
+        if (parseScheduleAssignees(assignee).length > 5) {
+            rowErrors.push(`Dòng ${excelRow}: chỉ được nhập tối đa 5 người thực hiện.`);
+        }
+        if (!status) {
+            rowErrors.push(`Dòng ${excelRow}: trạng thái không hợp lệ.`);
+        }
+        imported.push(record);
+    }
+    if (!imported.length) throw new Error('Không tìm thấy dòng dữ liệu hợp lệ trong file.');
+    if (imported.length > 1000) throw new Error('Mỗi lần chỉ được nhập tối đa 1.000 lịch.');
+    if (rowErrors.length) {
+        const displayedErrors = rowErrors.slice(0, 8).join('\n');
+        const remaining = rowErrors.length - 8;
+        throw new Error(`Không thể nhập do có lỗi:\n${displayedErrors}${remaining > 0 ? `\n... và ${remaining} lỗi khác.` : ''}`);
+    }
+    return imported;
+}
+
+function downloadScheduleImportTemplate(type) {
+    const headers = type === 'maintenance'
+        ? ['Đơn vị / phòng ban', 'Từ ngày', 'Đến ngày', 'Người thực hiện', 'Trạng thái', 'Nội dung bảo trì', 'Đối tượng', 'Chu kỳ', 'Ngày đến hạn', 'Kết quả', 'Ghi chú', 'Liên kết']
+        : ['Ngày', 'Giờ', 'Nội dung xử lý', 'Đơn vị', 'Người thực hiện', 'Trạng thái', 'Ghi chú'];
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet([headers]);
+    XLSX.utils.book_append_sheet(workbook, worksheet, type === 'maintenance' ? 'Lịch bảo trì' : 'Lịch cửa hàng');
+    XLSX.writeFile(workbook, type === 'maintenance' ? 'mau-nhap-lich-bao-tri.xlsx' : 'mau-nhap-lich-cua-hang.xlsx');
+}
+
+async function exportScheduleWorkbook(type) {
+    if (!isAdmin()) throw new Error('Bạn không có quyền xuất lịch.');
+    const requestUserId = getCurrentUserId();
+    if (!requestUserId) throw new Error('Không xác định được tài khoản đang đăng nhập.');
+
+    const snapshot = await get(scheduleRef());
+    if (requestUserId !== getCurrentUserId()) throw new Error('Tài khoản đã thay đổi. Vui lòng thử xuất lại.');
+    const records = [];
+    if (snapshot.exists()) {
+        snapshot.forEach(yearSnapshot => {
+            yearSnapshot.forEach(monthSnapshot => {
+                monthSnapshot.forEach(daySnapshot => {
+                    const date = `${yearSnapshot.key}-${String(monthSnapshot.key).padStart(2, '0')}-${String(daySnapshot.key).padStart(2, '0')}`;
+                    if (!isValidYmd(date)) return;
+                    daySnapshot.forEach(scheduleSnapshot => {
+                        const schedule = scheduleSnapshot.val();
+                        if (schedule && typeof schedule === 'object' && schedule.type === type) {
+                            records.push({ ...schedule, id: scheduleSnapshot.key, date });
+                        }
+                    });
+                });
+            });
+        });
+    }
+    records.sort((first, second) =>
+        first.date.localeCompare(second.date) ||
+        String(first.time || '07:00').localeCompare(String(second.time || '07:00')) ||
+        Number(first.createdAt || 0) - Number(second.createdAt || 0)
+    );
+    if (!records.length) {
+        await showCustomAlert(type === 'maintenance' ? 'Chưa có lịch bảo trì để xuất.' : 'Chưa có lịch đi cửa hàng để xuất.');
+        return;
+    }
+
+    const statusLabels = type === 'maintenance'
+        ? {
+            'Đã lên lịch': 'ĐÃ LÊN LỊCH',
+            'Đang bảo trì': 'ĐANG BẢO TRÌ',
+            'Hoàn thành': 'ĐÃ HOÀN TẤT',
+            'Cần chú ý': 'CẦN CHÚ Ý',
+            'Chờ': 'CHỜ',
+            'Đã hủy': 'ĐÃ HỦY',
+            'Chưa bắt đầu': 'ĐÃ LÊN LỊCH',
+            'Đang thực hiện': 'ĐANG BẢO TRÌ'
+        }
+        : {
+            'Chưa bắt đầu': 'CHƯA XỬ LÝ',
+            'Đã lên lịch': 'ĐÃ LÊN LỊCH',
+            'Đang thực hiện': 'ĐANG XỬ LÝ',
+            'Chậm tiến độ': 'CHẬM TIẾN ĐỘ',
+            'Hoàn thành': 'ĐÃ XỬ LÝ',
+            'Chờ': 'CHỜ',
+            'Đã hủy': 'ĐÃ HỦY'
+        };
+    const headers = type === 'maintenance'
+        ? ['STT', 'Đơn vị / phòng ban', 'Từ ngày', 'Đến ngày', 'Người thực hiện', 'Trạng thái', 'Nội dung bảo trì', 'Đối tượng', 'Chu kỳ', 'Kết quả', 'Ghi chú', 'Bằng chứng', 'Liên kết']
+        : ['Ngày', 'Giờ', 'Nội dung xử lý', 'Đơn vị', 'Người thực hiện', 'Trạng thái', 'Ghi chú'];
+    const rows = records.map((schedule, index) => type === 'maintenance'
+        ? [
+            index + 1,
+            schedule.unit || schedule.location || '',
+            schedule.startDate || schedule.date,
+            schedule.endDate || schedule.date,
+            schedule.assignee || '',
+            statusLabels[schedule.status] || statusLabels['Đã lên lịch'],
+            schedule.maintenanceContent || schedule.content || '',
+            schedule.equipment || '',
+            schedule.cycle || '',
+            schedule.result || '',
+            schedule.note || '',
+            schedule.evidenceUrl || schedule.evidenceName || '',
+            schedule.link || ''
+        ]
+        : [
+            schedule.date,
+            schedule.time || '07:00',
+            schedule.content || '',
+            schedule.unit || schedule.location || '',
+            schedule.assignee || '',
+            statusLabels[schedule.status] || statusLabels['Chưa bắt đầu'],
+            schedule.note || ''
+        ]);
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    worksheet['!cols'] = type === 'maintenance'
+        ? [{ wch: 8 }, { wch: 24 }, { wch: 14 }, { wch: 14 }, { wch: 28 }, { wch: 18 }, { wch: 36 }, { wch: 24 }, { wch: 18 }, { wch: 32 }, { wch: 32 }, { wch: 42 }, { wch: 42 }]
+        : [{ wch: 14 }, { wch: 10 }, { wch: 42 }, { wch: 26 }, { wch: 34 }, { wch: 18 }, { wch: 32 }];
+    worksheet['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: headers.length - 1 } }) };
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, type === 'maintenance' ? 'Lịch bảo trì' : 'Lịch cửa hàng');
+    const now = new Date();
+    const dateSuffix = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const fileName = type === 'maintenance'
+        ? `lich-bao-tri_${dateSuffix}.xlsx`
+        : `lich-cua-hang_${dateSuffix}.xlsx`;
+    XLSX.writeFile(workbook, fileName, { bookType: 'xlsx' });
+}
+
+async function importScheduleWorkbook(file, type) {
+    if (!isAdmin()) throw new Error('Bạn không có quyền tải lịch lên.');
+    if (!file) throw new Error('Vui lòng chọn file Excel.');
+    if (!/\.(xlsx|xls|csv)$/i.test(file.name)) throw new Error('Chỉ hỗ trợ file .xlsx, .xls hoặc .csv.');
+    if (file.size > 10 * 1024 * 1024) throw new Error('File không được vượt quá 10 MB.');
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    if (!worksheet) throw new Error('File Excel không có trang tính.');
+    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: true });
+    const records = parseScheduleImportRows(rows, type);
+    const typeLabel = type === 'maintenance' ? 'lịch bảo trì' : 'lịch đi cửa hàng';
+    if (!await showCustomConfirm(`Sẽ thêm ${records.length} ${typeLabel}. Dữ liệu hiện có sẽ được giữ nguyên. Bạn muốn tiếp tục?`)) return;
+
+    const userId = getCurrentUserId();
+    if (!userId) throw new Error('Không xác định được tài khoản đang đăng nhập.');
+    const updates = {};
+    records.forEach(record => {
+        const [year, month, day] = record.date.split('-');
+        const id = push(scheduleRef(year, month, day)).key;
+        if (!id) throw new Error('Không thể tạo mã cho một trong các lịch cần nhập.');
+        updates[`storeMaintenanceSchedules/${userId}/${year}/${month}/${day}/${id}`] = record;
+    });
+    await update(ref(db), updates);
+    await loadScheduleList();
+    await showCustomAlert(`Đã nhập thành công ${records.length} ${typeLabel}.`);
+}
+
 if (scheduleForm) {
     scheduleDateInput.value = getTodayString();
     maintenanceStartDateInput.value = getTodayString();
@@ -3722,6 +4084,10 @@ if (scheduleForm) {
         const type = scheduleTypeInput.value;
         const status = scheduleStatusInput.value;
         const selectedEvidence = isMaintenance ? maintenanceEvidenceInput.files[0] : null;
+        if (parseScheduleAssignees(assignee).length > 5) {
+            await showCustomAlert('Chỉ được chọn tối đa 5 người thực hiện.');
+            return;
+        }
         if (!isValidYmd(date) || !isValidYmd(endDate) || endDate < date ||
             (dueDate && !isValidYmd(dueDate)) ||
             (!isMaintenance && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) ||
@@ -3738,8 +4104,8 @@ if (scheduleForm) {
             return;
         }
         const validStatuses = isMaintenance
-            ? ['Đã lên lịch', 'Đang bảo trì', 'Hoàn thành', 'Cần chú ý', 'Đã hủy']
-            : ['Chưa bắt đầu', 'Đang thực hiện', 'Chậm tiến độ', 'Đã lên lịch', 'Hoàn thành', 'Đã hủy'];
+            ? ['Đã lên lịch', 'Đang bảo trì', 'Hoàn thành', 'Cần chú ý', 'Chờ', 'Đã hủy']
+            : ['Chưa bắt đầu', 'Đang thực hiện', 'Chậm tiến độ', 'Đã lên lịch', 'Hoàn thành', 'Chờ', 'Đã hủy'];
         if (type !== activeScheduleType || !validStatuses.includes(status)) {
             await showCustomAlert('Loại lịch không khớp hoặc trạng thái không hợp lệ.');
             return;
@@ -3841,6 +4207,44 @@ if (scheduleForm) {
         setScheduleFormMode();
         openScheduleEditorModal();
     };
+    importScheduleBtn.onclick = () => scheduleImportFile.click();
+    downloadScheduleTemplateBtn.onclick = () => {
+        try {
+            downloadScheduleImportTemplate(activeScheduleType);
+        } catch (error) {
+            console.error('Lỗi tải mẫu nhập lịch:', error);
+            showCustomAlert(`Không thể tải mẫu Excel: ${error?.message || String(error)}`);
+        }
+    };
+    exportScheduleBtn.onclick = async () => {
+        exportScheduleBtn.disabled = true;
+        showLoading();
+        try {
+            await exportScheduleWorkbook(activeScheduleType);
+        } catch (error) {
+            console.error('Lỗi xuất lịch ra Excel:', error);
+            await showCustomAlert(`Không thể xuất lịch: ${error?.message || String(error)}`);
+        } finally {
+            exportScheduleBtn.disabled = false;
+            hideLoading();
+        }
+    };
+    scheduleImportFile.addEventListener('change', async () => {
+        const file = scheduleImportFile.files?.[0];
+        if (!file) return;
+        importScheduleBtn.disabled = true;
+        showLoading();
+        try {
+            await importScheduleWorkbook(file, activeScheduleType);
+        } catch (error) {
+            console.error('Lỗi nhập lịch từ Excel:', error);
+            await showCustomAlert(`Không thể nhập lịch: ${error?.message || String(error)}`);
+        } finally {
+            scheduleImportFile.value = '';
+            importScheduleBtn.disabled = false;
+            hideLoading();
+        }
+    });
     refreshScheduleBtn.onclick = loadScheduleList;
     cancelScheduleEditBtn.onclick = () => closeMenuDetailModal(scheduleEditorModal);
 }

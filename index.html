@@ -226,8 +226,15 @@
                             <h2 id="scheduleManagementTitle">Lịch đi cửa hàng</h2>
                             <p id="scheduleCount" class="schedule-count">0 lịch đang theo dõi</p>
                         </div>
-                        <button type="button" id="openScheduleFormBtn" class="schedule-add-btn">＋ Thêm lịch</button>
+                        <div class="schedule-header-actions">
+                            <button type="button" id="importScheduleBtn" class="schedule-import-btn">📥 Nhập Excel</button>
+                            <button type="button" id="downloadScheduleTemplateBtn" class="schedule-template-btn">⬇ Mẫu Excel</button>
+                            <button type="button" id="exportScheduleBtn" class="schedule-template-btn">📤 Xuất Excel</button>
+                            <button type="button" id="openScheduleFormBtn" class="schedule-add-btn">＋ Thêm lịch</button>
+                            <input type="file" id="scheduleImportFile" accept=".xlsx,.xls,.csv" hidden>
+                        </div>
                     </header>
+                    <p class="schedule-import-hint">Mẫu Excel: điền dữ liệu từ dòng 2. Hệ thống đọc trang tính đầu tiên.</p>
                     <section id="maintenanceDashboard" class="maintenance-dashboard" hidden aria-label="Tổng quan lịch bảo trì">
                         <article class="maintenance-stat-card">
                             <span>Đến hạn</span>
@@ -327,9 +334,9 @@
                         <div class="schedule-form-field schedule-form-field-wide">
                             <label class="menu-form-label" id="scheduleAssigneeLabel" for="scheduleAssignee">Người thực hiện</label>
                             <div class="schedule-select-wrap">
-                                <input type="text" id="scheduleAssignee" class="menu-form-input" maxlength="120" placeholder="Chọn người thực hiện" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="scheduleAssigneeEmployeeList" required>
+                                <input type="text" id="scheduleAssignee" class="menu-form-input" maxlength="600" placeholder="Chọn người thực hiện" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="scheduleAssigneeEmployeeList" required>
                             </div>
-                            <small class="schedule-field-hint">Nhập nhiều người, ngăn cách bằng dấu phẩy.</small>
+                            <small class="schedule-field-hint">Chọn tối đa 5 người, ngăn cách bằng dấu phẩy.</small>
                         </div>
                         <div class="schedule-form-field" data-schedule-maintenance-field hidden>
                             <label class="menu-form-label" for="maintenanceStartDate">Từ ngày</label>
