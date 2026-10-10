@@ -2,6 +2,7 @@
 // Nhập Firebase SDK cần thiết cho ứng dụng Quản lý Công việc
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 // ========== CẤU HÌNH FIREBASE ==========
 // Cấu hình Firebase cho dự án "to-do-list"
@@ -23,3 +24,4 @@ const app = initializeApp(firebaseConfig);
 // Export Realtime Database instance để sử dụng trong các file khác
 // Sử dụng: import { db } from "./firebase.js"
 export const db = getDatabase(app);
+export const storage = getStorage(app);

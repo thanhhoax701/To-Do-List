@@ -1,7 +1,8 @@
 // ========== NHẬP FIREBASE ==========
 // Nhập Firebase Realtime Database và các hàm cần thiết để thao tác với database
-import { db } from "./firebase.js";
+import { db, storage } from "./firebase.js";
 import { ref, push, onValue, remove, update, get, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { ref as firebaseStorageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 /* ========== DOM ELEMENTS ========== */
 // Phần tử lịch và tiêu đề tháng
@@ -62,18 +63,56 @@ const menuToggleBtn = document.getElementById("menuToggleBtn");
 const menuCloseBtn = document.getElementById("menuCloseBtn");
 const sideMenuPanel = document.getElementById("sideMenuPanel");
 const scheduleForm = document.getElementById('scheduleForm');
+const scheduleEditorModal = document.getElementById('scheduleEditorModal');
+const scheduleEditorTitle = document.getElementById('scheduleEditorTitle');
 const scheduleDateInput = document.getElementById('scheduleDate');
+const scheduleTimeInput = document.getElementById('scheduleTime');
 const scheduleTypeInput = document.getElementById('scheduleType');
 const scheduleTypeField = document.getElementById('scheduleTypeField');
 const scheduleManagementTitle = document.getElementById('scheduleManagementTitle');
+const scheduleListTitle = document.getElementById('scheduleListTitle');
 const scheduleLocationInput = document.getElementById('scheduleLocation');
+const maintenanceContentInput = document.getElementById('maintenanceContent');
+const maintenanceEquipmentInput = document.getElementById('maintenanceEquipment');
+const maintenanceStartDateInput = document.getElementById('maintenanceStartDate');
+const maintenanceEndDateInput = document.getElementById('maintenanceEndDate');
+const maintenanceDueDateInput = document.getElementById('maintenanceDueDate');
+const maintenanceCycleInput = document.getElementById('maintenanceCycle');
+const maintenanceResultInput = document.getElementById('maintenanceResult');
+const maintenanceNoteInput = document.getElementById('maintenanceNote');
+const maintenanceEvidenceInput = document.getElementById('maintenanceEvidence');
+const maintenanceEvidenceCurrent = document.getElementById('maintenanceEvidenceCurrent');
+const maintenanceLinkInput = document.getElementById('maintenanceLink');
+const scheduleUnitInput = document.getElementById('scheduleUnit');
 const scheduleAssigneeInput = document.getElementById('scheduleAssignee');
+const scheduleAssigneeLabel = document.getElementById('scheduleAssigneeLabel');
 const scheduleStatusInput = document.getElementById('scheduleStatus');
 const scheduleNoteInput = document.getElementById('scheduleNote');
 const scheduleList = document.getElementById('scheduleList');
 const saveScheduleBtn = document.getElementById('saveScheduleBtn');
 const cancelScheduleEditBtn = document.getElementById('cancelScheduleEditBtn');
 const refreshScheduleBtn = document.getElementById('refreshScheduleBtn');
+const openScheduleFormBtn = document.getElementById('openScheduleFormBtn');
+const scheduleCount = document.getElementById('scheduleCount');
+const maintenanceDashboard = document.getElementById('maintenanceDashboard');
+const maintenanceDueCount = document.getElementById('maintenanceDueCount');
+const maintenanceCompletedCount = document.getElementById('maintenanceCompletedCount');
+const maintenanceAttentionCount = document.getElementById('maintenanceAttentionCount');
+const storeScheduleHead = document.getElementById('storeScheduleHead');
+const maintenanceScheduleHead = document.getElementById('maintenanceScheduleHead');
+const employeeTableContainer = document.getElementById('employeeTableContainer');
+const employeesCount = document.getElementById('employeesCount');
+const employeeSearch = document.getElementById('employeeSearch');
+const employeeDepartmentFilter = document.getElementById('employeeDepartmentFilter');
+const employeePageSizeSelect = document.getElementById('employeePageSize');
+const deleteAllEmployeesBtn = document.getElementById('deleteAllEmployeesBtn');
+const uploadEmployeesBtn = document.getElementById('uploadEmployeesBtn');
+const employeesFileInput = document.getElementById('employeesFile');
+const employeePageSummary = document.getElementById('employeePageSummary');
+const employeePagination = document.getElementById('employeePagination');
+const employeeEditForm = document.getElementById('employeeEditForm');
+const employeeEditModal = document.getElementById('employeeEditModal');
+const employeesBackBtn = document.getElementById('employeesBackBtn');
 
 // Modal lựa chọn ngày NB
 const nbSelectModal = document.getElementById("nbSelectModal");
@@ -168,6 +207,9 @@ function nlRef(...parts) {
 function scheduleRef(...parts) {
     const uid = getCurrentUserId();
     return ref(db, `storeMaintenanceSchedules/${uid}${parts.length ? '/' + parts.join('/') : ''}`);
+}
+function employeesRef(...parts) {
+    return ref(db, `employees${parts.length ? '/' + parts.join('/') : ''}`);
 }
 
 /* ========== LỊCH ========== */
@@ -1457,6 +1499,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (closeBtn) {
             closeBtn.onclick = function (e) {
                 e.preventDefault();
+                closeEmployeeAutocomplete();
                 taskModal.style.display = 'none';
             };
         }
@@ -1469,6 +1512,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 endDateInput.value = startDateInput.value;
             }
         });
+    }
+
+    if (requesterInput) {
+        setupEmployeeAutocomplete(requesterInput, 'requester');
+    }
+    if (unitInput) {
+        setupEmployeeAutocomplete(unitInput, 'unit');
+    }
+    if (assigneeInput) {
+        setupEmployeeAutocomplete(assigneeInput, 'assignee');
+    }
+    if (scheduleUnitInput) {
+        setupEmployeeAutocomplete(scheduleUnitInput, 'scheduleUnit');
+    }
+    if (scheduleAssigneeInput) {
+        setupEmployeeAutocomplete(scheduleAssigneeInput, 'scheduleAssignee');
     }
 
     // ========== SEARCH EVENT LISTENERS ==========
@@ -2216,123 +2275,382 @@ if (changeNlBtn) {
 let editingScheduleId = null;
 let editingScheduleDate = null;
 let editingScheduleCreatedAt = null;
+let editingScheduleData = null;
 let scheduleLoadToken = 0;
 let activeScheduleType = 'storeVisit';
 
 function setScheduleTypeMode(type) {
     activeScheduleType = type === 'maintenance' ? 'maintenance' : 'storeVisit';
     scheduleTypeInput.value = activeScheduleType;
-    scheduleTypeField.style.display = 'none';
-    scheduleManagementTitle.textContent = activeScheduleType === 'maintenance'
-        ? 'Quản lý lịch bảo trì'
-        : 'Quản lý lịch đi cửa hàng';
+    const isMaintenance = activeScheduleType === 'maintenance';
+    scheduleTypeField.hidden = true;
+    scheduleTypeInput.disabled = true;
+    scheduleForm.dataset.scheduleType = activeScheduleType;
+    scheduleForm.querySelectorAll('[data-schedule-store-field]').forEach(field => {
+        field.hidden = isMaintenance;
+        field.querySelectorAll('input, textarea, select').forEach(control => {
+            control.disabled = isMaintenance;
+        });
+    });
+    scheduleForm.querySelectorAll('[data-schedule-maintenance-field]').forEach(field => {
+        field.hidden = !isMaintenance;
+        field.querySelectorAll('input, textarea, select').forEach(control => {
+            control.disabled = !isMaintenance;
+        });
+    });
+    maintenanceDashboard.hidden = !isMaintenance;
+    storeScheduleHead.hidden = isMaintenance;
+    maintenanceScheduleHead.hidden = !isMaintenance;
+    scheduleManagementTitle.textContent = isMaintenance ? 'Bảo trì' : 'Lịch đi cửa hàng';
+    scheduleListTitle.textContent = activeScheduleType === 'maintenance'
+        ? 'Danh sách bảo trì'
+        : 'Danh sách lịch đi cửa hàng';
+    scheduleAssigneeLabel.textContent = isMaintenance ? 'Người phụ trách' : 'Người thực hiện';
+    scheduleAssigneeInput.placeholder = isMaintenance ? 'Chọn người phụ trách' : 'Chọn người thực hiện';
+    openScheduleFormBtn.textContent = isMaintenance ? '＋ Tạo lịch bảo trì' : '＋ Thêm lịch';
+
+    const currentStatus = scheduleStatusInput.value;
+    const statuses = isMaintenance
+        ? [
+            ['Đã lên lịch', 'ĐÃ LÊN LỊCH'],
+            ['Đang bảo trì', 'ĐANG BẢO TRÌ'],
+            ['Hoàn thành', 'ĐÃ HOÀN TẤT'],
+            ['Cần chú ý', 'CẦN CHÚ Ý'],
+            ['Đã hủy', 'ĐÃ HỦY']
+        ]
+        : [
+            ['Chưa bắt đầu', 'CHƯA XỬ LÝ'],
+            ['Đang thực hiện', 'ĐANG XỬ LÝ'],
+            ['Chậm tiến độ', 'CHẬM TIẾN ĐỘ'],
+            ['Đã lên lịch', 'ĐÃ LÊN LỊCH'],
+            ['Hoàn thành', 'ĐÃ XỬ LÝ'],
+            ['Đã hủy', 'ĐÃ HỦY']
+        ];
+    scheduleStatusInput.replaceChildren(...statuses.map(([value, label]) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        return option;
+    }));
+    scheduleStatusInput.value = statuses.some(([value]) => value === currentStatus)
+        ? currentStatus
+        : statuses[0][0];
+}
+
+function getSafeScheduleUrl(value) {
+    if (typeof value !== 'string' || !value.trim()) return '';
+    try {
+        const url = new URL(value);
+        return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+    } catch {
+        return '';
+    }
 }
 
 function setScheduleFormMode(schedule = null) {
-    const selectedDateValue = scheduleDateInput.value || getTodayString();
+    const selectedDateValue = activeScheduleType === 'maintenance'
+        ? getTodayString()
+        : scheduleDateInput.value || getTodayString();
     if (!schedule) {
         editingScheduleId = null;
         editingScheduleDate = null;
         editingScheduleCreatedAt = null;
+        editingScheduleData = null;
         scheduleForm.reset();
         scheduleDateInput.value = selectedDateValue;
+        scheduleTimeInput.value = '07:00';
         scheduleTypeInput.value = activeScheduleType;
-        scheduleStatusInput.value = 'Chưa bắt đầu';
-        saveScheduleBtn.textContent = 'Thêm lịch';
-        cancelScheduleEditBtn.style.display = 'none';
+        maintenanceStartDateInput.value = selectedDateValue;
+        maintenanceEndDateInput.value = selectedDateValue;
+        maintenanceDueDateInput.value = '';
+        maintenanceContentInput.value = '';
+        maintenanceEquipmentInput.value = '';
+        maintenanceCycleInput.value = '';
+        maintenanceResultInput.value = '';
+        maintenanceNoteInput.value = '';
+        maintenanceEvidenceInput.value = '';
+        maintenanceEvidenceCurrent.textContent = '';
+        maintenanceLinkInput.value = '';
+        scheduleStatusInput.value = activeScheduleType === 'maintenance' ? 'Đã lên lịch' : 'Chưa bắt đầu';
+        saveScheduleBtn.textContent = 'Lưu lịch';
+        scheduleEditorTitle.textContent = activeScheduleType === 'maintenance' ? 'Tạo lịch bảo trì' : 'Thêm lịch';
         return;
     }
 
     editingScheduleId = schedule.id;
     editingScheduleDate = schedule.date;
     editingScheduleCreatedAt = schedule.createdAt || null;
+    editingScheduleData = schedule;
     scheduleDateInput.value = schedule.date;
+    scheduleTimeInput.value = schedule.time || '07:00';
     scheduleTypeInput.value = schedule.type === 'maintenance' ? 'maintenance' : 'storeVisit';
-    scheduleLocationInput.value = schedule.location || '';
+    scheduleLocationInput.value = schedule.content || schedule.location || '';
+    scheduleUnitInput.value = schedule.unit || schedule.location || '';
     scheduleAssigneeInput.value = schedule.assignee || '';
-    scheduleStatusInput.value = schedule.status || 'Chưa bắt đầu';
-    scheduleNoteInput.value = schedule.note || '';
-    saveScheduleBtn.textContent = 'Lưu thay đổi';
-    cancelScheduleEditBtn.style.display = 'inline-block';
+    if (activeScheduleType === 'maintenance') {
+        maintenanceStartDateInput.value = schedule.startDate || schedule.date;
+        maintenanceEndDateInput.value = schedule.endDate || schedule.date;
+        maintenanceDueDateInput.value = schedule.dueDate || '';
+        maintenanceContentInput.value = schedule.maintenanceContent || schedule.content || '';
+        maintenanceEquipmentInput.value = schedule.equipment || '';
+        maintenanceCycleInput.value = schedule.cycle || '';
+        maintenanceResultInput.value = schedule.result || '';
+        maintenanceNoteInput.value = schedule.note || '';
+        maintenanceEvidenceInput.value = '';
+        maintenanceEvidenceCurrent.textContent = schedule.evidenceName
+            ? `Tệp hiện tại: ${schedule.evidenceName}`
+            : (schedule.evidenceUrl ? 'Đã có bằng chứng đính kèm.' : '');
+        maintenanceLinkInput.value = schedule.link || '';
+    } else {
+        scheduleNoteInput.value = schedule.note || '';
+    }
+    const maintenanceStatusMap = {
+        'Chưa bắt đầu': 'Đã lên lịch',
+        'Đang thực hiện': 'Đang bảo trì'
+    };
+    scheduleStatusInput.value = activeScheduleType === 'maintenance'
+        ? maintenanceStatusMap[schedule.status] || schedule.status || 'Đã lên lịch'
+        : schedule.status || 'Chưa bắt đầu';
+    saveScheduleBtn.textContent = 'Lưu lịch';
+    scheduleEditorTitle.textContent = activeScheduleType === 'maintenance' ? 'Sửa lịch bảo trì' : 'Sửa lịch';
+}
+
+function openScheduleEditorModal() {
+    scheduleEditorModal.classList.add('show');
+    scheduleEditorModal.setAttribute('aria-hidden', 'false');
+    (activeScheduleType === 'maintenance' ? maintenanceContentInput : scheduleDateInput).focus();
 }
 
 async function loadScheduleList() {
     if (!scheduleDateInput || !scheduleList || !isAdmin()) return;
-    const date = scheduleDateInput.value;
     const requestUserId = getCurrentUserId();
+    const requestType = activeScheduleType;
     const requestToken = ++scheduleLoadToken;
     scheduleList.replaceChildren();
-    if (!isValidYmd(date)) {
-        const message = document.createElement('p');
-        message.className = 'schedule-empty';
-        message.textContent = 'Vui lòng chọn ngày hợp lệ.';
-        scheduleList.appendChild(message);
-        return;
-    }
-
-    const [year, month, day] = date.split('-');
+    if (scheduleCount) scheduleCount.textContent = 'Đang tải lịch...';
     try {
-        const snapshot = await get(scheduleRef(year, month, day));
-        if (requestToken !== scheduleLoadToken || date !== scheduleDateInput.value ||
+        const snapshot = await get(scheduleRef());
+        if (requestToken !== scheduleLoadToken || requestType !== activeScheduleType ||
             !isAdmin() || requestUserId !== getCurrentUserId()) return;
         const records = [];
         if (snapshot.exists()) {
-            snapshot.forEach(child => {
-                const schedule = child.val();
-                if (schedule && typeof schedule === 'object' && schedule.type === activeScheduleType) {
-                    records.push({ ...schedule, id: child.key, date });
-                }
+            snapshot.forEach(yearSnapshot => {
+                yearSnapshot.forEach(monthSnapshot => {
+                    monthSnapshot.forEach(daySnapshot => {
+                        const date = `${yearSnapshot.key}-${String(monthSnapshot.key).padStart(2, '0')}-${String(daySnapshot.key).padStart(2, '0')}`;
+                        if (!isValidYmd(date)) return;
+                        daySnapshot.forEach(scheduleSnapshot => {
+                            const schedule = scheduleSnapshot.val();
+                            if (schedule && typeof schedule === 'object' && schedule.type === requestType) {
+                                records.push({ ...schedule, id: scheduleSnapshot.key, date });
+                            }
+                        });
+                    });
+                });
             });
         }
-        records.sort((a, b) => Number(b.updatedAt || b.createdAt || 0) - Number(a.updatedAt || a.createdAt || 0));
+        records.sort((a, b) =>
+            a.date.localeCompare(b.date) ||
+            String(a.time || '07:00').localeCompare(String(b.time || '07:00')) ||
+            Number(a.createdAt || 0) - Number(b.createdAt || 0)
+        );
+        if (scheduleCount) {
+            scheduleCount.textContent = requestType === 'maintenance'
+                ? `Theo dõi lịch bảo trì thiết bị và hệ thống · ${records.length} hạng mục`
+                : `${records.length} lịch đang theo dõi`;
+        }
+        if (requestType === 'maintenance') {
+            const today = getTodayString();
+            const activeRecords = records.filter(schedule =>
+                !['Hoàn thành', 'Đã hủy'].includes(schedule.status)
+            );
+            maintenanceDueCount.textContent = String(activeRecords.filter(schedule =>
+                schedule.dueDate && schedule.dueDate <= today
+            ).length);
+            maintenanceCompletedCount.textContent = String(records.filter(schedule =>
+                schedule.status === 'Hoàn thành'
+            ).length);
+            maintenanceAttentionCount.textContent = String(activeRecords.filter(schedule =>
+                schedule.status === 'Cần chú ý' || (schedule.dueDate && schedule.dueDate < today)
+            ).length);
+        }
 
         if (records.length === 0) {
-            const message = document.createElement('p');
-            message.className = 'schedule-empty';
-            message.textContent = activeScheduleType === 'maintenance'
-                ? 'Chưa có lịch bảo trì trong ngày này.'
-                : 'Chưa có lịch đi cửa hàng trong ngày này.';
-            scheduleList.appendChild(message);
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+            cell.colSpan = requestType === 'maintenance' ? 13 : 8;
+            cell.className = 'schedule-empty';
+            cell.textContent = requestType === 'maintenance'
+                ? 'Chưa có lịch bảo trì.'
+                : 'Chưa có lịch đi cửa hàng.';
+            row.appendChild(cell);
+            scheduleList.appendChild(row);
             return;
         }
 
-        for (const schedule of records) {
-            const card = document.createElement('article');
-            card.className = 'schedule-card';
-
-            const title = document.createElement('strong');
-            title.className = 'schedule-card-title';
-            title.textContent = schedule.location || 'Chưa có địa điểm';
-            card.appendChild(title);
-
-            const details = document.createElement('p');
-            details.className = 'schedule-card-details';
-            details.textContent = `${schedule.assignee || 'Chưa có người phụ trách'} · ${schedule.status || 'Chưa bắt đầu'}`;
-            card.appendChild(details);
-
-            if (schedule.note) {
-                const note = document.createElement('p');
-                note.className = 'schedule-card-note';
-                note.textContent = schedule.note;
-                card.appendChild(note);
+        for (const [recordIndex, schedule] of records.entries()) {
+            const row = document.createElement('tr');
+            if (requestType === 'maintenance') {
+                const numberCell = document.createElement('td');
+                numberCell.textContent = String(recordIndex + 1);
+                const unitCell = document.createElement('td');
+                unitCell.textContent = schedule.unit || schedule.location || '—';
+                const startCell = document.createElement('td');
+                startCell.textContent = formatDisplayDate(schedule.startDate || schedule.date);
+                const endCell = document.createElement('td');
+                endCell.textContent = formatDisplayDate(schedule.endDate || schedule.date);
+                const assigneeCell = document.createElement('td');
+                assigneeCell.className = 'schedule-assignees';
+                String(schedule.assignee || '—').split(',').map(name => name.trim()).filter(Boolean).forEach(name => {
+                    const chip = document.createElement('span');
+                    chip.textContent = name;
+                    assigneeCell.appendChild(chip);
+                });
+                row.append(numberCell, unitCell, startCell, endCell, assigneeCell);
+            } else {
+                const dateCell = document.createElement('td');
+                dateCell.className = 'schedule-date-cell';
+                dateCell.textContent = formatDisplayDate(schedule.date).replace(/-/g, '/');
+                const timeCell = document.createElement('td');
+                timeCell.textContent = schedule.time || '07:00';
+                const contentCell = document.createElement('td');
+                contentCell.className = 'schedule-content-cell';
+                contentCell.textContent = schedule.content || '—';
+                const unitCell = document.createElement('td');
+                unitCell.textContent = schedule.unit || schedule.location || '—';
+                const assigneeCell = document.createElement('td');
+                assigneeCell.className = 'schedule-assignees';
+                String(schedule.assignee || 'Chưa có người phụ trách')
+                    .split(',')
+                    .map(name => name.trim())
+                    .filter(Boolean)
+                    .forEach(name => {
+                        const chip = document.createElement('span');
+                        chip.textContent = name;
+                        assigneeCell.appendChild(chip);
+                    });
+                row.append(dateCell, timeCell, contentCell, unitCell, assigneeCell);
             }
-
-            const actions = document.createElement('div');
-            actions.className = 'schedule-card-actions';
+            const statusCell = document.createElement('td');
+            const status = document.createElement('span');
+            const storeStatusLabels = {
+                'Chưa bắt đầu': 'CHƯA XỬ LÝ',
+                'Đã lên lịch': 'ĐÃ LÊN LỊCH',
+                'Đang thực hiện': 'ĐANG XỬ LÝ',
+                'Chậm tiến độ': 'CHẬM TIẾN ĐỘ',
+                'Đang bảo trì': 'ĐANG BẢO TRÌ',
+                'Hoàn thành': 'ĐÃ XỬ LÝ',
+                'Cần chú ý': 'CẦN CHÚ Ý',
+                'Đã hủy': 'ĐÃ HỦY'
+            };
+            const statusKey = ['Hoàn thành'].includes(schedule.status) ? 'done'
+                : ['Đang thực hiện', 'Đang bảo trì'].includes(schedule.status) ? 'active'
+                    : ['Cần chú ý', 'Chậm tiến độ'].includes(schedule.status) ? 'attention'
+                        : schedule.status === 'Đã hủy' ? 'cancelled' : 'pending';
+            const maintenanceStatusLabels = {
+                'Đã lên lịch': 'ĐÃ LÊN LỊCH',
+                'Đang bảo trì': 'ĐANG BẢO TRÌ',
+                'Hoàn thành': 'ĐÃ HOÀN TẤT',
+                'Cần chú ý': 'CẦN CHÚ Ý',
+                'Đã hủy': 'ĐÃ HỦY',
+                'Chưa bắt đầu': 'ĐÃ LÊN LỊCH',
+                'Đang thực hiện': 'ĐANG BẢO TRÌ'
+            };
+            status.className = `schedule-status schedule-status-${statusKey}`;
+            status.textContent = (requestType === 'maintenance' ? maintenanceStatusLabels : storeStatusLabels)[schedule.status] ||
+                (requestType === 'maintenance' ? 'ĐÃ LÊN LỊCH' : storeStatusLabels['Chưa bắt đầu']);
+            statusCell.appendChild(status);
+            row.appendChild(statusCell);
+            if (requestType === 'maintenance') {
+                const contentCell = document.createElement('td');
+                contentCell.className = 'schedule-content-cell';
+                contentCell.textContent = schedule.maintenanceContent || schedule.content || '—';
+                const equipmentCell = document.createElement('td');
+                equipmentCell.textContent = schedule.equipment || '—';
+                const cycleCell = document.createElement('td');
+                cycleCell.textContent = schedule.cycle || '—';
+                const resultCell = document.createElement('td');
+                resultCell.textContent = schedule.result || '—';
+                const noteCell = document.createElement('td');
+                noteCell.textContent = schedule.note || '—';
+                const evidenceCell = document.createElement('td');
+                const evidenceUrl = getSafeScheduleUrl(schedule.evidenceUrl);
+                if (evidenceUrl) {
+                    const evidenceLink = document.createElement('a');
+                    evidenceLink.href = evidenceUrl;
+                    evidenceLink.target = '_blank';
+                    evidenceLink.rel = 'noopener noreferrer';
+                    evidenceLink.textContent = schedule.evidenceName || 'Mở bằng chứng';
+                    evidenceLink.className = 'schedule-evidence-link';
+                    evidenceCell.appendChild(evidenceLink);
+                }
+                const externalLink = getSafeScheduleUrl(schedule.link);
+                if (externalLink) {
+                    const link = document.createElement('a');
+                    link.href = externalLink;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.textContent = evidenceUrl ? 'Mở liên kết' : schedule.link;
+                    link.className = 'schedule-evidence-link';
+                    evidenceCell.appendChild(link);
+                }
+                if (!evidenceCell.childNodes.length) evidenceCell.textContent = '—';
+                row.append(contentCell, equipmentCell, cycleCell, resultCell, noteCell, evidenceCell);
+            } else {
+                const noteCell = document.createElement('td');
+                noteCell.textContent = schedule.note || '—';
+                row.appendChild(noteCell);
+            }
+            const actions = document.createElement('td');
+            actions.className = 'schedule-table-actions';
             const editButton = document.createElement('button');
             editButton.type = 'button';
-            editButton.className = 'schedule-action-btn schedule-edit-btn';
-            editButton.textContent = 'Sửa';
-            editButton.setAttribute('aria-label', 'Sửa lịch');
+            editButton.className = 'schedule-action-btn schedule-copy-btn';
+            editButton.textContent = '▢';
+            editButton.title = 'Sao chép lịch';
+            editButton.setAttribute('aria-label', 'Sao chép lịch');
             editButton.onclick = async () => {
+                const summary = [
+                    requestType === 'maintenance'
+                        ? formatDisplayDate(schedule.startDate || schedule.date)
+                        : formatDisplayDate(schedule.date).replace(/-/g, '/'),
+                    requestType === 'maintenance' ? schedule.endDate || '' : schedule.time || '07:00',
+                    requestType === 'maintenance' ? schedule.maintenanceContent || schedule.content || '' : schedule.content || '',
+                    schedule.unit || schedule.location || '',
+                    schedule.assignee || '',
+                    schedule.status || 'Chưa bắt đầu',
+                    schedule.note || '',
+                    schedule.equipment || '',
+                    schedule.cycle || '',
+                    schedule.result || '',
+                    schedule.dueDate || '',
+                    schedule.link || ''
+                ].join('\t');
+                try {
+                    await navigator.clipboard.writeText(summary);
+                    await showCustomAlert('Đã sao chép thông tin lịch.');
+                } catch (error) {
+                    console.error('Lỗi sao chép lịch:', error);
+                    await showCustomAlert('Không thể sao chép lịch. Vui lòng kiểm tra quyền truy cập clipboard.');
+                }
+            };
+            const updateButton = document.createElement('button');
+            updateButton.type = 'button';
+            updateButton.className = 'schedule-action-btn schedule-edit-btn';
+            updateButton.textContent = '✎';
+            updateButton.title = 'Sửa lịch';
+            updateButton.setAttribute('aria-label', 'Sửa lịch');
+            updateButton.onclick = async () => {
                 if (!isAdmin()) { await showCustomAlert('Bạn không có quyền chỉnh sửa lịch.'); return; }
                 setScheduleFormMode(schedule);
+                openScheduleEditorModal();
             };
 
             const deleteButton = document.createElement('button');
             deleteButton.type = 'button';
             deleteButton.className = 'schedule-action-btn schedule-delete-btn';
-            deleteButton.textContent = 'Xóa';
+            deleteButton.textContent = '×';
+            deleteButton.title = 'Xóa lịch';
             deleteButton.setAttribute('aria-label', 'Xóa lịch');
             deleteButton.onclick = async () => {
                 if (!isAdmin()) { await showCustomAlert('Bạn không có quyền xóa lịch.'); return; }
@@ -2340,8 +2658,9 @@ async function loadScheduleList() {
                 deleteButton.disabled = true;
                 showLoading();
                 try {
+                    const [year, month, day] = schedule.date.split('-');
                     await remove(scheduleRef(year, month, day, schedule.id));
-                    if (editingScheduleId === schedule.id && editingScheduleDate === date) {
+                    if (editingScheduleId === schedule.id && editingScheduleDate === schedule.date) {
                         setScheduleFormMode();
                     }
                     await loadScheduleList();
@@ -2354,40 +2673,1091 @@ async function loadScheduleList() {
                     hideLoading();
                 }
             };
-            actions.append(editButton, deleteButton);
-            card.appendChild(actions);
-            scheduleList.appendChild(card);
+            actions.append(editButton, updateButton, deleteButton);
+            row.appendChild(actions);
+            scheduleList.appendChild(row);
         }
     } catch (e) {
-        if (requestToken !== scheduleLoadToken || !isAdmin() || requestUserId !== getCurrentUserId()) return;
+        if (requestToken !== scheduleLoadToken || requestType !== activeScheduleType ||
+            !isAdmin() || requestUserId !== getCurrentUserId()) return;
         console.error('Lỗi tải lịch cửa hàng/bảo trì:', e);
-        const message = document.createElement('p');
+        const row = document.createElement('tr');
+        const message = document.createElement('td');
+        message.colSpan = requestType === 'maintenance' ? 13 : 8;
         message.className = 'schedule-empty schedule-error';
         message.textContent = 'Không thể tải lịch. Vui lòng thử tải lại.';
-        scheduleList.appendChild(message);
+        row.appendChild(message);
+        scheduleList.appendChild(row);
+        if (scheduleCount) scheduleCount.textContent = 'Không thể tải danh sách lịch';
         await showCustomAlert(`Không thể tải lịch: ${e && e.message ? e.message : String(e)}`);
     }
 }
 
+let employeeRecords = [];
+let employeeTaskOptionsLoaded = false;
+let employeeRequesterOptions = [];
+let employeeAssigneeOptions = [];
+let employeeUnitOptions = [];
+const scheduleUnitExcludedOptions = new Set([
+    'ban hang',
+    'ban kiem soat',
+    'dich vu',
+    'ke toan',
+    'khac',
+    'kho tong',
+    'phu tung',
+    'quan ly head'
+]);
+let activeEmployeeAutocomplete = null;
+let employeeAutocompleteDismissalBound = false;
+let employeePage = 1;
+let employeesPerPage = 50;
+const expandedEmployeeDepartments = new Set();
+let initializedEmployeeDepartments = false;
+let employeeEditReturnFocus = null;
+
+function normalizeEmployeeText(value) {
+    return String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[đĐ]/g, character => character === 'Đ' ? 'D' : 'd')
+        .toLowerCase()
+        .trim();
+}
+
+function appendEmployeeSearchHighlights(element, value, query) {
+    const text = String(value ?? '');
+    const terms = normalizeEmployeeText(query).split(/\s+/).filter(Boolean);
+    if (!terms.length || !text) {
+        element.textContent = text;
+        return;
+    }
+
+    let normalizedText = '';
+    const sourcePositions = [];
+    for (let offset = 0; offset < text.length;) {
+        const character = String.fromCodePoint(text.codePointAt(offset));
+        const end = offset + character.length;
+        const normalizedCharacter = normalizeEmployeeText(character);
+        normalizedText += normalizedCharacter;
+        for (let index = 0; index < normalizedCharacter.length; index += 1) {
+            sourcePositions.push({ start: offset, end });
+        }
+        offset = end;
+    }
+
+    const matches = [];
+    terms.forEach(term => {
+        let matchIndex = normalizedText.indexOf(term);
+        while (matchIndex !== -1) {
+            const firstPosition = sourcePositions[matchIndex];
+            const lastPosition = sourcePositions[matchIndex + term.length - 1];
+            if (firstPosition && lastPosition) matches.push({ start: firstPosition.start, end: lastPosition.end });
+            matchIndex = normalizedText.indexOf(term, matchIndex + term.length);
+        }
+    });
+    matches.sort((first, second) => first.start - second.start || first.end - second.end);
+
+    let offset = 0;
+    matches.forEach(match => {
+        if (match.start < offset) {
+            offset = Math.max(offset, match.end);
+            return;
+        }
+        element.append(document.createTextNode(text.slice(offset, match.start)));
+        const highlighted = document.createElement('mark');
+        highlighted.className = 'employee-search-highlight';
+        highlighted.textContent = text.slice(match.start, match.end);
+        element.appendChild(highlighted);
+        offset = match.end;
+    });
+    element.append(document.createTextNode(text.slice(offset)));
+}
+
+function normalizeEmployeeDate(value) {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+    }
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+        const parsed = XLSX.SSF.parse_date_code(value);
+        if (parsed) return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
+    }
+    const valueString = String(value ?? '').trim();
+    if (!valueString) return '';
+    const normalized = normalizeDateString(valueString);
+    return normalized && isValidYmd(normalized) ? normalized : '';
+}
+
+function employeeDepartment(employee) {
+    return String(employee.department || 'Chưa phân loại').trim() || 'Chưa phân loại';
+}
+
+const employeeDepartmentOrder = [
+    'ban giam doc',
+    'phong cskh',
+    'phong it',
+    'phong kinh doanh',
+    'phong nhan su dao tao',
+    'phong tai chinh ke toan'
+];
+
+function compareEmployeeDepartments(first, second) {
+    const firstName = normalizeEmployeeText(first).replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    const secondName = normalizeEmployeeText(second).replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    const firstOrder = employeeDepartmentOrder.indexOf(firstName);
+    const secondOrder = employeeDepartmentOrder.indexOf(secondName);
+    const firstRank = firstOrder < 0 ? employeeDepartmentOrder.length : firstOrder;
+    const secondRank = secondOrder < 0 ? employeeDepartmentOrder.length : secondOrder;
+
+    return firstRank - secondRank || first.localeCompare(second, 'vi', { numeric: true });
+}
+
+async function loadEmployeeTaskOptions() {
+    if (employeeTaskOptionsLoaded) return;
+
+    try {
+        const snapshot = await get(employeesRef());
+        const requesterOptions = [];
+        const assigneeOptions = [];
+        const departments = new Map();
+        const locations = new Map();
+        if (snapshot.exists()) {
+            snapshot.forEach(child => {
+                const employee = child.val();
+                if (!employee || typeof employee !== 'object') return;
+                const code = String(employee.code || '').trim();
+                const name = String(employee.name || '').trim();
+                if (code && name) {
+                    const detailPosition = String(employee.positionDetail || '').trim();
+                    requesterOptions.push({
+                        value: `${code} _ ${name} _ ${detailPosition}`,
+                        code,
+                        name,
+                        detailPosition
+                    });
+                    const searchablePosition = normalizeEmployeeText([
+                        detailPosition,
+                        employee.position,
+                        employee.department
+                    ].join(' '));
+                    if (/(^|[^a-z0-9])(it|cntt)(?=$|[^a-z0-9])/.test(searchablePosition)) {
+                        assigneeOptions.push({
+                            value: `${code} _ ${name} _ ${detailPosition}`,
+                            code,
+                            name,
+                            detailPosition
+                        });
+                    }
+                }
+
+                const department = String(employee.department || '').trim();
+                const location = String(employee.location || '').trim();
+                if (department) departments.set(normalizeEmployeeText(department), department);
+                if (location) locations.set(normalizeEmployeeText(location), location);
+            });
+        }
+
+        requesterOptions.sort((first, second) => first.value.localeCompare(second.value, 'vi', { numeric: true }));
+        employeeRequesterOptions = requesterOptions;
+        assigneeOptions.sort((first, second) => first.value.localeCompare(second.value, 'vi', { numeric: true }));
+        employeeAssigneeOptions = assigneeOptions;
+        const orderedLocations = [...locations.values()].sort(compareEmployeeLocations);
+        departments.set('phong it', 'Phòng IT');
+        const orderedDepartments = [...departments.values()].sort(compareEmployeeDepartments);
+        const management = orderedDepartments.filter(value => normalizeEmployeeText(value) === 'ban giam doc');
+        const otherDepartments = orderedDepartments.filter(value => normalizeEmployeeText(value) !== 'ban giam doc');
+        employeeUnitOptions = [
+            ...management.map(value => ({ value, group: 'Ban Giám Đốc' })),
+            ...otherDepartments.map(value => ({ value, group: 'Phòng ban' })),
+            ...orderedLocations.map(value => ({ value, group: 'Đơn vị cửa hàng' }))
+        ];
+        employeeTaskOptionsLoaded = true;
+    } catch (error) {
+        console.error('Lỗi tải gợi ý đơn vị và nhân viên từ danh sách nhân viên:', error);
+        await showCustomAlert(`Không thể tải gợi ý đơn vị và nhân viên: ${error?.message || String(error)}`);
+    }
+}
+
+function closeEmployeeAutocomplete() {
+    if (!activeEmployeeAutocomplete) return;
+    activeEmployeeAutocomplete.input.setAttribute('aria-expanded', 'false');
+    activeEmployeeAutocomplete.input.removeAttribute('aria-activedescendant');
+    activeEmployeeAutocomplete.popup.remove();
+    activeEmployeeAutocomplete = null;
+}
+
+function getScheduleStoreUnitIdentity(value) {
+    return normalizeEmployeeText(value)
+        .replace(/[^\w\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/^[a-z]{1,3}\s*\d+\s+/, '')
+        .replace(/^head\s+/, '')
+        .replace(/^hong duc\s+/, '');
+}
+
+function isExcludedEmployeeUnit(value) {
+    return scheduleUnitExcludedOptions.has(getScheduleStoreUnitIdentity(value));
+}
+
+function positionEmployeeAutocomplete() {
+    if (!activeEmployeeAutocomplete) return;
+    const { input, popup } = activeEmployeeAutocomplete;
+    const rect = input.getBoundingClientRect();
+    const margin = 8;
+    const below = window.innerHeight - rect.bottom - margin;
+    const above = rect.top - margin;
+    const openAbove = below < 170 && above > below;
+    const availableHeight = Math.max(80, Math.min(300, openAbove ? above : below));
+    const width = Math.min(rect.width, window.innerWidth - margin * 2);
+
+    popup.style.width = `${width}px`;
+    popup.style.maxHeight = `${availableHeight}px`;
+    popup.style.left = `${Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin))}px`;
+    popup.style.top = `${openAbove ? Math.max(margin, rect.top - availableHeight - 6) : rect.bottom + 6}px`;
+}
+
+function renderEmployeeAutocomplete() {
+    if (!activeEmployeeAutocomplete) return;
+    const { input, popup, type } = activeEmployeeAutocomplete;
+    const isUnitField = type === 'unit' || type === 'scheduleUnit';
+    const isScheduleAssignee = type === 'scheduleAssignee';
+    const queryValue = isScheduleAssignee ? input.value.split(',').pop().trim() : input.value;
+    const query = normalizeEmployeeText(queryValue);
+    const source = isUnitField
+        ? employeeUnitOptions.filter(item => !isExcludedEmployeeUnit(item.value))
+        : type === 'assignee' || isScheduleAssignee
+            ? employeeAssigneeOptions
+            : employeeRequesterOptions;
+    const matches = source.filter(item => normalizeEmployeeText(item.value).includes(query)).slice(0, 40);
+    const visibleItems = [];
+    popup.replaceChildren();
+
+    if (!matches.length) {
+        const empty = document.createElement('div');
+        empty.className = 'employee-autocomplete-empty';
+        empty.textContent = query ? 'Không tìm thấy kết quả phù hợp' : 'Chưa có dữ liệu gợi ý';
+        popup.appendChild(empty);
+        positionEmployeeAutocomplete();
+        return;
+    }
+
+    let currentGroup = '';
+    matches.forEach(item => {
+        if (isUnitField && item.group !== currentGroup) {
+            currentGroup = item.group;
+            const heading = document.createElement('div');
+            heading.className = 'employee-autocomplete-group';
+            heading.textContent = currentGroup;
+            popup.appendChild(heading);
+        }
+
+        const option = document.createElement('button');
+        option.type = 'button';
+        const isPersonOption = !isUnitField;
+        option.className = `employee-autocomplete-option ${isPersonOption ? 'employee-autocomplete-requester' : 'employee-autocomplete-unit'}`;
+        option.setAttribute('role', 'option');
+        option.setAttribute('aria-selected', 'false');
+        option.id = `employee-autocomplete-option-${visibleItems.length}`;
+        if (isPersonOption) {
+            const code = document.createElement('span');
+            code.className = 'employee-autocomplete-code';
+            code.textContent = item.code;
+            const name = document.createElement('span');
+            name.className = 'employee-autocomplete-name';
+            name.textContent = item.name;
+            const detail = document.createElement('span');
+            detail.className = 'employee-autocomplete-detail';
+            detail.textContent = item.detailPosition || 'Chưa có chức danh chi tiết';
+            option.append(code, name, detail);
+            popup.appendChild(option);
+        } else {
+            option.textContent = item.value;
+            popup.appendChild(option);
+        }
+        visibleItems.push({ item, option });
+        option.addEventListener('mousedown', event => event.preventDefault());
+        option.addEventListener('click', () => {
+            if (isScheduleAssignee) {
+                const assignees = input.value.split(',');
+                assignees[assignees.length - 1] = item.value;
+                input.value = assignees.map(value => value.trim()).filter(Boolean).join(', ');
+            } else {
+                input.value = item.value;
+            }
+            closeEmployeeAutocomplete();
+            input.focus();
+        });
+    });
+
+    activeEmployeeAutocomplete.items = visibleItems;
+    activeEmployeeAutocomplete.activeIndex = -1;
+    input.removeAttribute('aria-activedescendant');
+    positionEmployeeAutocomplete();
+}
+
+async function openEmployeeAutocomplete(input, type) {
+    await loadEmployeeTaskOptions();
+    if (document.activeElement !== input) return;
+    closeEmployeeAutocomplete();
+
+    const popup = document.createElement('div');
+    popup.className = 'employee-autocomplete-list';
+    const popupIds = {
+        requester: 'employeeRequesterList',
+        assignee: 'employeeAssigneeList',
+        unit: 'employeeUnitList',
+        scheduleUnit: 'scheduleUnitEmployeeList',
+        scheduleAssignee: 'scheduleAssigneeEmployeeList'
+    };
+    popup.id = popupIds[type];
+    popup.setAttribute('role', 'listbox');
+    document.body.appendChild(popup);
+    input.setAttribute('aria-expanded', 'true');
+    activeEmployeeAutocomplete = { input, type, popup, items: [], activeIndex: -1 };
+    renderEmployeeAutocomplete();
+
+    if (!employeeAutocompleteDismissalBound) {
+        document.addEventListener('pointerdown', event => {
+            if (!activeEmployeeAutocomplete) return;
+            if (!activeEmployeeAutocomplete.popup.contains(event.target) && activeEmployeeAutocomplete.input !== event.target) {
+                closeEmployeeAutocomplete();
+            }
+        });
+        document.addEventListener('scroll', positionEmployeeAutocomplete, true);
+        window.addEventListener('resize', positionEmployeeAutocomplete);
+        employeeAutocompleteDismissalBound = true;
+    }
+}
+
+function setupEmployeeAutocomplete(input, type) {
+    input.addEventListener('focus', () => openEmployeeAutocomplete(input, type));
+    input.addEventListener('blur', () => {
+        if (activeEmployeeAutocomplete?.input === input) closeEmployeeAutocomplete();
+    });
+    input.addEventListener('input', () => {
+        if (activeEmployeeAutocomplete?.input === input) {
+            renderEmployeeAutocomplete();
+        } else {
+            openEmployeeAutocomplete(input, type);
+        }
+    });
+    input.addEventListener('keydown', event => {
+        if (!activeEmployeeAutocomplete || activeEmployeeAutocomplete.input !== input) return;
+        const { items } = activeEmployeeAutocomplete;
+        if (event.key === 'Escape') {
+            closeEmployeeAutocomplete();
+        } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            if (!items.length) return;
+            event.preventDefault();
+            const direction = event.key === 'ArrowDown' ? 1 : -1;
+            activeEmployeeAutocomplete.activeIndex = activeEmployeeAutocomplete.activeIndex < 0
+                ? (direction > 0 ? 0 : items.length - 1)
+                : (activeEmployeeAutocomplete.activeIndex + direction + items.length) % items.length;
+            items.forEach(({ option }, index) => {
+                const selected = index === activeEmployeeAutocomplete.activeIndex;
+                option.classList.toggle('is-active', selected);
+                option.setAttribute('aria-selected', String(selected));
+            });
+            input.setAttribute('aria-activedescendant', items[activeEmployeeAutocomplete.activeIndex].option.id);
+            items[activeEmployeeAutocomplete.activeIndex].option.scrollIntoView({ block: 'nearest' });
+        } else if (event.key === 'Enter' && activeEmployeeAutocomplete.activeIndex >= 0) {
+            event.preventDefault();
+            items[activeEmployeeAutocomplete.activeIndex].option.click();
+        }
+    });
+}
+
+function employeeLocation(employee) {
+    return String(employee.location || 'Chưa phân loại').trim() || 'Chưa phân loại';
+}
+
+const employeeLocationOrder = [
+    'mau than',
+    'nam can tho',
+    'vinh thanh',
+    'vi thuy',
+    'chau thanh',
+    'lo te',
+    'soc trang',
+    'haus'
+];
+
+function compareEmployeeLocations(first, second) {
+    const normalizeLocation = location => normalizeEmployeeText(location)
+        .replace(/[^\w\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/^[a-z]{1,3}\s*\d+\s+/, '');
+    const getLocationOrder = location => {
+        let normalized = normalizeLocation(location).replace(/^head\s+/, '');
+        if (normalized === 'vp cong ty') return { rank: 0, branch: 0 };
+
+        normalized = normalized.replace(/^hong duc\s+/, '');
+        const branchMatch = normalized.match(/^([0-9]+)$/);
+        if (branchMatch) return { rank: 1, branch: Number(branchMatch[1]) };
+
+        const locationIndex = employeeLocationOrder.indexOf(normalized);
+        return {
+            rank: locationIndex < 0 ? employeeLocationOrder.length + 2 : locationIndex + 2,
+            branch: 0
+        };
+    };
+    const firstOrder = getLocationOrder(first);
+    const secondOrder = getLocationOrder(second);
+
+    if (firstOrder.rank !== secondOrder.rank) return firstOrder.rank - secondOrder.rank;
+    if (firstOrder.rank === 1) return firstOrder.branch - secondOrder.branch;
+    return first.localeCompare(second, 'vi', { numeric: true });
+}
+
+function employeeComparator(a, b) {
+    return compareEmployeeLocations(employeeLocation(a), employeeLocation(b)) ||
+        employeeDepartment(a).localeCompare(employeeDepartment(b), 'vi') ||
+        String(a.code || '').localeCompare(String(b.code || ''), 'vi', { numeric: true }) ||
+        String(a.name || '').localeCompare(String(b.name || ''), 'vi');
+}
+
+function renderEmployeePagination(total, pageCount) {
+    employeePagination.replaceChildren();
+    const addPageButton = (label, page, disabled = false, current = false, ariaLabel = '') => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `employee-page-btn${current ? ' is-current' : ''}`;
+        button.textContent = label;
+        button.disabled = disabled;
+        if (ariaLabel) button.setAttribute('aria-label', ariaLabel);
+        if (current) button.setAttribute('aria-current', 'page');
+        button.addEventListener('click', () => {
+            employeePage = page;
+            renderEmployees();
+        });
+        employeePagination.appendChild(button);
+    };
+
+    const firstPage = Math.max(1, employeePage - 2);
+    const lastPage = Math.min(pageCount, firstPage + 4);
+    addPageButton('≪', 1, employeePage === 1, false, 'Trang đầu');
+    addPageButton('‹', Math.max(1, employeePage - 1), employeePage === 1, false, 'Trang trước');
+    for (let page = firstPage; page <= lastPage; page += 1) {
+        addPageButton(String(page), page, false, page === employeePage, `Trang ${page}`);
+    }
+    addPageButton('›', Math.min(pageCount, employeePage + 1), employeePage >= pageCount, false, 'Trang sau');
+    addPageButton('≫', pageCount, employeePage >= pageCount, false, 'Trang cuối');
+
+    const start = total ? (employeePage - 1) * employeesPerPage + 1 : 0;
+    const end = Math.min(employeePage * employeesPerPage, total);
+    employeePageSummary.replaceChildren();
+    const range = document.createElement('strong');
+    range.textContent = `${start}–${end}`;
+    employeePageSummary.append(range, document.createTextNode(` trên ${total} nhân viên`));
+}
+
+function renderEmployees() {
+    const query = normalizeEmployeeText(employeeSearch.value);
+    const selectedDepartment = employeeDepartmentFilter.value;
+    const filtered = employeeRecords
+        .filter(employee => !selectedDepartment || employeeDepartment(employee) === selectedDepartment)
+        .filter(employee => {
+            if (!query) return true;
+            return [
+                employee.code,
+                employee.name,
+                employee.location,
+                employee.attendanceId,
+                employee.position,
+                employee.positionDetail,
+                employee.phone,
+                employee.birthDate,
+                employee.gender,
+                employee.email,
+                employee.department,
+                employee.status
+            ].some(value => normalizeEmployeeText(value).includes(query));
+        })
+        .sort(employeeComparator);
+
+    const pageCount = Math.max(1, Math.ceil(filtered.length / employeesPerPage));
+    employeePage = Math.min(employeePage, pageCount);
+    const startIndex = (employeePage - 1) * employeesPerPage;
+    const pageRecords = filtered.slice(startIndex, startIndex + employeesPerPage);
+    const locations = new Map();
+    filtered.forEach(employee => {
+        const location = employeeLocation(employee);
+        const department = employeeDepartment(employee);
+        if (!locations.has(location)) locations.set(location, new Map());
+        const departments = locations.get(location);
+        if (!departments.has(department)) departments.set(department, []);
+        departments.get(department).push(employee);
+    });
+    const pageEmployeesByDepartment = new Map();
+    pageRecords.forEach(employee => {
+        const location = employeeLocation(employee);
+        const department = employeeDepartment(employee);
+        const departmentKey = `${location}\u0000${department}`;
+        if (!pageEmployeesByDepartment.has(departmentKey)) pageEmployeesByDepartment.set(departmentKey, []);
+        pageEmployeesByDepartment.get(departmentKey).push(employee);
+    });
+    if (query) {
+        locations.forEach((departments, location) => {
+            expandedEmployeeDepartments.add(`location:${location}`);
+            departments.forEach((_, department) => {
+                expandedEmployeeDepartments.add(`department:${location}\u0000${department}`);
+            });
+        });
+    }
+    if (!initializedEmployeeDepartments && locations.size) {
+        const [location, departments] = locations.entries().next().value;
+        expandedEmployeeDepartments.add(`location:${location}`);
+        if (departments.size) {
+            expandedEmployeeDepartments.add(`department:${location}\u0000${departments.keys().next().value}`);
+        }
+        initializedEmployeeDepartments = true;
+    }
+
+    employeeTableContainer.replaceChildren();
+    if (!pageRecords.length) {
+        const empty = document.createElement('p');
+        empty.className = 'employee-empty';
+        empty.textContent = employeeRecords.length
+            ? 'Không tìm thấy nhân viên phù hợp.'
+            : 'Chưa có dữ liệu nhân viên. Tải lên file Excel để bắt đầu.';
+        employeeTableContainer.appendChild(empty);
+    }
+
+    const createEmployeeTable = employees => {
+        const scroll = document.createElement('div');
+        scroll.className = 'employee-table-scroll';
+        const table = document.createElement('table');
+        table.className = 'employee-table';
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        ['Trạng thái', 'Mã', 'Họ và tên', 'ID chấm công', 'Chức danh', 'Điện thoại', 'Ngày sinh', 'Giới tính', 'Email', 'Thao tác'].forEach(label => {
+            const cell = document.createElement('th');
+            cell.textContent = label;
+            headerRow.appendChild(cell);
+        });
+        thead.appendChild(headerRow);
+        const tbody = document.createElement('tbody');
+
+        employees.forEach(employee => {
+            const row = document.createElement('tr');
+            const statusCell = document.createElement('td');
+            const status = document.createElement('span');
+            const isActive = !employee.status || normalizeEmployeeText(employee.status).includes('dang lam');
+            status.className = `employee-status${isActive ? ' employee-status-active' : ' employee-status-inactive'}`;
+            status.textContent = employee.status || 'Đang làm việc';
+            statusCell.appendChild(status);
+
+            const code = document.createElement('td');
+            code.className = 'employee-code';
+            code.textContent = employee.code || '—';
+            const name = document.createElement('td');
+            name.className = 'employee-name';
+            const nameStrong = document.createElement('strong');
+            appendEmployeeSearchHighlights(nameStrong, employee.name || '—', query);
+            name.appendChild(nameStrong);
+            const attendance = document.createElement('td');
+            attendance.textContent = employee.attendanceId || '—';
+            const position = document.createElement('td');
+            if (employee.position || employee.positionDetail) {
+                if (employee.position) {
+                    const positionName = document.createElement('strong');
+                    positionName.textContent = employee.position;
+                    position.appendChild(positionName);
+                }
+                if (employee.positionDetail) {
+                    const positionDetail = document.createElement('small');
+                    positionDetail.textContent = employee.positionDetail;
+                    position.appendChild(positionDetail);
+                }
+            } else {
+                position.textContent = '—';
+            }
+            const phone = document.createElement('td');
+            phone.textContent = employee.phone || '—';
+            const birthDate = document.createElement('td');
+            birthDate.textContent = employee.birthDate ? formatDisplayDate(employee.birthDate).replace(/-/g, '/') : '—';
+            const gender = document.createElement('td');
+            gender.textContent = employee.gender || '—';
+            const email = document.createElement('td');
+            email.textContent = employee.email || '—';
+            const actions = document.createElement('td');
+            actions.className = 'employee-actions';
+            const editButton = document.createElement('button');
+            editButton.type = 'button';
+            editButton.className = 'employee-action-btn';
+            editButton.textContent = '✎';
+            editButton.setAttribute('aria-label', `Sửa ${employee.name || employee.code}`);
+            editButton.addEventListener('click', () => openEmployeeEdit(employee, editButton));
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'employee-action-btn employee-delete-btn';
+            deleteButton.textContent = '×';
+            deleteButton.setAttribute('aria-label', `Xóa ${employee.name || employee.code}`);
+            deleteButton.addEventListener('click', () => deleteEmployee(employee));
+            actions.append(editButton, deleteButton);
+            row.append(statusCell, code, name, attendance, position, phone, birthDate, gender, email, actions);
+            tbody.appendChild(row);
+        });
+        table.append(thead, tbody);
+        scroll.appendChild(table);
+        return scroll;
+    };
+
+    locations.forEach((departments, location) => {
+        const locationKey = `location:${location}`;
+        const locationGroup = document.createElement('section');
+        locationGroup.className = 'employee-location-group';
+        const locationHeader = document.createElement('button');
+        locationHeader.type = 'button';
+        locationHeader.className = 'employee-department-heading employee-location-heading';
+        locationHeader.setAttribute('aria-expanded', String(expandedEmployeeDepartments.has(locationKey)));
+        const locationName = document.createElement('span');
+        locationName.className = 'employee-department-name';
+        locationName.textContent = `${expandedEmployeeDepartments.has(locationKey) ? '▾' : '▸'} ${location}`;
+        const locationCount = document.createElement('span');
+        locationCount.className = 'employee-department-count';
+        const totalInLocation = [...departments.values()].reduce((total, employees) => total + employees.length, 0);
+        locationCount.textContent = `${totalInLocation} nhân viên`;
+        locationHeader.append(locationName, locationCount);
+        locationHeader.addEventListener('click', () => {
+            if (expandedEmployeeDepartments.has(locationKey)) expandedEmployeeDepartments.delete(locationKey);
+            else {
+                expandedEmployeeDepartments.add(locationKey);
+                const firstMatchingEmployee = filtered.findIndex(employee => employeeLocation(employee) === location);
+                if (firstMatchingEmployee >= 0 &&
+                    (firstMatchingEmployee < startIndex || firstMatchingEmployee >= startIndex + employeesPerPage)) {
+                    employeePage = Math.floor(firstMatchingEmployee / employeesPerPage) + 1;
+                }
+            }
+            renderEmployees();
+        });
+        locationGroup.appendChild(locationHeader);
+
+        if (expandedEmployeeDepartments.has(locationKey)) {
+            departments.forEach((employees, department) => {
+                const departmentKey = `department:${location}\u0000${department}`;
+                const currentPageEmployees = pageEmployeesByDepartment.get(`${location}\u0000${department}`) || [];
+                const departmentGroup = document.createElement('section');
+                departmentGroup.className = 'employee-department-group';
+                const departmentHeader = document.createElement('button');
+                departmentHeader.type = 'button';
+                departmentHeader.className = 'employee-department-heading employee-subdepartment-heading';
+                departmentHeader.setAttribute('aria-expanded', String(expandedEmployeeDepartments.has(departmentKey)));
+                const departmentName = document.createElement('span');
+                departmentName.className = 'employee-department-name';
+                departmentName.textContent = `${expandedEmployeeDepartments.has(departmentKey) ? '▾' : '▸'} ${department}`;
+                const departmentCount = document.createElement('span');
+                departmentCount.className = 'employee-department-count';
+                departmentCount.textContent = `${employees.length} nhân viên`;
+                departmentHeader.append(departmentName, departmentCount);
+                departmentHeader.addEventListener('click', () => {
+                    if (expandedEmployeeDepartments.has(departmentKey)) expandedEmployeeDepartments.delete(departmentKey);
+                    else {
+                        expandedEmployeeDepartments.add(departmentKey);
+                        const firstMatchingEmployee = filtered.findIndex(employee =>
+                            employeeLocation(employee) === location && employeeDepartment(employee) === department
+                        );
+                        if (firstMatchingEmployee >= 0 &&
+                            (firstMatchingEmployee < startIndex || firstMatchingEmployee >= startIndex + employeesPerPage)) {
+                            employeePage = Math.floor(firstMatchingEmployee / employeesPerPage) + 1;
+                        }
+                    }
+                    renderEmployees();
+                });
+                departmentGroup.appendChild(departmentHeader);
+                if (expandedEmployeeDepartments.has(departmentKey)) {
+                    if (currentPageEmployees.length) {
+                        departmentGroup.appendChild(createEmployeeTable(currentPageEmployees));
+                    } else {
+                        const pageMessage = document.createElement('p');
+                        pageMessage.className = 'employee-empty employee-page-hint';
+                        pageMessage.textContent = 'Danh sách của đơn vị này nằm ở trang khác.';
+                        departmentGroup.appendChild(pageMessage);
+                    }
+                }
+                locationGroup.appendChild(departmentGroup);
+            });
+        }
+        employeeTableContainer.appendChild(locationGroup);
+    });
+
+    employeesCount.textContent = `${filtered.length} nhân viên`;
+    renderEmployeePagination(filtered.length, pageCount);
+}
+
+async function loadEmployees() {
+    if (!isAdmin()) return;
+    try {
+        const snapshot = await get(employeesRef());
+        employeeRecords = [];
+        if (snapshot.exists()) {
+            snapshot.forEach(child => {
+                const employee = child.val();
+                if (employee && typeof employee === 'object') {
+                    employeeRecords.push({ ...employee, key: child.key });
+                }
+            });
+        }
+        employeeRecords.sort(employeeComparator);
+        const departments = [...new Set(employeeRecords.map(employeeDepartment))]
+            .sort((a, b) => a.localeCompare(b, 'vi'));
+        const currentDepartment = employeeDepartmentFilter.value;
+        employeeDepartmentFilter.replaceChildren(new Option('Tên bộ phận hiện tại', ''));
+        departments.forEach(department => employeeDepartmentFilter.add(new Option(department, department)));
+        if (departments.includes(currentDepartment)) employeeDepartmentFilter.value = currentDepartment;
+        else employeeDepartmentFilter.value = '';
+        renderEmployees();
+    } catch (error) {
+        console.error('Lỗi tải danh sách nhân viên:', error);
+        employeesCount.textContent = 'Không thể tải danh sách nhân viên';
+        employeeTableContainer.replaceChildren();
+        const message = document.createElement('p');
+        message.className = 'employee-empty employee-error';
+        message.textContent = 'Không thể tải dữ liệu. Vui lòng thử tải lại.';
+        employeeTableContainer.appendChild(message);
+        await showCustomAlert(`Không thể tải danh sách nhân viên: ${error?.message || String(error)}`);
+    }
+}
+
+function openEmployeeEdit(employee, trigger) {
+    employeeEditReturnFocus = trigger;
+    document.getElementById('employeeEditKey').value = employee.key;
+    document.getElementById('employeeEditCode').value = employee.code || '';
+    document.getElementById('employeeEditName').value = employee.name || '';
+    document.getElementById('employeeEditLocation').value = employeeLocation(employee);
+    document.getElementById('employeeEditDepartment').value = employeeDepartment(employee);
+    document.getElementById('employeeEditAttendanceId').value = employee.attendanceId || '';
+    document.getElementById('employeeEditPosition').value = employee.position || '';
+    document.getElementById('employeeEditPositionDetail').value = employee.positionDetail || '';
+    document.getElementById('employeeEditPhone').value = employee.phone || '';
+    document.getElementById('employeeEditBirthDate').value = employee.birthDate || '';
+    document.getElementById('employeeEditGender').value = employee.gender || '';
+    document.getElementById('employeeEditEmail').value = employee.email || '';
+    document.getElementById('employeeEditStatus').value = employee.status || 'Đang làm việc';
+    employeeEditModal.classList.add('show');
+    employeeEditModal.setAttribute('aria-hidden', 'false');
+    document.getElementById('employeeEditCode').focus();
+}
+
+async function deleteEmployee(employee) {
+    if (!isAdmin()) {
+        await showCustomAlert('Bạn không có quyền xóa nhân viên.');
+        return;
+    }
+    if (!await showCustomConfirm('Bạn có chắc muốn xóa nhân viên này không?')) return;
+    showLoading();
+    try {
+        await remove(employeesRef(employee.key));
+        employeeRecords = employeeRecords.filter(record => record.key !== employee.key);
+        employeeTaskOptionsLoaded = false;
+        renderEmployees();
+    } catch (error) {
+        console.error('Lỗi xóa nhân viên:', error);
+        await showCustomAlert(`Không thể xóa nhân viên: ${error?.message || String(error)}`);
+    } finally {
+        hideLoading();
+    }
+}
+
+async function importEmployeesWorkbook(file) {
+    if (!isAdmin()) {
+        await showCustomAlert('Bạn không có quyền tải lên danh sách nhân viên.');
+        return;
+    }
+    showLoading();
+    uploadEmployeesBtn.disabled = true;
+    try {
+        const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        if (!worksheet) throw new Error('File Excel không có trang tính.');
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: true });
+        if (rows.length < 2) throw new Error('File không có dòng dữ liệu nhân viên.');
+
+        const aliases = {
+            code: ['ma', 'manv', 'manhanvien', 'employeeid', 'employeecode', 'code', 'maso'],
+            name: ['hovaten', 'tennhanvien', 'hoten', 'name', 'fullname', 'employeename'],
+            location: ['noilamviec', 'workplace', 'location'],
+            attendanceId: ['idchamcong', 'machamcong', 'attendanceid', 'attendancecode'],
+            position: ['chucdanh', 'chucvu', 'position', 'title'],
+            positionDetail: ['chucdanhchitiet', 'chucvuchitiet', 'positiondetail', 'detailedposition'],
+            phone: ['dienthoai', 'sodienthoai', 'phone', 'phonenumber', 'mobile'],
+            birthDate: ['ngaysinh', 'birthday', 'birthdate', 'dateofbirth'],
+            gender: ['gioitinh', 'gender', 'sex'],
+            email: ['email', 'emailcongty'],
+            department: ['donvi', 'phongban', 'donviphongban', 'tenbophanhientai', 'department', 'unit'],
+            status: ['trangthai', 'status', 'tinhtrang']
+        };
+        const headers = rows[0].map(normalizeEmployeeText).map(header => header.replace(/[^a-z0-9]/g, ''));
+        const columnIndexes = Object.fromEntries(Object.entries(aliases).map(([field, names]) => [
+            field,
+            headers.findIndex(header => names.includes(header))
+        ]));
+        if (columnIndexes.code < 0 || columnIndexes.name < 0) {
+            throw new Error('Không nhận diện được cột Mã nhân viên và Họ và tên trong dòng tiêu đề.');
+        }
+
+        const importedByCode = new Map();
+        let skipped = 0;
+        rows.slice(1).forEach(row => {
+            const getCell = field => {
+                const index = columnIndexes[field];
+                return index >= 0 ? row[index] : '';
+            };
+            const code = String(getCell('code') ?? '').trim();
+            const name = String(getCell('name') ?? '').trim();
+            if (!code || !name) {
+                if (row.some(value => String(value ?? '').trim())) skipped += 1;
+                return;
+            }
+            const birthDateValue = normalizeEmployeeDate(getCell('birthDate'));
+            const employee = {
+                code,
+                name,
+                location: String(getCell('location') ?? '').trim() || 'Chưa phân loại',
+                attendanceId: String(getCell('attendanceId') ?? '').trim(),
+                position: String(getCell('position') ?? '').trim(),
+                positionDetail: String(getCell('positionDetail') ?? '').trim(),
+                phone: String(getCell('phone') ?? '').trim(),
+                birthDate: birthDateValue,
+                gender: String(getCell('gender') ?? '').trim(),
+                email: String(getCell('email') ?? '').trim(),
+                department: String(getCell('department') ?? '').trim() || 'Chưa phân loại',
+                status: String(getCell('status') ?? '').trim() || 'Đang làm việc'
+            };
+            importedByCode.set(normalizeEmployeeText(code), employee);
+        });
+        if (!importedByCode.size) throw new Error('Không tìm thấy nhân viên hợp lệ để tải lên.');
+        if (importedByCode.size > 20000) throw new Error('Mỗi lần chỉ được tải lên tối đa 20.000 nhân viên.');
+
+        const snapshot = await get(employeesRef());
+        const existingKeysByCode = new Map();
+        if (snapshot.exists()) {
+            snapshot.forEach(child => {
+                const employee = child.val();
+                if (employee?.code) existingKeysByCode.set(normalizeEmployeeText(employee.code), child.key);
+            });
+        }
+        const updates = {};
+        let added = 0;
+        let updated = 0;
+        const now = Date.now();
+        importedByCode.forEach((employee, normalizedCode) => {
+            const existingKey = existingKeysByCode.get(normalizedCode);
+            const key = existingKey || push(employeesRef()).key;
+            if (!key) throw new Error(`Không thể tạo mã dữ liệu cho nhân viên ${employee.code}.`);
+            if (existingKey) {
+                updated += 1;
+                const existing = snapshot.child(existingKey).val() || {};
+                employee.createdAt = existing.createdAt || now;
+            } else {
+                added += 1;
+                employee.createdAt = now;
+            }
+            employee.updatedAt = now;
+            updates[`employees/${key}`] = employee;
+        });
+
+        await update(ref(db), updates);
+        employeeTaskOptionsLoaded = false;
+        employeePage = 1;
+        expandedEmployeeDepartments.clear();
+        initializedEmployeeDepartments = false;
+        await loadEmployees();
+        await showCustomAlert(`Đã tải lên ${added} nhân viên mới và cập nhật ${updated} nhân viên.${skipped ? ` Bỏ qua ${skipped} dòng thiếu mã hoặc họ tên.` : ''}`);
+    } catch (error) {
+        console.error('Lỗi tải file Excel nhân viên:', error);
+        await showCustomAlert(`Không thể tải file Excel: ${error?.message || String(error)}`);
+    } finally {
+        uploadEmployeesBtn.disabled = false;
+        hideLoading();
+        employeesFileInput.value = '';
+    }
+}
+
+function initializeEmployeeDirectory() {
+    employeeSearch.addEventListener('input', () => {
+        employeePage = 1;
+        renderEmployees();
+    });
+    employeeDepartmentFilter.addEventListener('change', () => {
+        employeePage = 1;
+        const selectedDepartment = employeeDepartmentFilter.value;
+        if (selectedDepartment) {
+            employeeRecords
+                .filter(employee => employeeDepartment(employee) === selectedDepartment)
+                .forEach(employee => {
+                    const location = employeeLocation(employee);
+                    expandedEmployeeDepartments.add(`location:${location}`);
+                    expandedEmployeeDepartments.add(`department:${location}\u0000${selectedDepartment}`);
+                });
+        }
+        renderEmployees();
+    });
+    employeePageSizeSelect.addEventListener('change', () => {
+        employeesPerPage = Number(employeePageSizeSelect.value);
+        employeePage = 1;
+        renderEmployees();
+    });
+    uploadEmployeesBtn.addEventListener('click', () => employeesFileInput.click());
+    employeesFileInput.addEventListener('change', () => {
+        const file = employeesFileInput.files[0];
+        if (file) importEmployeesWorkbook(file);
+    });
+    deleteAllEmployeesBtn.addEventListener('click', async () => {
+        if (!isAdmin()) {
+            await showCustomAlert('Bạn không có quyền xóa danh sách nhân viên.');
+            return;
+        }
+        if (!employeeRecords.length) {
+            await showCustomAlert('Danh sách nhân viên hiện đang trống.');
+            return;
+        }
+        const confirmed = await showCustomConfirm(`Xóa toàn bộ ${employeeRecords.length} nhân viên? Thao tác này không thể hoàn tác.`);
+        if (!confirmed) return;
+        showLoading();
+        deleteAllEmployeesBtn.disabled = true;
+        try {
+            await remove(employeesRef());
+            employeeRecords = [];
+            employeeTaskOptionsLoaded = false;
+            employeePage = 1;
+            expandedEmployeeDepartments.clear();
+            initializedEmployeeDepartments = false;
+            employeeSearch.value = '';
+            employeeDepartmentFilter.value = '';
+            employeeDepartmentFilter.replaceChildren(new Option('Tên bộ phận hiện tại', ''));
+            renderEmployees();
+        } catch (error) {
+            console.error('Lỗi xóa toàn bộ nhân viên:', error);
+            await showCustomAlert(`Không thể xóa danh sách nhân viên: ${error?.message || String(error)}`);
+        } finally {
+            deleteAllEmployeesBtn.disabled = false;
+            hideLoading();
+        }
+    });
+    employeesBackBtn.addEventListener('click', () => {
+        closeMenuDetailModal(document.getElementById('employeesModal'), false);
+        sideMenuPanel.classList.add('show');
+        syncMenuToggleVisibility();
+        const menuButton = sideMenuPanel.querySelector('[data-menu-modal="employeesModal"]');
+        if (menuButton) menuButton.focus();
+    });
+    employeeEditForm.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (!isAdmin()) {
+            await showCustomAlert('Bạn không có quyền chỉnh sửa nhân viên.');
+            return;
+        }
+        const key = document.getElementById('employeeEditKey').value;
+        const employee = {
+            code: document.getElementById('employeeEditCode').value.trim(),
+            name: document.getElementById('employeeEditName').value.trim(),
+            location: document.getElementById('employeeEditLocation').value.trim(),
+            department: document.getElementById('employeeEditDepartment').value.trim(),
+            attendanceId: document.getElementById('employeeEditAttendanceId').value.trim(),
+            position: document.getElementById('employeeEditPosition').value.trim(),
+            positionDetail: document.getElementById('employeeEditPositionDetail').value.trim(),
+            phone: document.getElementById('employeeEditPhone').value.trim(),
+            birthDate: document.getElementById('employeeEditBirthDate').value,
+            gender: document.getElementById('employeeEditGender').value,
+            email: document.getElementById('employeeEditEmail').value.trim(),
+            status: document.getElementById('employeeEditStatus').value
+        };
+        if (!employee.code || !employee.name || !employee.location || !employee.department) {
+            await showCustomAlert('Mã nhân viên, họ tên, nơi làm việc và bộ phận là bắt buộc.');
+            return;
+        }
+        const duplicate = employeeRecords.find(record =>
+            record.key !== key && normalizeEmployeeText(record.code) === normalizeEmployeeText(employee.code)
+        );
+        if (duplicate) {
+            await showCustomAlert(`Mã nhân viên ${employee.code} đã tồn tại.`);
+            return;
+        }
+
+        showLoading();
+        try {
+            const existing = employeeRecords.find(record => record.key === key);
+            employee.createdAt = existing?.createdAt || Date.now();
+            employee.updatedAt = Date.now();
+            await update(employeesRef(key), employee);
+            employeeTaskOptionsLoaded = false;
+            await loadEmployees();
+            closeMenuDetailModal(employeeEditModal, false);
+            await showCustomAlert('Đã cập nhật thông tin nhân viên.');
+        } catch (error) {
+            console.error('Lỗi cập nhật nhân viên:', error);
+            await showCustomAlert(`Không thể cập nhật nhân viên: ${error?.message || String(error)}`);
+        } finally {
+            hideLoading();
+        }
+    });
+    document.getElementById('cancelEmployeeEditBtn').addEventListener('click', () => {
+        closeMenuDetailModal(employeeEditModal, false);
+        if (employeeEditReturnFocus?.isConnected) employeeEditReturnFocus.focus();
+    });
+}
+
+initializeEmployeeDirectory();
+
 if (scheduleForm) {
     scheduleDateInput.value = getTodayString();
+    maintenanceStartDateInput.value = getTodayString();
+    maintenanceEndDateInput.value = getTodayString();
     scheduleForm.addEventListener('submit', async event => {
         event.preventDefault();
         if (!isAdmin()) { await showCustomAlert('Bạn không có quyền quản lý lịch.'); return; }
 
-        const date = scheduleDateInput.value;
-        const location = scheduleLocationInput.value.trim();
+        const isMaintenance = activeScheduleType === 'maintenance';
+        const date = isMaintenance ? maintenanceStartDateInput.value : scheduleDateInput.value;
+        const endDate = isMaintenance ? maintenanceEndDateInput.value : date;
+        const dueDate = isMaintenance ? maintenanceDueDateInput.value : '';
+        const time = isMaintenance ? '' : scheduleTimeInput.value;
+        const content = isMaintenance ? maintenanceContentInput.value.trim() : scheduleLocationInput.value.trim();
+        const equipment = isMaintenance ? maintenanceEquipmentInput.value.trim() : '';
+        const unit = scheduleUnitInput.value.trim();
         const assignee = scheduleAssigneeInput.value.trim();
         const type = scheduleTypeInput.value;
         const status = scheduleStatusInput.value;
-        if (!isValidYmd(date) || !location || !assignee) {
-            await showCustomAlert('Vui lòng nhập ngày hợp lệ, cửa hàng/địa điểm và người phụ trách.');
+        const selectedEvidence = isMaintenance ? maintenanceEvidenceInput.files[0] : null;
+        if (!isValidYmd(date) || !isValidYmd(endDate) || endDate < date ||
+            (dueDate && !isValidYmd(dueDate)) ||
+            (!isMaintenance && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) ||
+            !content || !unit || !assignee ||
+            (isMaintenance && !equipment)) {
+            await showCustomAlert(isMaintenance
+                ? 'Vui lòng nhập nội dung, thiết bị, đơn vị, người phụ trách và khoảng ngày hợp lệ.'
+                : 'Vui lòng nhập ngày, giờ hợp lệ, nội dung xử lý, đơn vị và người phụ trách.');
             return;
         }
-        if (type !== activeScheduleType ||
-            !['Chưa bắt đầu', 'Đang thực hiện', 'Hoàn thành', 'Đã hủy'].includes(status)) {
+        if (isMaintenance && (!maintenanceCycleInput.value ||
+            (dueDate && dueDate < date))) {
+            await showCustomAlert('Vui lòng chọn chu kỳ và ngày đến hạn hợp lệ.');
+            return;
+        }
+        const validStatuses = isMaintenance
+            ? ['Đã lên lịch', 'Đang bảo trì', 'Hoàn thành', 'Cần chú ý', 'Đã hủy']
+            : ['Chưa bắt đầu', 'Đang thực hiện', 'Chậm tiến độ', 'Đã lên lịch', 'Hoàn thành', 'Đã hủy'];
+        if (type !== activeScheduleType || !validStatuses.includes(status)) {
             await showCustomAlert('Loại lịch không khớp hoặc trạng thái không hợp lệ.');
             return;
+        }
+        if (selectedEvidence && selectedEvidence.size > 10 * 1024 * 1024) {
+            await showCustomAlert('Tệp bằng chứng không được vượt quá 10 MB.');
+            return;
+        }
+
+        const link = isMaintenance ? maintenanceLinkInput.value.trim() : '';
+        if (link) {
+            try {
+                const parsedLink = new URL(link);
+                if (!['http:', 'https:'].includes(parsedLink.protocol)) throw new Error('invalid protocol');
+            } catch (error) {
+                await showCustomAlert('Vui lòng nhập liên kết bắt đầu bằng http:// hoặc https://.');
+                return;
+            }
         }
 
         const [year, month, day] = date.split('-');
@@ -2395,14 +3765,30 @@ if (scheduleForm) {
         const isEditing = Boolean(editingScheduleId);
         const schedule = {
             date,
+            time,
             type,
-            location,
+            content,
+            unit,
+            location: isMaintenance ? unit : content,
             assignee,
             status,
-            note: scheduleNoteInput.value.trim(),
+            note: isMaintenance ? maintenanceNoteInput.value.trim() : scheduleNoteInput.value.trim(),
             createdAt: editingScheduleCreatedAt || now,
             updatedAt: now
         };
+        if (isMaintenance) {
+            schedule.startDate = date;
+            schedule.endDate = endDate;
+            schedule.dueDate = dueDate;
+            schedule.maintenanceContent = content;
+            schedule.equipment = equipment;
+            schedule.cycle = maintenanceCycleInput.value;
+            schedule.result = maintenanceResultInput.value.trim();
+            schedule.link = link;
+            schedule.evidenceUrl = editingScheduleData?.evidenceUrl || '';
+            schedule.evidenceName = editingScheduleData?.evidenceName || '';
+            schedule.evidencePath = editingScheduleData?.evidencePath || '';
+        }
 
         const scheduleControls = [
             ...Array.from(scheduleForm.elements),
@@ -2412,20 +3798,32 @@ if (scheduleForm) {
         scheduleControls.forEach(control => { control.disabled = true; });
         showLoading();
         try {
+            const scheduleId = editingScheduleId || push(scheduleRef(year, month, day)).key;
+            if (!scheduleId) throw new Error('Không thể tạo mã lịch.');
+            if (selectedEvidence) {
+                const evidencePath = `storeMaintenanceEvidence/${getCurrentUserId()}/${scheduleId}/${encodeURIComponent(selectedEvidence.name)}`;
+                const uploadedEvidence = await uploadBytes(firebaseStorageRef(storage, evidencePath), selectedEvidence, {
+                    contentType: selectedEvidence.type || 'application/octet-stream'
+                });
+                schedule.evidenceUrl = await getDownloadURL(uploadedEvidence.ref);
+                schedule.evidenceName = selectedEvidence.name;
+                schedule.evidencePath = evidencePath;
+            }
             if (editingScheduleId) {
                 const [oldYear, oldMonth, oldDay] = editingScheduleDate.split('-');
                 if (editingScheduleDate === date) {
-                    await update(scheduleRef(oldYear, oldMonth, oldDay, editingScheduleId), schedule);
+                    await update(scheduleRef(oldYear, oldMonth, oldDay, scheduleId), schedule);
                 } else {
                     await update(ref(db), {
-                        [`storeMaintenanceSchedules/${getCurrentUserId()}/${oldYear}/${oldMonth}/${oldDay}/${editingScheduleId}`]: null,
-                        [`storeMaintenanceSchedules/${getCurrentUserId()}/${year}/${month}/${day}/${editingScheduleId}`]: schedule
+                        [`storeMaintenanceSchedules/${getCurrentUserId()}/${oldYear}/${oldMonth}/${oldDay}/${scheduleId}`]: null,
+                        [`storeMaintenanceSchedules/${getCurrentUserId()}/${year}/${month}/${day}/${scheduleId}`]: schedule
                     });
                 }
             } else {
-                await push(scheduleRef(year, month, day), schedule);
+                await set(scheduleRef(year, month, day, scheduleId), schedule);
             }
             setScheduleFormMode();
+            closeMenuDetailModal(scheduleEditorModal, false);
             await loadScheduleList();
             await showCustomAlert(isEditing ? 'Đã cập nhật lịch thành công.' : 'Đã thêm lịch thành công.');
         } catch (e) {
@@ -2439,9 +3837,12 @@ if (scheduleForm) {
         }
     });
 
-    scheduleDateInput.addEventListener('change', loadScheduleList);
+    openScheduleFormBtn.onclick = () => {
+        setScheduleFormMode();
+        openScheduleEditorModal();
+    };
     refreshScheduleBtn.onclick = loadScheduleList;
-    cancelScheduleEditBtn.onclick = () => setScheduleFormMode();
+    cancelScheduleEditBtn.onclick = () => closeMenuDetailModal(scheduleEditorModal);
 }
 
 // conflict prevention wrappers
@@ -4048,8 +5449,37 @@ function closeMenuDetailModal(menuModal, restoreFocus = true) {
     if (!menuModal) return;
     menuModal.classList.remove('show');
     menuModal.setAttribute('aria-hidden', 'true');
+    if (menuModal.id === 'scheduleEditorModal') {
+        setScheduleFormMode();
+        if (restoreFocus && scheduleManagementModalIsOpen() && openScheduleFormBtn) {
+            openScheduleFormBtn.focus();
+            return;
+        }
+    }
+    if (menuModal.id === 'employeeEditModal' && restoreFocus && employeeEditReturnFocus?.isConnected) {
+        employeeEditReturnFocus.focus();
+        return;
+    }
     if (restoreFocus && menuToggleBtn && menuToggleBtn.style.display !== 'none') menuToggleBtn.focus();
 }
+
+function scheduleManagementModalIsOpen() {
+    const modal = document.getElementById('scheduleManagementModal');
+    return Boolean(modal && modal.classList.contains('show'));
+}
+
+document.querySelectorAll('.menu-category-toggle[aria-controls]').forEach(button => {
+    button.addEventListener('click', () => {
+        const submenu = document.getElementById(button.getAttribute('aria-controls'));
+        if (!submenu) {
+            console.error(`Không tìm thấy menu con: ${button.getAttribute('aria-controls')}`);
+            return;
+        }
+        const isExpanded = button.getAttribute('aria-expanded') === 'true';
+        button.setAttribute('aria-expanded', String(!isExpanded));
+        submenu.hidden = isExpanded;
+    });
+});
 
 document.querySelectorAll('.menu-category-btn[data-menu-modal]').forEach(button => {
     button.addEventListener('click', () => {
@@ -4062,7 +5492,12 @@ document.querySelectorAll('.menu-category-btn[data-menu-modal]').forEach(button 
         if (menuModal.id === 'scheduleManagementModal') {
             setScheduleTypeMode(button.dataset.scheduleType);
             setScheduleFormMode();
+            menuModal.dataset.scheduleType = button.dataset.scheduleType;
+        } else {
+            delete menuModal.dataset.scheduleType;
         }
+        const openMenuModal = menuDetailModals.find(modal => modal.classList.contains('show'));
+        if (openMenuModal) closeMenuDetailModal(openMenuModal, false);
         if (sideMenuPanel) sideMenuPanel.classList.remove('show');
         syncMenuToggleVisibility();
         menuModal.classList.add('show');
@@ -4070,6 +5505,26 @@ document.querySelectorAll('.menu-category-btn[data-menu-modal]').forEach(button 
         const closeButton = menuModal.querySelector('.menu-detail-close');
         if (closeButton) closeButton.focus();
         if (menuModal.id === 'scheduleManagementModal') loadScheduleList();
+        if (menuModal.id === 'employeesModal') loadEmployees();
+    });
+});
+
+document.querySelectorAll('.menu-detail-back[data-menu-parent]').forEach(button => {
+    button.addEventListener('click', () => {
+        const parentModal = document.getElementById(button.dataset.menuParent);
+        const childModal = button.closest('.menu-detail-modal');
+        if (!parentModal || !childModal) {
+            console.error('Không tìm thấy modal cha hoặc modal con để quay lại.');
+            return;
+        }
+        closeMenuDetailModal(childModal, false);
+        parentModal.classList.add('show');
+        parentModal.setAttribute('aria-hidden', 'false');
+        const parentOptions = Array.from(parentModal.querySelectorAll(`[data-menu-modal="${childModal.id}"]`));
+        const parentOption = parentOptions.find(option =>
+            !option.dataset.scheduleType || option.dataset.scheduleType === childModal.dataset.scheduleType
+        ) || parentOptions[0];
+        if (parentOption) parentOption.focus();
     });
 });
 
@@ -4108,7 +5563,9 @@ if (savedUser) {
 // Keyboard shortcut to close modals
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-        const openMenuModal = menuDetailModals.find(menuModal => menuModal.classList.contains('show'));
+        const openMenuModal = scheduleEditorModal.classList.contains('show')
+            ? scheduleEditorModal
+            : menuDetailModals.find(menuModal => menuModal.classList.contains('show'));
         if (openMenuModal) closeMenuDetailModal(openMenuModal);
         if (nbSelectModal && nbSelectModal.style.display === 'flex') {
             nbSelectModal.style.display = 'none';

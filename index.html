@@ -122,29 +122,24 @@
                         <span class="menu-category-text">1. Quản lý ngày NB / NL</span>
                         <span class="menu-category-arrow">›</span>
                     </button>
-                    <button type="button" class="menu-category-btn" data-menu-modal="scheduleManagementModal" data-schedule-type="storeVisit">
-                        <span class="menu-category-icon">🏬</span>
-                        <span class="menu-category-text">2. Lịch đi cửa hàng</span>
-                        <span class="menu-category-arrow">›</span>
-                    </button>
-                    <button type="button" class="menu-category-btn" data-menu-modal="scheduleManagementModal" data-schedule-type="maintenance">
-                        <span class="menu-category-icon">🛠️</span>
-                        <span class="menu-category-text">3. Lịch bảo trì</span>
+                    <button type="button" class="menu-category-btn" data-menu-modal="workScheduleModal">
+                        <span class="menu-category-icon">📅</span>
+                        <span class="menu-category-text">2. LỊCH CÔNG TÁC</span>
                         <span class="menu-category-arrow">›</span>
                     </button>
                     <button type="button" class="menu-category-btn" data-menu-modal="importExportModal">
                         <span class="menu-category-icon">📁</span>
-                        <span class="menu-category-text">4. Import / Export</span>
+                        <span class="menu-category-text">3. Import / Export</span>
                         <span class="menu-category-arrow">›</span>
                     </button>
-                    <button type="button" class="menu-category-btn" data-menu-modal="duplicateTaskModal">
-                        <span class="menu-category-icon">📑</span>
-                        <span class="menu-category-text">5. Nhân bản công việc</span>
+                    <button type="button" class="menu-category-btn" data-menu-modal="taskActionsModal">
+                        <span class="menu-category-icon">⚙️</span>
+                        <span class="menu-category-text">4. THAO TÁC CÔNG VIỆC</span>
                         <span class="menu-category-arrow">›</span>
                     </button>
-                    <button type="button" class="menu-category-btn" data-menu-modal="deleteTaskModal">
-                        <span class="menu-category-icon">🗑️</span>
-                        <span class="menu-category-text">6. Xóa công việc</span>
+                    <button type="button" class="menu-category-btn" data-menu-modal="employeesModal">
+                        <span class="menu-category-icon">👥</span>
+                        <span class="menu-category-text">5. NHÂN VIÊN</span>
                         <span class="menu-category-arrow">›</span>
                     </button>
                 </div>
@@ -154,70 +149,326 @@
                     <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
                     <h2 id="calendarManagementTitle">Quản lý ngày NB / NL</h2>
                     <div class="menu-detail-sections">
-                        <section class="menu-section">
-                            <h3 class="menu-section-title">Nghỉ bù (NB)</h3>
-                            <button id="selectNbDayBtn" class="btn-check-nb menu-btn">Lựa chọn ngày NB</button>
-                            <div>
-                                <label class="menu-form-label" for="manageNbDate">Chọn NB cần chỉnh:</label>
-                                <input type="date" id="manageNbDate" class="menu-form-input">
-                            </div>
-                            <button id="deleteNbBtn" class="btn-delete" style="width:100%; margin-top:8px;">🗑️ Xóa NB</button>
-                            <button id="changeNbBtn" class="btn-edit" style="width:100%; margin-top:4px;">🔄 Đổi ngày NB</button>
-                        </section>
-                        <section class="menu-section">
-                            <h3 class="menu-section-title">Nghỉ lễ (NL)</h3>
-                            <button id="selectNlDayBtn" class="btn-check-nl menu-btn">Lựa chọn ngày NL</button>
-                            <div>
-                                <label class="menu-form-label" for="manageNlDate">Chọn NL cần chỉnh:</label>
-                                <input type="date" id="manageNlDate" class="menu-form-input">
-                            </div>
-                            <button id="deleteNlBtn" class="btn-delete" style="width:100%; margin-top:8px;">🗑️ Xóa NL</button>
-                            <button id="changeNlBtn" class="btn-edit" style="width:100%; margin-top:4px;">🔄 Đổi ngày NL</button>
-                        </section>
+                        <button type="button" class="menu-category-btn" data-menu-modal="manageNbModal">
+                            <span class="menu-category-icon">🟠</span>
+                            <span class="menu-category-text">Nghỉ bù (NB)</span>
+                            <span class="menu-category-arrow">›</span>
+                        </button>
+                        <button type="button" class="menu-category-btn" data-menu-modal="manageNlModal">
+                            <span class="menu-category-icon">🔵</span>
+                            <span class="menu-category-text">Nghỉ lễ (NL)</span>
+                            <span class="menu-category-arrow">›</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="manageNbModal" class="modal menu-detail-modal" role="dialog" aria-modal="true" aria-labelledby="manageNbTitle" aria-hidden="true">
+                <div class="modal-content menu-detail-content">
+                    <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
+                    <h2 id="manageNbTitle">Nghỉ bù (NB)</h2>
+                    <button type="button" class="menu-detail-back" data-menu-parent="calendarManagementModal">‹ Quay lại</button>
+                    <section class="menu-section">
+                        <h3 class="menu-section-title">Nghỉ bù (NB)</h3>
+                        <button id="selectNbDayBtn" class="btn-check-nb menu-btn">Lựa chọn ngày NB</button>
+                        <div>
+                            <label class="menu-form-label" for="manageNbDate">Chọn NB cần chỉnh:</label>
+                            <input type="date" id="manageNbDate" class="menu-form-input">
+                        </div>
+                        <button id="deleteNbBtn" class="btn-delete" style="width:100%; margin-top:8px;">🗑️ Xóa NB</button>
+                        <button id="changeNbBtn" class="btn-edit" style="width:100%; margin-top:4px;">🔄 Đổi ngày NB</button>
+                    </section>
+                </div>
+            </div>
+            <div id="manageNlModal" class="modal menu-detail-modal" role="dialog" aria-modal="true" aria-labelledby="manageNlTitle" aria-hidden="true">
+                <div class="modal-content menu-detail-content">
+                    <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
+                    <h2 id="manageNlTitle">Nghỉ lễ (NL)</h2>
+                    <button type="button" class="menu-detail-back" data-menu-parent="calendarManagementModal">‹ Quay lại</button>
+                    <section class="menu-section">
+                        <h3 class="menu-section-title">Nghỉ lễ (NL)</h3>
+                        <button id="selectNlDayBtn" class="btn-check-nl menu-btn">Lựa chọn ngày NL</button>
+                        <div>
+                            <label class="menu-form-label" for="manageNlDate">Chọn NL cần chỉnh:</label>
+                            <input type="date" id="manageNlDate" class="menu-form-input">
+                        </div>
+                        <button id="deleteNlBtn" class="btn-delete" style="width:100%; margin-top:8px;">🗑️ Xóa NL</button>
+                        <button id="changeNlBtn" class="btn-edit" style="width:100%; margin-top:4px;">🔄 Đổi ngày NL</button>
+                    </section>
+                </div>
+            </div>
+            <div id="workScheduleModal" class="modal menu-detail-modal" role="dialog" aria-modal="true" aria-labelledby="workScheduleTitle" aria-hidden="true">
+                <div class="modal-content menu-detail-content">
+                    <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
+                    <h2 id="workScheduleTitle">Lịch công tác</h2>
+                    <div class="menu-detail-sections">
+                        <button type="button" class="menu-category-btn" data-menu-modal="scheduleManagementModal" data-schedule-type="storeVisit">
+                            <span class="menu-category-icon">🏬</span>
+                            <span class="menu-category-text">Lịch đi cửa hàng</span>
+                            <span class="menu-category-arrow">›</span>
+                        </button>
+                        <button type="button" class="menu-category-btn" data-menu-modal="scheduleManagementModal" data-schedule-type="maintenance">
+                            <span class="menu-category-icon">🛠️</span>
+                            <span class="menu-category-text">Lịch bảo trì</span>
+                            <span class="menu-category-arrow">›</span>
+                        </button>
                     </div>
                 </div>
             </div>
             <div id="scheduleManagementModal" class="modal menu-detail-modal" role="dialog" aria-modal="true" aria-labelledby="scheduleManagementTitle" aria-hidden="true">
-                <div class="modal-content menu-detail-content">
+                <div class="modal-content menu-detail-content schedule-management-content">
                     <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
-                    <h2 id="scheduleManagementTitle">Quản lý lịch đi cửa hàng</h2>
-                    <section class="menu-section" id="storeMaintenanceScheduleSection">
-                        <form id="scheduleForm" class="schedule-form">
-                            <label class="menu-form-label" for="scheduleDate">Ngày:</label>
-                            <input type="date" id="scheduleDate" class="menu-form-input" required>
-                            <div id="scheduleTypeField" class="schedule-type-field">
-                                <label class="menu-form-label" for="scheduleType">Loại lịch:</label>
-                                <select id="scheduleType" class="menu-form-input" required>
-                                <option value="storeVisit">Đi cửa hàng</option>
-                                <option value="maintenance">Bảo trì</option>
-                                </select>
-                            </div>
-                            <label class="menu-form-label" for="scheduleLocation">Cửa hàng / địa điểm:</label>
-                            <input type="text" id="scheduleLocation" class="menu-form-input" maxlength="150" required>
-                            <label class="menu-form-label" for="scheduleAssignee">Người phụ trách:</label>
-                            <input type="text" id="scheduleAssignee" class="menu-form-input" maxlength="120" required>
-                            <label class="menu-form-label" for="scheduleStatus">Trạng thái:</label>
-                            <select id="scheduleStatus" class="menu-form-input" required>
-                                <option value="Chưa bắt đầu">Chưa bắt đầu</option>
-                                <option value="Đang thực hiện">Đang thực hiện</option>
-                                <option value="Hoàn thành">Hoàn thành</option>
-                                <option value="Đã hủy">Đã hủy</option>
-                            </select>
-                            <label class="menu-form-label" for="scheduleNote">Ghi chú:</label>
-                            <textarea id="scheduleNote" class="menu-form-input schedule-note" rows="3" maxlength="1000"></textarea>
-                            <div class="schedule-form-actions">
-                                <button type="submit" id="saveScheduleBtn" class="btn-add">Thêm lịch</button>
-                                <button type="button" id="cancelScheduleEditBtn" class="btn-edit" style="display:none;">Hủy sửa</button>
-                            </div>
-                        </form>
+                    <button type="button" class="menu-detail-back" data-menu-parent="workScheduleModal">‹ Quay lại</button>
+                    <header class="schedule-page-header">
+                        <div>
+                            <h2 id="scheduleManagementTitle">Lịch đi cửa hàng</h2>
+                            <p id="scheduleCount" class="schedule-count">0 lịch đang theo dõi</p>
+                        </div>
+                        <button type="button" id="openScheduleFormBtn" class="schedule-add-btn">＋ Thêm lịch</button>
+                    </header>
+                    <section id="maintenanceDashboard" class="maintenance-dashboard" hidden aria-label="Tổng quan lịch bảo trì">
+                        <article class="maintenance-stat-card">
+                            <span>Đến hạn</span>
+                            <strong id="maintenanceDueCount">0</strong>
+                        </article>
+                        <article class="maintenance-stat-card">
+                            <span>Đã hoàn tất</span>
+                            <strong id="maintenanceCompletedCount">0</strong>
+                        </article>
+                        <article class="maintenance-stat-card">
+                            <span>Thiết bị cần chú ý</span>
+                            <strong id="maintenanceAttentionCount">0</strong>
+                        </article>
+                    </section>
+                    <section class="schedule-page" id="storeMaintenanceScheduleSection">
                         <div class="schedule-list-heading">
-                            <strong>Lịch trong ngày</strong>
+                            <strong id="scheduleListTitle">Danh sách lịch đi cửa hàng</strong>
                             <button type="button" id="refreshScheduleBtn" class="schedule-refresh-btn" aria-label="Tải lại lịch">↻</button>
                         </div>
-                        <div id="scheduleList" class="schedule-list" aria-live="polite">
-                            <p class="schedule-empty">Chọn ngày để xem lịch.</p>
+                        <div class="schedule-table-wrap">
+                            <table class="schedule-table">
+                                <thead id="storeScheduleHead">
+                                    <tr>
+                                        <th>Ngày</th>
+                                        <th>Giờ</th>
+                                        <th>Nội dung xử lý</th>
+                                        <th>Đơn vị</th>
+                                        <th>Người thực hiện</th>
+                                        <th>Trạng thái</th>
+                                        <th>Ghi chú</th>
+                                        <th aria-label="Thao tác"></th>
+                                    </tr>
+                                </thead>
+                                <thead id="maintenanceScheduleHead" hidden>
+                                    <tr>
+                                        <th>STT</th>
+                                        <th>Đơn vị / phòng ban</th>
+                                        <th>Từ ngày</th>
+                                        <th>Đến ngày</th>
+                                        <th>Người thực hiện</th>
+                                        <th>Trạng thái</th>
+                                        <th>Nội dung bảo trì</th>
+                                        <th>Đối tượng</th>
+                                        <th>Chu kỳ</th>
+                                        <th>Kết quả</th>
+                                        <th>Ghi chú</th>
+                                        <th>Bằng chứng / biên bản / liên kết</th>
+                                        <th aria-label="Thao tác"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="scheduleList" aria-live="polite">
+                                    <tr><td colspan="8" class="schedule-empty">Đang tải danh sách lịch...</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </section>
+                </div>
+            </div>
+            <div id="scheduleEditorModal" class="modal menu-detail-modal schedule-editor-modal" role="dialog" aria-modal="true" aria-labelledby="scheduleEditorTitle" aria-hidden="true">
+                <div class="modal-content schedule-editor-content">
+                    <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
+                    <h2 id="scheduleEditorTitle" class="schedule-editor-title">Thêm lịch</h2>
+                    <form id="scheduleForm" class="schedule-form schedule-editor">
+                        <div class="schedule-form-field" data-schedule-store-field>
+                            <label class="menu-form-label" for="scheduleDate">Ngày</label>
+                            <input type="date" id="scheduleDate" class="menu-form-input" required>
+                        </div>
+                        <div class="schedule-form-field" data-schedule-store-field>
+                            <label class="menu-form-label" for="scheduleTime">Giờ</label>
+                            <input type="time" id="scheduleTime" class="menu-form-input" value="07:00" required>
+                        </div>
+                        <div id="scheduleTypeField" class="schedule-type-field">
+                            <label class="menu-form-label" for="scheduleType">Loại lịch:</label>
+                            <select id="scheduleType" class="menu-form-input" required>
+                                <option value="storeVisit">Đi cửa hàng</option>
+                                <option value="maintenance">Bảo trì</option>
+                            </select>
+                        </div>
+                        <div class="schedule-form-field schedule-form-field-wide" data-schedule-store-field>
+                            <label class="menu-form-label" for="scheduleLocation">Nội dung xử lý</label>
+                            <textarea id="scheduleLocation" class="menu-form-input schedule-note" rows="3" maxlength="500" placeholder="Ví dụ: Xử lý Camera bị ngoại tuyến" required></textarea>
+                        </div>
+                        <div class="schedule-form-field schedule-form-field-wide" data-schedule-maintenance-field hidden>
+                            <label class="menu-form-label" for="maintenanceContent">Nội dung bảo trì</label>
+                            <input type="text" id="maintenanceContent" class="menu-form-input" maxlength="300" placeholder="Bảo trì định kỳ firewall / NVR / server" required>
+                        </div>
+                        <div class="schedule-form-field" data-schedule-maintenance-field hidden>
+                            <label class="menu-form-label" for="maintenanceEquipment">Thiết bị / hệ thống</label>
+                            <input type="text" id="maintenanceEquipment" class="menu-form-input" maxlength="200" placeholder="Firewall, NVR, Server..." required>
+                        </div>
+                        <div class="schedule-form-field schedule-form-field-wide">
+                            <label class="menu-form-label" id="scheduleUnitLabel" for="scheduleUnit">Đơn vị / cửa hàng</label>
+                            <div class="schedule-select-wrap">
+                                <input type="text" id="scheduleUnit" class="menu-form-input" maxlength="150" placeholder="Chọn đơn vị / cửa hàng" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="scheduleUnitEmployeeList" required>
+                            </div>
+                        </div>
+                        <div class="schedule-form-field schedule-form-field-wide">
+                            <label class="menu-form-label" id="scheduleAssigneeLabel" for="scheduleAssignee">Người thực hiện</label>
+                            <div class="schedule-select-wrap">
+                                <input type="text" id="scheduleAssignee" class="menu-form-input" maxlength="120" placeholder="Chọn người thực hiện" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="scheduleAssigneeEmployeeList" required>
+                            </div>
+                            <small class="schedule-field-hint">Nhập nhiều người, ngăn cách bằng dấu phẩy.</small>
+                        </div>
+                        <div class="schedule-form-field" data-schedule-maintenance-field hidden>
+                            <label class="menu-form-label" for="maintenanceStartDate">Từ ngày</label>
+                            <input type="date" id="maintenanceStartDate" class="menu-form-input" required>
+                        </div>
+                        <div class="schedule-form-field" data-schedule-maintenance-field hidden>
+                            <label class="menu-form-label" for="maintenanceEndDate">Đến ngày</label>
+                            <input type="date" id="maintenanceEndDate" class="menu-form-input" required>
+                        </div>
+                        <div class="schedule-form-field" data-schedule-maintenance-field hidden>
+                            <label class="menu-form-label" for="maintenanceDueDate">Ngày đến hạn</label>
+                            <input type="date" id="maintenanceDueDate" class="menu-form-input">
+                        </div>
+                        <div class="schedule-form-field" data-schedule-maintenance-field hidden>
+                            <label class="menu-form-label" for="maintenanceCycle">Chu kỳ</label>
+                            <select id="maintenanceCycle" class="menu-form-input" required>
+                                <option value="">Chọn một lựa chọn</option>
+                                <option>Hàng tuần</option>
+                                <option>Hàng tháng</option>
+                                <option>Hàng quý</option>
+                                <option>6 tháng</option>
+                                <option>Hàng năm</option>
+                                <option>Không định kỳ</option>
+                            </select>
+                        </div>
+                        <div class="schedule-form-field schedule-form-field-half">
+                            <label class="menu-form-label" for="scheduleStatus">Trạng thái</label>
+                            <select id="scheduleStatus" class="menu-form-input" required>
+                                <option value="Chưa bắt đầu">CHƯA XỬ LÝ</option>
+                                <option value="Đang thực hiện">ĐANG XỬ LÝ</option>
+                                <option value="Chậm tiến độ">CHẬM TIẾN ĐỘ</option>
+                                <option value="Đã lên lịch">ĐÃ LÊN LỊCH</option>
+                                <option value="Hoàn thành">ĐÃ XỬ LÝ</option>
+                                <option value="Cần chú ý">CẦN CHÚ Ý</option>
+                                <option value="Đã hủy">ĐÃ HỦY</option>
+                            </select>
+                        </div>
+                        <div class="schedule-form-field schedule-form-field-wide" data-schedule-store-field>
+                            <label class="menu-form-label" for="scheduleNote">Ghi chú</label>
+                            <textarea id="scheduleNote" class="menu-form-input schedule-note" rows="3" maxlength="1000" placeholder="Ghi chú thêm"></textarea>
+                        </div>
+                        <div class="schedule-form-field schedule-form-field-wide" data-schedule-maintenance-field hidden>
+                            <label class="menu-form-label" for="maintenanceResult">Kết quả bảo trì</label>
+                            <textarea id="maintenanceResult" class="menu-form-input schedule-note" rows="3" maxlength="2000" placeholder="Hạng mục đã thực hiện, kết quả, vấn đề phát hiện..."></textarea>
+                        </div>
+                        <div class="schedule-form-field schedule-form-field-wide" data-schedule-maintenance-field hidden>
+                            <label class="menu-form-label" for="maintenanceNote">Ghi chú</label>
+                            <textarea id="maintenanceNote" class="menu-form-input schedule-note" rows="3" maxlength="2000" placeholder="Ghi chú thêm về lịch, nội dung, hoặc phát sinh trong quá trình bảo trì..."></textarea>
+                        </div>
+                        <div class="schedule-form-field schedule-form-field-wide" data-schedule-maintenance-field hidden>
+                            <label class="menu-form-label" for="maintenanceEvidence">Bằng chứng / biên bản</label>
+                            <input type="file" id="maintenanceEvidence" class="menu-form-input">
+                            <span id="maintenanceEvidenceCurrent" class="schedule-field-hint"></span>
+                        </div>
+                        <div class="schedule-form-field schedule-form-field-wide" data-schedule-maintenance-field hidden>
+                            <label class="menu-form-label" for="maintenanceLink">Hoặc liên kết</label>
+                            <input type="url" id="maintenanceLink" class="menu-form-input" maxlength="1000" placeholder="https://...">
+                        </div>
+                        <div class="schedule-form-actions">
+                            <button type="button" id="cancelScheduleEditBtn" class="btn-edit">Hủy</button>
+                            <button type="submit" id="saveScheduleBtn" class="btn-add">Lưu lịch</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div id="employeesModal" class="modal menu-detail-modal employees-modal" role="dialog" aria-modal="true" aria-labelledby="employeesTitle" aria-hidden="true">
+                <div class="modal-content employees-content">
+                    <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
+                    <button type="button" class="menu-detail-back employees-back" id="employeesBackBtn">‹ Quay lại</button>
+                    <header class="employees-header">
+                        <div>
+                            <h2 id="employeesTitle">Danh sách nhân viên</h2>
+                            <p id="employeesCount" class="employees-count">Đang tải danh sách...</p>
+                        </div>
+                        <div class="employees-toolbar">
+                            <label class="employees-search">
+                                <span aria-hidden="true">⌕</span>
+                                <input style="margin: 0;" type="search" id="employeeSearch" placeholder="Tìm tên, mã NV, số điện thoại...">
+                            </label>
+                            <select id="employeeDepartmentFilter" aria-label="Lọc tên bộ phận hiện tại">
+                                <option value="">Tên bộ phận hiện tại</option>
+                            </select>
+                            <select id="employeePageSize" aria-label="Số nhân viên trên mỗi trang">
+                                <option value="50">Phân trang (50/trang)</option>
+                                <option value="100">Phân trang (100/trang)</option>
+                            </select>
+                            <button type="button" id="deleteAllEmployeesBtn" class="employees-tool-btn employees-delete-all">Xóa toàn bộ</button>
+                            <button type="button" id="uploadEmployeesBtn" class="employees-tool-btn employees-upload">↑ Tải lên Excel</button>
+                            <input type="file" id="employeesFile" accept=".xlsx,.xls,.csv" hidden>
+                        </div>
+                    </header>
+                    <div id="employeeTableContainer" class="employee-table-container" aria-live="polite"></div>
+                    <footer class="employees-pagination">
+                        <p id="employeePageSummary">0 nhân viên</p>
+                        <nav id="employeePagination" aria-label="Phân trang danh sách nhân viên"></nav>
+                    </footer>
+                </div>
+            </div>
+            <div id="employeeEditModal" class="modal menu-detail-modal employee-edit-modal" role="dialog" aria-modal="true" aria-labelledby="employeeEditTitle" aria-hidden="true">
+                <div class="modal-content employee-edit-content">
+                    <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
+                    <h2 id="employeeEditTitle">Chỉnh sửa nhân viên</h2>
+                    <form id="employeeEditForm" class="employee-edit-form">
+                        <input type="hidden" id="employeeEditKey">
+                        <label for="employeeEditCode">Mã nhân viên</label>
+                        <input id="employeeEditCode" required maxlength="60">
+                        <label for="employeeEditName">Họ và tên</label>
+                        <input id="employeeEditName" required maxlength="150">
+                        <label for="employeeEditLocation">Nơi làm việc</label>
+                        <input id="employeeEditLocation" required maxlength="150">
+                        <label for="employeeEditDepartment">Tên bộ phận hiện tại</label>
+                        <input id="employeeEditDepartment" required maxlength="150">
+                        <label for="employeeEditAttendanceId">ID chấm công</label>
+                        <input id="employeeEditAttendanceId" maxlength="60">
+                        <label for="employeeEditPosition">Chức danh</label>
+                        <input id="employeeEditPosition" maxlength="120">
+                        <label for="employeeEditPositionDetail">Chức danh chi tiết</label>
+                        <input id="employeeEditPositionDetail" maxlength="150">
+                        <label for="employeeEditPhone">Điện thoại</label>
+                        <input id="employeeEditPhone" type="tel" maxlength="40">
+                        <label for="employeeEditBirthDate">Ngày sinh</label>
+                        <input id="employeeEditBirthDate" type="date">
+                        <label for="employeeEditGender">Giới tính</label>
+                        <select id="employeeEditGender">
+                            <option value="">Chọn giới tính</option>
+                            <option>Nam</option>
+                            <option>Nữ</option>
+                            <option>Khác</option>
+                        </select>
+                        <label for="employeeEditEmail">Email</label>
+                        <input id="employeeEditEmail" type="email" maxlength="150">
+                        <label for="employeeEditStatus">Trạng thái</label>
+                        <select id="employeeEditStatus">
+                            <option>Đang làm việc</option>
+                            <option>Đã nghỉ việc</option>
+                            <option>Tạm nghỉ</option>
+                        </select>
+                        <div class="employee-edit-actions">
+                            <button type="button" id="cancelEmployeeEditBtn" class="employees-tool-btn">Hủy</button>
+                            <button type="submit" class="employees-tool-btn employees-upload">Lưu thay đổi</button>
+                        </div>
+                    </form>
                 </div>
             </div>
             <div id="importExportModal" class="modal menu-detail-modal" role="dialog" aria-modal="true" aria-labelledby="importExportTitle" aria-hidden="true">
@@ -225,65 +476,105 @@
                     <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
                     <h2 id="importExportTitle">Import / Export</h2>
                     <div class="menu-detail-sections">
-                        <section class="menu-section">
-                            <h3 class="menu-section-title">Xuất công việc</h3>
-                            <select id="exportType" class="menu-form-input">
-                                <option value="day">Ngày</option>
-                                <option value="week">Tuần</option>
-                                <option value="month">Tháng</option>
-                                <option value="range">Khoảng</option>
-                            </select>
-                            <div id="exportWeek" class="menu-conditional-field">
-                                <label class="menu-form-label" for="exportWeekSelect">Chọn tuần:</label>
-                                <select id="exportWeekSelect" class="menu-form-input" style="margin-bottom:10px;"></select>
-                            </div>
-                            <div id="exportMonth" class="menu-conditional-field">
-                                <label class="menu-form-label" for="exportMonthPicker">Chọn tháng:</label>
-                                <input type="month" id="exportMonthPicker" class="menu-form-input">
-                            </div>
-                            <div id="exportRange" class="menu-conditional-field">
-                                <label class="menu-form-label" for="exportRangeStart">Từ ngày:</label>
-                                <input type="date" id="exportRangeStart" class="menu-form-input" style="margin-bottom:8px;">
-                                <label class="menu-form-label" for="exportRangeEnd">Đến ngày:</label>
-                                <input type="date" id="exportRangeEnd" class="menu-form-input">
-                            </div>
-                            <button id="exportConfirmBtn" class="btn-add" style="width:100%; margin-top:8px; background:#28a745;">📄 Xuất</button>
-                        </section>
-                        <section class="menu-section">
-                            <h3 class="menu-section-title">Nhập công việc</h3>
-                            <label class="menu-form-label" for="importType">Loại import:</label>
-                            <select id="importType" class="menu-form-input" style="margin-bottom:8px;">
-                                <option value="auto">Tự động (theo sheet/Ngày)</option>
-                                <option value="week">Tuần</option>
-                                <option value="month">Tháng</option>
-                                <option value="range">Khoảng</option>
-                            </select>
-                            <div id="importWeek" class="menu-conditional-field">
-                                <label class="menu-form-label" for="importWeekSelect">Chọn tuần:</label>
-                                <select id="importWeekSelect" class="menu-form-input"></select>
-                            </div>
-                            <div id="importMonth" class="menu-conditional-field">
-                                <label class="menu-form-label" for="importMonthPicker">Chọn tháng:</label>
-                                <input type="month" id="importMonthPicker" class="menu-form-input">
-                            </div>
-                            <div id="importRange" class="menu-conditional-field">
-                                <label class="menu-form-label" for="importRangeStart">Từ ngày:</label>
-                                <input type="date" id="importRangeStart" class="menu-form-input" style="margin-bottom:8px;">
-                                <label class="menu-form-label" for="importRangeEnd">Đến ngày:</label>
-                                <input type="date" id="importRangeEnd" class="menu-form-input">
-                            </div>
-                            <label class="menu-form-label" for="importFile">Chọn file .xlsx (cấu trúc giống file xuất):</label>
-                            <input type="file" id="importFile" accept=".xlsx" class="menu-form-input" style="margin-bottom:8px;">
-                            <div class="schedule-form-actions">
-                                <button id="importConfirmBtn" class="btn-add" style="flex:1; background:#007bff;">📥 Nhập</button>
-                                <button id="importPreviewBtn" class="btn-edit" style="flex:1; background:#6c757d;">🔎 Xem trước</button>
-                            </div>
-                            <small class="menu-help-text">
-                                Hỗ trợ file nhiều sheet (mỗi sheet là 1 ngày, sheet name có thể chỉ chứa số ngày) hoặc một sheet có cột “Ngày”. Với
-                                <strong>Tuần/Tháng</strong>, dòng thiếu ngày được gán ngày bắt đầu; với
-                                <strong>Khoảng</strong>, chỉ nhập dòng có ngày hợp lệ trong khoảng đã chọn.
-                            </small>
-                        </section>
+                        <button type="button" class="menu-category-btn" data-menu-modal="exportTasksModal">
+                            <span class="menu-category-icon">📤</span>
+                            <span class="menu-category-text">Xuất công việc</span>
+                            <span class="menu-category-arrow">›</span>
+                        </button>
+                        <button type="button" class="menu-category-btn" data-menu-modal="importTasksModal">
+                            <span class="menu-category-icon">📥</span>
+                            <span class="menu-category-text">Nhập công việc</span>
+                            <span class="menu-category-arrow">›</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="exportTasksModal" class="modal menu-detail-modal" role="dialog" aria-modal="true" aria-labelledby="exportTasksTitle" aria-hidden="true">
+                <div class="modal-content menu-detail-content">
+                    <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
+                    <h2 id="exportTasksTitle">Xuất công việc</h2>
+                    <button type="button" class="menu-detail-back" data-menu-parent="importExportModal">‹ Quay lại</button>
+                    <section class="menu-section">
+                        <select id="exportType" class="menu-form-input">
+                            <option value="day">Ngày</option>
+                            <option value="week">Tuần</option>
+                            <option value="month">Tháng</option>
+                            <option value="range">Khoảng</option>
+                        </select>
+                        <div id="exportWeek" class="menu-conditional-field">
+                            <label class="menu-form-label" for="exportWeekSelect">Chọn tuần:</label>
+                            <select id="exportWeekSelect" class="menu-form-input" style="margin-bottom:10px;"></select>
+                        </div>
+                        <div id="exportMonth" class="menu-conditional-field">
+                            <label class="menu-form-label" for="exportMonthPicker">Chọn tháng:</label>
+                            <input type="month" id="exportMonthPicker" class="menu-form-input">
+                        </div>
+                        <div id="exportRange" class="menu-conditional-field">
+                            <label class="menu-form-label" for="exportRangeStart">Từ ngày:</label>
+                            <input type="date" id="exportRangeStart" class="menu-form-input" style="margin-bottom:8px;">
+                            <label class="menu-form-label" for="exportRangeEnd">Đến ngày:</label>
+                            <input type="date" id="exportRangeEnd" class="menu-form-input">
+                        </div>
+                        <button id="exportConfirmBtn" class="btn-add" style="width:100%; margin-top:8px; background:#28a745;">📄 Xuất</button>
+                    </section>
+                </div>
+            </div>
+            <div id="importTasksModal" class="modal menu-detail-modal" role="dialog" aria-modal="true" aria-labelledby="importTasksTitle" aria-hidden="true">
+                <div class="modal-content menu-detail-content">
+                    <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
+                    <h2 id="importTasksTitle">Nhập công việc</h2>
+                    <button type="button" class="menu-detail-back" data-menu-parent="importExportModal">‹ Quay lại</button>
+                    <section class="menu-section">
+                        <label class="menu-form-label" for="importType">Loại import:</label>
+                        <select id="importType" class="menu-form-input" style="margin-bottom:8px;">
+                            <option value="auto">Tự động (theo sheet/Ngày)</option>
+                            <option value="week">Tuần</option>
+                            <option value="month">Tháng</option>
+                            <option value="range">Khoảng</option>
+                        </select>
+                        <div id="importWeek" class="menu-conditional-field">
+                            <label class="menu-form-label" for="importWeekSelect">Chọn tuần:</label>
+                            <select id="importWeekSelect" class="menu-form-input"></select>
+                        </div>
+                        <div id="importMonth" class="menu-conditional-field">
+                            <label class="menu-form-label" for="importMonthPicker">Chọn tháng:</label>
+                            <input type="month" id="importMonthPicker" class="menu-form-input">
+                        </div>
+                        <div id="importRange" class="menu-conditional-field">
+                            <label class="menu-form-label" for="importRangeStart">Từ ngày:</label>
+                            <input type="date" id="importRangeStart" class="menu-form-input" style="margin-bottom:8px;">
+                            <label class="menu-form-label" for="importRangeEnd">Đến ngày:</label>
+                            <input type="date" id="importRangeEnd" class="menu-form-input">
+                        </div>
+                        <label class="menu-form-label" for="importFile">Chọn file .xlsx (cấu trúc giống file xuất):</label>
+                        <input type="file" id="importFile" accept=".xlsx" class="menu-form-input" style="margin-bottom:8px;">
+                        <div class="schedule-form-actions">
+                            <button id="importConfirmBtn" class="btn-add" style="flex:1; background:#007bff;">📥 Nhập</button>
+                            <button id="importPreviewBtn" class="btn-edit" style="flex:1; background:#6c757d;">🔎 Xem trước</button>
+                        </div>
+                        <small class="menu-help-text">
+                            Hỗ trợ file nhiều sheet (mỗi sheet là 1 ngày, sheet name có thể chỉ chứa số ngày) hoặc một sheet có cột “Ngày”. Với
+                            <strong>Tuần/Tháng</strong>, dòng thiếu ngày được gán ngày bắt đầu; với
+                            <strong>Khoảng</strong>, chỉ nhập dòng có ngày hợp lệ trong khoảng đã chọn.
+                        </small>
+                    </section>
+                </div>
+            </div>
+            <div id="taskActionsModal" class="modal menu-detail-modal" role="dialog" aria-modal="true" aria-labelledby="taskActionsTitle" aria-hidden="true">
+                <div class="modal-content menu-detail-content">
+                    <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
+                    <h2 id="taskActionsTitle">Thao tác công việc</h2>
+                    <div class="menu-detail-sections">
+                        <button type="button" class="menu-category-btn" data-menu-modal="duplicateTaskModal">
+                            <span class="menu-category-icon">📑</span>
+                            <span class="menu-category-text">Nhân bản công việc</span>
+                            <span class="menu-category-arrow">›</span>
+                        </button>
+                        <button type="button" class="menu-category-btn" data-menu-modal="deleteTaskModal">
+                            <span class="menu-category-icon">🗑️</span>
+                            <span class="menu-category-text">Xóa công việc</span>
+                            <span class="menu-category-arrow">›</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -291,6 +582,7 @@
                 <div class="modal-content menu-detail-content task-management-content">
                     <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
                     <h2 id="duplicateTaskTitle">Nhân bản công việc</h2>
+                    <button type="button" class="menu-detail-back" data-menu-parent="taskActionsModal">‹ Quay lại</button>
                     <section class="menu-section">
                         <h3 class="menu-section-title">Chọn ngày để nhân bản</h3>
                         <button id="duplicateDayBtn" class="btn-duplicate-day menu-btn">Nhân bản công việc</button>
@@ -301,6 +593,7 @@
                 <div class="modal-content menu-detail-content task-management-content">
                     <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
                     <h2 id="deleteTaskTitle">Xóa công việc</h2>
+                    <button type="button" class="menu-detail-back" data-menu-parent="taskActionsModal">‹ Quay lại</button>
                     <section class="menu-section">
                         <h3 class="menu-section-title">Chọn phạm vi cần xóa</h3>
                         <select id="deleteSelectMain" class="menu-form-input">
@@ -441,37 +734,58 @@
             </div>
             <!-- Modal thêm / sửa công việc -->
             <div id="taskModal" class="modal">
-                <div class="modal-content">
-                    <span class="close">&times;</span>
-                    <h2 id="modalTitle">Thêm công việc</h2>
+                <div class="modal-content task-modal-content">
+                    <span class="close" aria-label="Đóng">&times;</span>
+                    <h2 id="modalTitle" class="task-modal-title">Thêm công việc</h2>
                     <input type="hidden" id="taskId">
-                    <label>Công việc</label>
-                    <textarea id="content"></textarea>
-                    <label>Mô tả</label>
-                    <textarea id="description"></textarea>
-                    <label>Người yêu cầu</label>
-                    <input type="text" id="requester">
-                    <label>Đơn vị thực hiện</label>
-                    <input type="text" id="unit">
-                    <label>Phụ trách</label>
-                    <input type="text" id="assignee">
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div>
-                            <label>Ngày bắt đầu</label>
+                    <div class="task-form-grid">
+                        <div class="task-form-field task-form-field-wide">
+                            <label for="content">Công việc</label>
+                            <textarea id="content"></textarea>
+                        </div>
+                        <div class="task-form-field task-form-field-wide">
+                            <label for="description">Mô tả</label>
+                            <textarea id="description"></textarea>
+                        </div>
+                        <div class="task-form-field task-form-field-wide">
+                            <label for="requester">Người yêu cầu</label>
+                            <div class="employee-autocomplete-field">
+                                <input type="text" id="requester" autocomplete="off" role="combobox"
+                                    aria-autocomplete="list" aria-expanded="false" aria-controls="employeeRequesterList">
+                            </div>
+                        </div>
+                        <div class="task-form-field task-form-field-wide">
+                            <label for="unit">Đơn vị thực hiện</label>
+                            <div class="employee-autocomplete-field">
+                                <input type="text" id="unit" autocomplete="off" role="combobox"
+                                    aria-autocomplete="list" aria-expanded="false" aria-controls="employeeUnitList">
+                            </div>
+                        </div>
+                        <div class="task-form-field task-form-field-wide">
+                            <label for="assignee">Phụ trách</label>
+                            <div class="employee-autocomplete-field">
+                                <input type="text" id="assignee" autocomplete="off" role="combobox"
+                                    aria-autocomplete="list" aria-expanded="false" aria-controls="employeeAssigneeList">
+                            </div>
+                        </div>
+                        <div class="task-form-field">
+                            <label for="taskStartDate">Ngày bắt đầu</label>
                             <input type="date" id="taskStartDate">
                         </div>
-                        <div>
-                            <label>Ngày kết thúc</label>
+                        <div class="task-form-field">
+                            <label for="taskEndDate">Ngày kết thúc</label>
                             <input type="date" id="taskEndDate">
                         </div>
-                    </div>
-                    <label>Kết quả</label>
-                    <input type="text" id="result">
-                    <label>Hướng xử lý</label>
-                    <textarea id="direction"></textarea>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items:flex-end;">
-                        <div>
-                            <label>Trạng thái</label>
+                        <div class="task-form-field task-form-field-wide">
+                            <label for="result">Kết quả</label>
+                            <input type="text" id="result">
+                        </div>
+                        <div class="task-form-field task-form-field-wide">
+                            <label for="direction">Hướng xử lý</label>
+                            <textarea id="direction"></textarea>
+                        </div>
+                        <div class="task-form-field">
+                            <label for="status">Trạng thái</label>
                             <select id="status">
                                 <option>Chưa bắt đầu</option>
                                 <option>Đang thực hiện</option>
@@ -479,20 +793,18 @@
                                 <option>Chậm tiến độ</option>
                             </select>
                         </div>
-                        <div>
-                            <label>% Hoàn thành</label>
-                            <input
-                                type="number"
-                                id="completion"
-                                min="0"
-                                max="100"
-                                placeholder="VD: 80"
-                            >
+                        <div class="task-form-field">
+                            <label for="completion">% Hoàn thành</label>
+                            <input type="number" id="completion" min="0" max="100" placeholder="VD: 80">
+                        </div>
+                        <div class="task-form-field task-form-field-wide">
+                            <label for="note">Ghi chú</label>
+                            <textarea id="note"></textarea>
+                        </div>
+                        <div class="task-form-actions">
+                            <button id="saveTaskBtn" class="btn-add">💾 Lưu công việc</button>
                         </div>
                     </div>
-                    <label>Ghi chú</label>
-                    <textarea id="note"></textarea>
-                    <button id="saveTaskBtn" class="btn-add">💾 Lưu công việc</button>
                 </div>
             </div>
             <!-- Modal nhân bản nâng cao -->
