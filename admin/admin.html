@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-        <title>Admin - Quản lý người dùng</title>
+        <title>Admin Dashboard - Quản lý hệ thống</title>
         <link rel="stylesheet" href="../style.css">
         <link rel="stylesheet" href="admin.css">
     </head>
@@ -34,55 +34,154 @@
         <div id="adminPanel" style="display:none">
             <div class="admin-container">
                 <!-- navigation sidebar -->
-                <nav class="admin-sidebar">
+                <nav class="admin-sidebar" aria-label="Điều hướng quản trị">
+                    <a class="admin-brand" href="../index.html">
+                        <span class="admin-brand-mark">✓</span>
+                        <span><strong>TTH</strong><small>ADMINISTRATOR</small></span>
+                    </a>
+                    <p class="admin-nav-label">KHÔNG GIAN QUẢN TRỊ</p>
                     <ul id="adminNav">
-                        <li data-panel="panel-users" class="active">📋 Quản lý người dùng</li>
-                        <li data-panel="panel-tasks">🗂️ Quản lý công việc</li>
-                        <li data-panel="panel-editLog">📝 Nhật ký chỉnh sửa</li>
-                        <li data-panel="panel-loginLog">🔐 Nhật ký đăng nhập</li>
+                        <li data-panel="panel-dashboard" class="active" role="button" tabindex="0"><span class="admin-nav-icon">▦</span><span>Tổng quan</span></li>
+                        <li data-panel="panel-users" role="button" tabindex="0"><span class="admin-nav-icon">♙</span><span>Người dùng</span></li>
+                        <li data-panel="panel-tasks" role="button" tabindex="0"><span class="admin-nav-icon">☷</span><span>Công việc</span></li>
+                        <li data-panel="panel-editLog" role="button" tabindex="0"><span class="admin-nav-icon">↺</span><span>Nhật ký chỉnh sửa</span></li>
+                        <li data-panel="panel-loginLog" role="button" tabindex="0"><span class="admin-nav-icon">⌑</span><span>Nhật ký đăng nhập</span></li>
                     </ul>
+                    <div class="admin-sidebar-footer">
+                        <span class="admin-sidebar-status"></span>
+                        <span>Hệ thống quản lý</span>
+                        <a href="../index.html">Về trang chính <span>↗</span></a>
+                    </div>
                 </nav>
                 <!-- main content area -->
                 <div class="admin-main">
+                    <header class="admin-topbar">
+                        <div class="admin-breadcrumb"><span>Admin</span><span>/</span><strong id="adminCurrentSection">Tổng quan</strong></div>
+                        <a class="admin-home-link" href="../index.html">← Trang chính</a>
+                    </header>
+                    <!-- panel: dashboard -->
+                    <div id="panel-dashboard" class="panel-content">
+                        <section class="dashboard-welcome">
+                            <div>
+                                <span class="dashboard-eyebrow">BẢNG ĐIỀU KHIỂN</span>
+                                <h1>Xin chào, Quản trị viên <span>👋</span></h1>
+                                <p>Theo dõi nhanh tình hình tài khoản và truy cập các công cụ quản trị.</p>
+                            </div>
+                            <button type="button" class="dashboard-primary-action" data-admin-action="users">＋ Thêm người dùng</button>
+                            <div class="dashboard-welcome-orb" aria-hidden="true"></div>
+                        </section>
+
+                        <section class="dashboard-stats" aria-label="Thống kê tài khoản">
+                            <article class="dashboard-stat-card stat-total">
+                                <div class="dashboard-stat-top"><span>Tổng tài khoản</span><span class="dashboard-stat-icon">♙</span></div>
+                                <strong id="dashboardUserTotal">—</strong><small>Đang được quản lý</small>
+                            </article>
+                            <article class="dashboard-stat-card stat-admin">
+                                <div class="dashboard-stat-top"><span>Quản trị viên</span><span class="dashboard-stat-icon">⚙</span></div>
+                                <strong id="dashboardAdminTotal">—</strong><small>Quyền quản trị</small>
+                            </article>
+                            <article class="dashboard-stat-card stat-member">
+                                <div class="dashboard-stat-top"><span>Thành viên</span><span class="dashboard-stat-icon">♧</span></div>
+                                <strong id="dashboardMemberTotal">—</strong><small>Tài khoản thành viên</small>
+                            </article>
+                            <article class="dashboard-stat-card stat-department">
+                                <div class="dashboard-stat-top"><span>Phòng Ban</span><span class="dashboard-stat-icon">🏢</span></div>
+                                <strong id="dashboardDepartmentTotal">—</strong><small>Tài khoản Phòng Ban</small>
+                            </article>
+                            <article class="dashboard-stat-card stat-super">
+                                <div class="dashboard-stat-top"><span>Cấp cao</span><span class="dashboard-stat-icon">✦</span></div>
+                                <strong id="dashboardSuperTotal">—</strong><small>Quản trị viên cấp cao</small>
+                            </article>
+                        </section>
+
+                        <section class="dashboard-content-grid">
+                            <article class="dashboard-card role-overview-card">
+                                <div class="dashboard-card-heading">
+                                    <div><h2>Cơ cấu tài khoản</h2><p>Phân bổ theo quyền truy cập</p></div>
+                                    <span class="dashboard-card-dots" aria-hidden="true">•••</span>
+                                </div>
+                                <div class="role-overview">
+                                    <div class="role-donut" id="dashboardRoleDonut" role="img" aria-label="Biểu đồ cơ cấu tài khoản">
+                                        <div><strong id="dashboardDonutTotal">—</strong><span>Tài khoản</span></div>
+                                    </div>
+                                    <div class="role-legend">
+                                        <div><span class="role-legend-dot role-dot-member"></span><span>Thành viên</span><strong id="dashboardMemberPercent">0%</strong></div>
+                                        <div><span class="role-legend-dot role-dot-department"></span><span>Phòng Ban</span><strong id="dashboardDepartmentPercent">0%</strong></div>
+                                        <div><span class="role-legend-dot role-dot-admin"></span><span>Quản trị viên</span><strong id="dashboardAdminPercent">0%</strong></div>
+                                        <div><span class="role-legend-dot role-dot-super"></span><span>Cấp cao</span><strong id="dashboardSuperPercent">0%</strong></div>
+                                    </div>
+                                </div>
+                            </article>
+                            <article class="dashboard-card dashboard-shortcuts-card">
+                                <div class="dashboard-card-heading">
+                                    <div><h2>Lối tắt quản trị</h2><p>Truy cập nhanh các khu vực</p></div>
+                                </div>
+                                <button type="button" class="dashboard-shortcut" data-admin-action="users">
+                                    <span class="shortcut-icon shortcut-users">♙</span><span><strong>Quản lý người dùng</strong><small>Thêm, sửa vai trò và PIN</small></span><b>→</b>
+                                </button>
+                                <button type="button" class="dashboard-shortcut" data-admin-action="tasks">
+                                    <span class="shortcut-icon shortcut-tasks">☷</span><span><strong>Tra cứu công việc</strong><small>Xem công việc theo tài khoản</small></span><b>→</b>
+                                </button>
+                                <button type="button" class="dashboard-shortcut" data-admin-action="loginLog">
+                                    <span class="shortcut-icon shortcut-logs">↺</span><span><strong>Nhật ký hệ thống</strong><small>Xem trạng thái các nhật ký</small></span><b>→</b>
+                                </button>
+                            </article>
+                        </section>
+                        <p class="dashboard-footnote"><span class="admin-sidebar-status"></span> Số liệu tài khoản được cập nhật trực tiếp từ hệ thống.</p>
+                    </div>
                     <!-- panel: users -->
-                    <div id="panel-users" class="panel-content">
+                    <div id="panel-users" class="panel-content" style="display:none">
                         <div class="admin-box">
-                            <h2>📋 Quản lý người dùng</h2>
+                            <div class="admin-panel-heading">
+                                <div><span class="dashboard-eyebrow">TÀI KHOẢN & PHÂN QUYỀN</span><h1>Quản lý người dùng</h1><p>Thêm tài khoản, cập nhật PIN và quyền truy cập.</p></div>
+                            </div>
                             <!-- Input Đang chỉnh sửa user ID (hidden) -->
                             <input type="hidden" id="editingUserId">
                             <!-- Form thêm/sửa user -->
-                            <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+                            <div class="admin-user-form">
                                 <!-- Input tên user -->
-                                <input id="newName" placeholder="Tên người dùng" style="padding:8px;flex:1;min-width:200px;border-radius:6px;border:1px solid #ddd">
+                                <input id="newName" placeholder="Tên người dùng" aria-label="Tên người dùng">
                                 <!-- Input PIN 4 chữ số -->
                                 <input
                                     id="newPin"
                                     placeholder="PIN (4 chữ số)"
                                     maxlength="4"
-                                    style="padding:8px;width:140px;border-radius:6px;border:1px solid #ddd"
+                                    inputmode="numeric"
+                                    aria-label="PIN gồm 4 chữ số"
                                 >
                                 <!-- Dropdown chọn role -->
-                                <select id="newRole" style="padding:8px;border-radius:6px;border:1px solid #ddd">
+                                <select id="newRole" aria-label="Vai trò người dùng">
                                     <option value="member">👤 Thành viên</option>
+                                    <option value="department">🏢 Phòng Ban</option>
                                     <option value="admin">👨‍💼 Quản trị viên</option>
                                     <option value="superadmin">👑 Quản trị viên cấp cao</option>
                                 </select>
                                 <!-- Nút thêm / cập nhật -->
-                                <button id="addUserBtn" class="btn-add" style="white-space:nowrap">➕ Thêm</button>
+                                <button id="addUserBtn" class="btn-add">➕ Thêm</button>
                                 <!-- Nút hủy chỉnh sửa (hiện khi edit) -->
-                                <button id="cancelEditBtn" class="btn-edit" style="white-space:nowrap;display:none">❌ Hủy</button>
+                                <button id="cancelEditBtn" class="btn-edit" style="display:none">❌ Hủy</button>
                             </div>
                             <!-- Danh sách người dùng - render bởi JavaScript -->
+                            <div class="admin-list-toolbar">
+                                <div><h2>Danh sách tài khoản</h2><p>Được nhóm theo quyền truy cập</p></div>
+                                <label class="admin-search"><span>⌕</span><input id="userSearchInput" type="search" placeholder="Tìm theo tên hoặc PIN" aria-label="Tìm người dùng"></label>
+                            </div>
                             <div class="user-list" id="userList"></div>
                         </div>
                     </div>
                     <!-- panel: tasks -->
                     <div id="panel-tasks" class="panel-content" style="display:none">
                         <div class="admin-box">
-                            <h2>🗂️ Quản lý công việc</h2>
-                            <div id="taskUserList"></div>
-                            <div id="taskDetails" style="display:none;margin-top:16px">
-                                <button id="taskBackBtn">← Quay lại</button>
+                            <div class="admin-panel-heading"><div><span class="dashboard-eyebrow">TRA CỨU DỮ LIỆU</span><h1>Quản lý công việc</h1><p>Chọn một tài khoản để xem lịch sử công việc.</p></div></div>
+                            <section id="taskUserPicker" class="task-user-picker" aria-label="Chọn tài khoản">
+                                <div class="task-user-picker-heading"><strong>Chọn tài khoản</strong><span>Chọn người dùng để mở dữ liệu công việc</span></div>
+                                <div id="taskUserList" class="task-user-list"></div>
+                            </section>
+                            <div id="taskDetails" class="task-details" style="display:none">
+                                <div class="task-browser-toolbar">
+                                    <button id="taskBackBtn" type="button">← Danh sách tài khoản</button>
+                                    <div><span class="dashboard-eyebrow">TÀI KHOẢN ĐANG XEM</span><strong id="taskSelectedUserName"></strong></div>
+                                </div>
                                 <div id="tasksContent" style="margin-top:12px"></div>
                             </div>
                         </div>
@@ -90,15 +189,36 @@
                     <!-- panel: edit log -->
                     <div id="panel-editLog" class="panel-content" style="display:none">
                         <div class="admin-box">
-                            <h2>📝 Nhật ký chỉnh sửa</h2>
-                            <em>Chức năng đang được xây dựng. Dự kiến hiển thị theo: người dùng → năm → tháng → tuần → ngày → công việc → phần nhỏ.</em>
+                            <div class="admin-panel-heading"><div><span class="dashboard-eyebrow">THEO DÕI HOẠT ĐỘNG</span><h1>Nhật ký chỉnh sửa</h1><p>Lịch sử thay đổi dữ liệu trong hệ thống.</p></div></div>
+                            <div class="admin-coming-soon"><span>↺</span><strong>Nhật ký chỉnh sửa đang được phát triển</strong><p>Khu vực này sẽ hiển thị thay đổi theo người dùng, thời gian và nội dung công việc khi nguồn nhật ký được kết nối.</p></div>
                         </div>
                     </div>
                     <!-- panel: login log -->
                     <div id="panel-loginLog" class="panel-content" style="display:none">
                         <div class="admin-box">
-                            <h2>🔐 Nhật ký đăng nhập</h2>
-                            <em>Chức năng đang được xây dựng. Hiển thị sự kiện đăng nhập của người dùng.</em>
+                            <div class="admin-panel-heading"><div><span class="dashboard-eyebrow">BẢO MẬT & TRUY CẬP</span><h1>Nhật ký đăng nhập</h1><p>Theo dõi các sự kiện truy cập tài khoản.</p></div></div>
+                            <div class="login-log-toolbar">
+                                <label class="admin-search">
+                                    <span aria-hidden="true">⌕</span>
+                                    <input id="loginLogSearch" type="search" placeholder="Tìm tên, vai trò hoặc nơi đăng nhập" aria-label="Tìm trong nhật ký đăng nhập">
+                                </label>
+                                <button id="refreshLoginLogs" class="login-log-refresh" type="button">↻ Tải lại</button>
+                            </div>
+                            <p id="loginLogStatus" class="login-log-status" aria-live="polite">Đang tải nhật ký...</p>
+                            <div class="login-log-table-wrap">
+                                <table class="login-log-table">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Thời gian</th>
+                                            <th scope="col">Tài khoản</th>
+                                            <th scope="col">Vai trò</th>
+                                            <th scope="col">Nơi đăng nhập</th>
+                                            <th scope="col">Kết quả</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="loginLogTableBody"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>

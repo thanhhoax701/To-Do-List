@@ -3,6 +3,7 @@
 import { db, storage } from "./firebase.js";
 import { ref, push, onValue, remove, update, get, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { ref as firebaseStorageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { recordSuccessfulLogin } from "./login-log.js";
 
 /* ========== DOM ELEMENTS ========== */
 // Phần tử lịch và tiêu đề tháng
@@ -2269,6 +2270,7 @@ prevBtn.addEventListener("click", () => {
  * Hàm này được gọi sau khi người dùng đăng nhập thành công
  */
 function startApp() {
+    applyRolePermissions();
     // Tải danh sách các ngày NB và NL từ Firebase trước
     Promise.all([loadNbDays(), loadNlDays()]).then(() => {
         renderCalendar();
@@ -5879,6 +5881,11 @@ async function attemptLogin(pin) {
         }
 
         if (matched) {
+            try {
+                await recordSuccessfulLogin(matched, 'Ứng dụng');
+            } catch (logError) {
+                console.error('Không thể lưu nhật ký đăng nhập ứng dụng:', logError);
+            }
             sessionStorage.setItem('user', JSON.stringify(matched));
             updateUserDisplay();
             document.getElementById('mainContent').style.display = 'block';
@@ -5966,7 +5973,10 @@ function getLoggedInUserRole() {
 
 // Kiểm trá và trả về true/false dựa trên role
 function isMember() { return getLoggedInUserRole() === 'member'; }
-function isAdmin() { const r = getLoggedInUserRole(); return r === 'admin' || r === 'superadmin'; }
+function isAdmin() {
+    const role = getLoggedInUserRole();
+    return role === 'admin' || role === 'superadmin' || role === 'department';
+}
 
 /** Ẩn nút ☰ Menu khi sidebar đang mở (không đè chữ tiêu đề); member không thấy nút. */
 function syncMenuToggleVisibility() {
@@ -6003,9 +6013,12 @@ function checkMemberAccess(dateStr) {
 // Ẩn/Hiện UI dựa trên role khi app khởi động
 function applyRolePermissions() {
     const isReadOnlyRole = !isAdmin();
+    const isDepartment = getLoggedInUserRole() === 'department';
 
     // Ẩn nút toggle menu cho member; khi sidebar mở cũng ẩn để không đè tiêu đề
     syncMenuToggleVisibility();
+    const workScheduleMenu = document.querySelector('.side-menu-content > [data-menu-modal="workScheduleModal"]');
+    if (workScheduleMenu) workScheduleMenu.style.display = isDepartment ? 'none' : '';
 
     // Ẩn nút lựa chọn NB cho member
     if (selectNbDayBtn) selectNbDayBtn.style.display = isReadOnlyRole ? 'none' : 'inline-block';

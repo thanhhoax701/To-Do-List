@@ -1,7 +1,8 @@
 // ========== IMPORT FIREBASE ==========
 // Nhập Firebase Database và các hàm thao tác dữ liệu
 import { db } from '../firebase.js';
-import { ref, push, get, remove, onValue, update, set } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { ref, push, get, remove, onValue, update, set, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { recordSuccessfulLogin } from '../login-log.js';
 
 // ========== DOM ELEMENTS - PHẦN ĐĂNG NHẬP ==========
 // Các element cho giao diện đăng nhập quản trị viên
@@ -23,14 +24,25 @@ const newRole = document.getElementById('newRole'); // Dropdown role user
 
 // ========== BIẾN TOÀN CỤC ==========
 let editingUserId = null; // Lưu ID user đang chỉnh sửa (null = thêm mới)
+let activeAdminUser = null;
 
 // DOM elements new panels/navigation
 const navItems = document.querySelectorAll('#adminNav li');
 const panels = document.querySelectorAll('.panel-content');
 const taskUserListDiv = document.getElementById('taskUserList');
+const taskUserPicker = document.getElementById('taskUserPicker');
 const taskDetailsDiv = document.getElementById('taskDetails');
 const tasksContentDiv = document.getElementById('tasksContent');
 const taskBackBtn = document.getElementById('taskBackBtn');
+const taskSelectedUserName = document.getElementById('taskSelectedUserName');
+const adminCurrentSection = document.getElementById('adminCurrentSection');
+const userSearchInput = document.getElementById('userSearchInput');
+const loginLogSearch = document.getElementById('loginLogSearch');
+const loginLogStatus = document.getElementById('loginLogStatus');
+const loginLogTableBody = document.getElementById('loginLogTableBody');
+const refreshLoginLogsBtn = document.getElementById('refreshLoginLogs');
+let currentUsersObj = null;
+let currentLoginLogs = [];
 
 // ---------- hàm tiện ích hiển thị/loading cho trang quản trị ----------
 
@@ -46,10 +58,16 @@ function switchPanel(panelId) {
     // highlight nav
     const activeItem = document.querySelector(`#adminNav li[data-panel="${panelId}"]`);
     if (activeItem) activeItem.classList.add('active');
+    if (adminCurrentSection && activeItem) {
+        adminCurrentSection.textContent = activeItem.querySelector('span:last-child')?.textContent || activeItem.textContent.trim();
+    }
 
     // load data for some panels
     if (panelId === 'panel-tasks') {
         loadUsersForTasks();
+    }
+    if (panelId === 'panel-loginLog') {
+        loadLoginLogs();
     }
 }
 
@@ -58,7 +76,108 @@ navItems.forEach(li => {
     li.addEventListener('click', () => {
         switchPanel(li.dataset.panel);
     });
+    li.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            switchPanel(li.dataset.panel);
+        }
+    });
 });
+
+document.querySelectorAll('[data-admin-action]').forEach(button => {
+    button.addEventListener('click', () => {
+        const action = button.dataset.adminAction;
+        const panelId = action === 'users' ? 'panel-users'
+            : action === 'tasks' ? 'panel-tasks'
+                : action === 'loginLog' ? 'panel-loginLog' : 'panel-dashboard';
+        switchPanel(panelId);
+        if (action === 'users') newName.focus();
+    });
+});
+
+if (userSearchInput) {
+    userSearchInput.addEventListener('input', () => renderUsers(currentUsersObj));
+}
+
+if (loginLogSearch) {
+    loginLogSearch.addEventListener('input', renderLoginLogs);
+}
+
+if (refreshLoginLogsBtn) {
+    refreshLoginLogsBtn.addEventListener('click', loadLoginLogs);
+}
+
+async function loadLoginLogs() {
+    if (!loginLogStatus || !loginLogTableBody) return;
+    refreshLoginLogsBtn.disabled = true;
+    loginLogStatus.textContent = 'Đang tải nhật ký...';
+
+    try {
+        const logsQuery = query(ref(db, 'loginLogs'), orderByChild('timestamp'), limitToLast(200));
+        const snapshot = await get(logsQuery);
+        currentLoginLogs = [];
+        if (snapshot.exists()) {
+            snapshot.forEach(child => {
+                const log = child.val();
+                if (log && typeof log === 'object') currentLoginLogs.push(log);
+            });
+        }
+        currentLoginLogs.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+        renderLoginLogs();
+    } catch (error) {
+        console.error('Không thể tải nhật ký đăng nhập:', error);
+        currentLoginLogs = [];
+        loginLogTableBody.replaceChildren();
+        loginLogStatus.textContent = 'Không thể tải nhật ký đăng nhập. Vui lòng thử tải lại.';
+    } finally {
+        refreshLoginLogsBtn.disabled = false;
+    }
+}
+
+function renderLoginLogs() {
+    if (!loginLogStatus || !loginLogTableBody) return;
+    const searchTerm = (loginLogSearch?.value || '').trim().toLocaleLowerCase('vi');
+    const filteredLogs = currentLoginLogs.filter(log => {
+        const roleName = roleDisplay[log.role]?.label || String(log.role || 'Không xác định');
+        return [log.userName, roleName, log.accessType]
+            .some(value => String(value || '').toLocaleLowerCase('vi').includes(searchTerm));
+    });
+
+    loginLogTableBody.replaceChildren();
+    if (!filteredLogs.length) {
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 5;
+        cell.className = 'login-log-empty';
+        cell.textContent = currentLoginLogs.length
+            ? 'Không tìm thấy nhật ký phù hợp.'
+            : 'Chưa có lần đăng nhập nào được ghi nhận.';
+        row.appendChild(cell);
+        loginLogTableBody.appendChild(row);
+        loginLogStatus.textContent = currentLoginLogs.length
+            ? 'Không tìm thấy kết quả phù hợp.'
+            : 'Nhật ký sẽ xuất hiện sau khi có lần đăng nhập thành công.';
+        return;
+    }
+
+    filteredLogs.forEach(log => {
+        const row = document.createElement('tr');
+        const timestamp = Number(log.timestamp);
+        const date = Number.isFinite(timestamp) && timestamp > 0
+            ? new Date(timestamp).toLocaleString('vi-VN')
+            : '—';
+        const roleName = roleDisplay[log.role]?.label || String(log.role || 'Không xác định');
+        [date, log.userName || 'Tài khoản không tên', roleName, log.accessType || 'Ứng dụng', 'Thành công']
+            .forEach((value, index) => {
+                const cell = document.createElement('td');
+                cell.textContent = String(value);
+                if (index === 4) cell.className = 'login-log-success';
+                row.appendChild(cell);
+            });
+        loginLogTableBody.appendChild(row);
+    });
+    loginLogStatus.textContent = `Hiển thị ${filteredLogs.length} / ${currentLoginLogs.length} sự kiện gần nhất (tối đa 200).`;
+}
 
 function showLoadingAdmin() {
     if (addUserBtn) addUserBtn.disabled = true;
@@ -75,25 +194,24 @@ function hideLoadingAdmin() {
 const roleDisplay = {
     superadmin: { icon: '👑', label: 'Quản trị viên cấp cao' }, // Quyền cao nhất
     admin: { icon: '👨‍💼', label: 'Quản trị viên' }, // Quyền quản lý thứ cấp
+    department: { icon: '🏢', label: 'Phòng Ban' },
     member: { icon: '👤', label: 'Thành viên đăng ký' } // Quyền thường
 };
 
 // ========== HÀM ĐĂNG NHẬP ==========
-// Kiểm tra PIN quản trị viên cấp cao (superadmin)
-// Chỉ superadmin mới có quyền truy cập giao diện quản trị
+// Kiểm tra PIN của Admin hoặc Super Admin trước khi mở giao diện quản trị
 
 async function checkAdminPin(pin) {
     // Lấy danh sách tất cả users từ database
     const snap = await get(ref(db, 'users'));
-    if (!snap.exists()) return false; // Nếu không có users, trả về false
+    if (!snap.exists()) return null; // Nếu không có users, trả về null
 
-    let ok = false;
-    snap.forEach(ch => {
-        const u = ch.val();
-        // Kiểm tra: PIN trùng AND role = superadmin?
-        if (u && u.pin && String(u.pin) === String(pin) && u.role === 'superadmin') ok = true;
-    });
-    return ok;
+    const users = normalizeUsers(snap.val());
+    return Object.entries(users || {}).reduce((matchedAdmin, [key, user]) => {
+        if (matchedAdmin || !user || String(user.pin) !== String(pin) ||
+            !['admin', 'superadmin'].includes(user.role)) return matchedAdmin;
+        return { key, ...user };
+    }, null);
 }
 
 // Thực hiện đăng nhập quản trị viên
@@ -110,17 +228,25 @@ async function performAdminLogin() {
 
     try {
         // Kiểm tra PIN có hợp lệ không
-        const ok = await checkAdminPin(pin);
-        if (!ok) {
-            adminLoginMsg.innerText = 'PIN không hợp lệ hoặc không phải quản trị viên cấp cao';
+        const adminUser = await checkAdminPin(pin);
+        if (!adminUser) {
+            adminLoginMsg.innerText = 'PIN không hợp lệ hoặc tài khoản không có quyền quản trị';
             return;
+        }
+        activeAdminUser = adminUser;
+        updateRoleOptions();
+
+        try {
+            await recordSuccessfulLogin(adminUser, 'Quản trị');
+        } catch (logError) {
+            console.error('Không thể lưu nhật ký đăng nhập quản trị:', logError);
         }
 
         // Đăng nhập thành công: Ẩn form đăng nhập, hiển thị panel quản trị
         adminLoginDiv.style.display = 'none';
         adminPanel.style.display = 'block';
         bindUsers(); // Tải danh sách users
-        switchPanel('panel-users'); // hiển thị panel mặc định
+        switchPanel('panel-dashboard'); // hiển thị dashboard sau khi đăng nhập
     } catch (e) {
         adminLoginMsg.innerText = 'Lỗi khi kiểm tra PIN';
         console.error(e);
@@ -148,38 +274,96 @@ function clearForm() {
     editingUserIdField.value = '';
 }
 
+function isSuperAdmin() {
+    return activeAdminUser?.role === 'superadmin';
+}
+
+function canManageUser(user) {
+    return isSuperAdmin() || ['member', 'department'].includes(user?.role || 'member');
+}
+
+function updateRoleOptions(selectedRole = 'member') {
+    const allowedRoles = isSuperAdmin()
+        ? ['member', 'department', 'admin', 'superadmin']
+        : ['member', 'department'];
+    Array.from(newRole.options).forEach(option => {
+        option.hidden = !allowedRoles.includes(option.value);
+        option.disabled = option.hidden;
+    });
+    newRole.value = allowedRoles.includes(selectedRole) ? selectedRole : 'member';
+}
+
 // Đặt lại UI form về trạng thái "Thêm mới" (không phải chỉnh sửa)
 function resetFormUI() {
     addUserBtn.innerText = '➕ Thêm';
-    addUserBtn.style.background = '#28a745'; // Màu xanh
+    addUserBtn.classList.remove('is-editing');
     cancelEditBtn.style.display = 'none';
     clearForm();
 }
 
 // Chuyển form sang chế độ chỉnh sửa
 function editUser(userId, userData) {
+    if (!canManageUser(userData)) {
+        showCustomAlert('Bạn không có quyền chỉnh sửa tài khoản này.');
+        return;
+    }
     editingUserId = userId; // Lưu ID user đang chỉnh sửa
     editingUserIdField.value = userId;
     newName.value = userData.name || '';
     newPin.value = userData.pin || '';
-    newRole.value = userData.role || 'member';
+    updateRoleOptions(userData.role || 'member');
 
     // Đổi text nút thành "Cập nhật" và đổi màu
     addUserBtn.innerText = '✏️ Cập nhật';
-    addUserBtn.style.background = '#ffc107'; // Màu vàng
+    addUserBtn.classList.add('is-editing');
     cancelEditBtn.style.display = 'inline-block'; // Hiển thị nút hủy
 
     newName.focus(); // Auto focus tên
 }
 
 // Hiển thị danh sách users trên giao diện
+function updateDashboard(usersObj) {
+    const users = Object.values(usersObj || {});
+    const counts = users.reduce((result, user) => {
+        const role = user?.role || 'member';
+        result[role] = (result[role] || 0) + 1;
+        return result;
+    }, { member: 0, department: 0, admin: 0, superadmin: 0 });
+    const total = users.length;
+    const percent = role => total ? Math.round((counts[role] / total) * 100) : 0;
+
+    document.getElementById('dashboardUserTotal').textContent = total;
+    document.getElementById('dashboardAdminTotal').textContent = counts.admin;
+    document.getElementById('dashboardMemberTotal').textContent = counts.member;
+    document.getElementById('dashboardDepartmentTotal').textContent = counts.department;
+    document.getElementById('dashboardSuperTotal').textContent = counts.superadmin;
+    document.getElementById('dashboardDonutTotal').textContent = total;
+    document.getElementById('dashboardMemberPercent').textContent = `${percent('member')}%`;
+    document.getElementById('dashboardDepartmentPercent').textContent = `${percent('department')}%`;
+    document.getElementById('dashboardAdminPercent').textContent = `${percent('admin')}%`;
+    document.getElementById('dashboardSuperPercent').textContent = `${percent('superadmin')}%`;
+
+    const memberEnd = percent('member');
+    const departmentEnd = memberEnd + percent('department');
+    const adminEnd = departmentEnd + percent('admin');
+    const superEnd = adminEnd + percent('superadmin');
+    const donut = document.getElementById('dashboardRoleDonut');
+    donut.style.background = total
+        ? `conic-gradient(#df171f 0% ${memberEnd}%, #5578e8 ${memberEnd}% ${departmentEnd}%, #a9131a ${departmentEnd}% ${adminEnd}%, #f1ae4e ${adminEnd}% ${superEnd}%)`
+        : 'conic-gradient(#e8edf4 0% 100%)';
+    donut.setAttribute('aria-label', `Cơ cấu tài khoản: ${counts.member} thành viên, ${counts.department} Phòng Ban, ${counts.admin} quản trị viên, ${counts.superadmin} quản trị viên cấp cao`);
+}
+
 function renderUsers(usersObj) {
     userListDiv.innerHTML = ''; // Xóa danh sách cũ
-    if (!usersObj) return;
+    currentUsersObj = usersObj || {};
+    updateDashboard(currentUsersObj);
 
     // Sắp xếp users theo role (superadmin → admin → member)
-    const grouped = { superadmin: [], admin: [], member: [] };
-    Object.entries(usersObj).forEach(([k, u]) => {
+    const grouped = { superadmin: [], admin: [], department: [], member: [] };
+    const query = userSearchInput?.value.trim().toLocaleLowerCase('vi') || '';
+    Object.entries(currentUsersObj).forEach(([k, u]) => {
+        if (query && !`${u.name || ''} ${u.pin || ''}`.toLocaleLowerCase('vi').includes(query)) return;
         const role = u.role || 'member';
         if (!grouped[role]) grouped[role] = [];
 
@@ -188,7 +372,7 @@ function renderUsers(usersObj) {
     });
 
     // Render each group
-    ['superadmin', 'admin', 'member'].forEach(role => {
+    ['superadmin', 'admin', 'department', 'member'].forEach(role => {
         if (grouped[role] && grouped[role].length > 0) {
             // Group heading
             const groupEl = document.createElement('div');
@@ -200,13 +384,14 @@ function renderUsers(usersObj) {
             grouped[role].forEach(u => {
                 const el = document.createElement('div');
                 el.className = 'user-item';
+                const canManage = canManageUser(u);
                 el.innerHTML = `
                     <div class="meta">
                         <strong>${u.name || '(no name)'}</strong>
-                        <div style="color:#666">PIN: ${u.pin}</div>
+                        <div style="color:#666">PIN: ${canManage ? u.pin : '••••'}</div>
                         <div style="color:#666">${roleDisplay[role].label}</div>
                     </div>
-                    <div style="display:flex;gap:8px">
+                    <div style="display:${canManage ? 'flex' : 'none'};gap:8px">
                         <button data-key="${u.id}" class="btn-edit" style="display:inline-block;padding:6px 12px">✏️ Sửa</button>
                         <button data-key="${u.id}" class="btn-delete" style="display:inline-block;padding:6px 12px">🗑️ Xóa</button>
                     </div>
@@ -221,6 +406,10 @@ function renderUsers(usersObj) {
 
                 el.querySelector('.btn-delete').onclick = async (e) => {
                     e.preventDefault();
+                    if (!canManageUser(u)) {
+                        await showCustomAlert('Bạn không có quyền xóa tài khoản này.');
+                        return;
+                    }
                     const ok = await showCustomConfirm('Xóa người dùng "' + (u.name || 'User') + '" này?');
                     if (!ok) return;
                     showLoadingAdmin();
@@ -235,6 +424,9 @@ function renderUsers(usersObj) {
             });
         }
     });
+    if (!userListDiv.childElementCount) {
+        userListDiv.innerHTML = `<div class="admin-empty-state">${query ? 'Không tìm thấy tài khoản phù hợp.' : 'Chưa có người dùng nào.'}</div>`;
+    }
 }
 
 function normalizeUsers(obj) {
@@ -266,6 +458,9 @@ function bindUsers() {
 
 // --------- task panel helpers ----------
 async function loadUsersForTasks() {
+    taskUserPicker.hidden = false;
+    taskDetailsDiv.style.display = 'none';
+    taskSelectedUserName.textContent = '';
     try {
         const snap = await get(ref(db, 'users'));
         if (snap.exists()) {
@@ -298,6 +493,13 @@ let navPath = []; // e.g. ['2026','01','week5','2026-01-26']
 
 async function loadTasks(userId) {
     taskDetailsDiv.style.display = 'block';
+    taskUserPicker.hidden = true;
+    const selectedUser = Array.from(taskUserListDiv.querySelectorAll('button'))
+        .find(button => button.dataset.id === userId);
+    taskSelectedUserName.textContent = selectedUser?.textContent || userId;
+    navPath = [];
+    currentTasksObj = null;
+    renderBackButton(0);
     tasksContentDiv.innerHTML = 'Đang tải...';
     try {
         const snap = await get(ref(db, `tasks/${userId}`));
@@ -319,13 +521,13 @@ function clearTasksArea() {
 }
 
 function renderBackButton(level) {
-    // level: 0 => back to user list; >0 back up one level
-    const btn = document.createElement('button');
-    btn.textContent = '← Trở lại';
-    btn.style.margin = '8px 0';
-    btn.onclick = () => {
+    taskBackBtn.textContent = level === 0 ? '← Danh sách tài khoản' : '← Quay lại';
+    taskBackBtn.onclick = () => {
         if (level === 0) {
-            taskBackBtn.click();
+            taskDetailsDiv.style.display = 'none';
+            taskUserListDiv.hidden = false;
+            tasksContentDiv.innerHTML = '';
+            taskSelectedUserName.textContent = '';
         } else {
             navPath.pop();
             switch (level) {
@@ -336,7 +538,6 @@ function renderBackButton(level) {
             }
         }
     };
-    tasksContentDiv.appendChild(btn);
 }
 
 function renderYearView() {
@@ -415,50 +616,58 @@ function renderTasksForDate(year, month, week, date) {
         tasksContentDiv.innerHTML += '<em>Không có công việc</em>';
         return;
     }
-    // create styled table similar to main interface
+    const columns = [
+        { label: 'STT', width: '4%', value: (_, index) => index + 1 },
+        { label: 'Công việc', width: '10%', value: task => task.content },
+        { label: 'Mô tả', width: '10%', value: task => task.description },
+        { label: 'Người yêu cầu', width: '7%', value: task => task.requester },
+        { label: 'Đơn vị', width: '5%', value: task => task.unit },
+        { label: 'Phụ trách', width: '7%', value: task => task.assignee },
+        { label: 'Ngày bắt đầu', width: '7%', value: task => task.startDate },
+        { label: 'Ngày kết thúc', width: '7%', value: task => task.endDate },
+        { label: 'Kết quả', width: '7%', value: task => task.result },
+        { label: 'Hướng xử lý', width: '9%', value: task => task.direction },
+        { label: 'Trạng thái', width: '7%', value: task => task.status },
+        { label: '% Hoàn thành', width: '5%', value: task => task.completion },
+        { label: 'Ghi chú', width: '5%', value: task => task.note }
+    ];
     const table = document.createElement('table');
-    table.style.width = '100%';
-    // don't collapse borders for admin task table
-    // table.style.borderCollapse = 'collapse';
-    table.style.marginTop = '8px';
+    table.className = 'admin-task-table';
+    const colgroup = document.createElement('colgroup');
+    columns.forEach(column => {
+        const col = document.createElement('col');
+        col.style.width = column.width;
+        colgroup.appendChild(col);
+    });
+    table.appendChild(colgroup);
     const thead = document.createElement('thead');
-    thead.innerHTML = `
-        <tr style="background:#007bff;color:#fff;">
-            <th style="padding:8px;border:1px solid #ddd;">STT</th>
-            <th style="padding:8px;border:1px solid #ddd;">Nội dung</th>
-            <th style="padding:8px;border:1px solid #ddd;">Đơn vị</th>
-            <th style="padding:8px;border:1px solid #ddd;">Thời gian</th>
-            <th style="padding:8px;border:1px solid #ddd;">Mức độ</th>
-            <th style="padding:8px;border:1px solid #ddd;">Hướng xử lý</th>
-            <th style="padding:8px;border:1px solid #ddd;">Trạng thái</th>
-            <th style="padding:8px;border:1px solid #ddd;">Ghi chú</th>
-        </tr>`;
+    const headingRow = document.createElement('tr');
+    columns.forEach(column => {
+        const th = document.createElement('th');
+        th.scope = 'col';
+        th.textContent = column.label;
+        headingRow.appendChild(th);
+    });
+    thead.appendChild(headingRow);
     table.appendChild(thead);
     const tbody = document.createElement('tbody');
-    let idx = 1;
-    Object.entries(list).forEach(([taskId, task]) => {
+    Object.values(list).forEach((task, index) => {
         const tr = document.createElement('tr');
-        // no border on tr; we'll style cells instead
-        tr.innerHTML = `
-            <td style="padding:6px;vertical-align:top;">${idx++}</td>
-            <td style="padding:6px;vertical-align:top;">${task.content || ''}</td>
-            <td style="padding:6px;vertical-align:top;">${task.unit || ''}</td>
-            <td style="padding:6px;vertical-align:top;">${task.duration || ''}</td>
-            <td style="padding:6px;vertical-align:top;">${task.priority || ''}</td>
-            <td style="padding:6px;vertical-align:top;">${task.direction || ''}</td>
-            <td style="padding:6px;vertical-align:top;">${task.status || ''}</td>
-            <td style="padding:6px;vertical-align:top;">${task.note || ''}</td>
-        `;
+        columns.forEach((column, columnIndex) => {
+            const td = document.createElement('td');
+            const value = column.value(task || {}, index);
+            td.textContent = value === null || value === undefined || value === '' ? '—' : String(value);
+            if (columnIndex === 0) td.className = 'admin-task-index';
+            tr.appendChild(td);
+        });
         tbody.appendChild(tr);
     });
     table.appendChild(tbody);
-    tasksContentDiv.appendChild(table);
+    const tableWrap = document.createElement('div');
+    tableWrap.className = 'admin-task-table-wrap';
+    tableWrap.appendChild(table);
+    tasksContentDiv.appendChild(tableWrap);
 }
-
-taskBackBtn && taskBackBtn.addEventListener('click', () => {
-    taskDetailsDiv.style.display = 'none';
-    tasksContentDiv.innerHTML = '';
-});
 
 function buildTasksTable(obj) {
     const rows = [];
@@ -547,6 +756,14 @@ addUserBtn.onclick = async () => {
 
     if (!name) { await showCustomAlert('Vui lòng nhập tên người dùng'); return; }
     if (!pin || pin.length !== 4) { await showCustomAlert('PIN phải đủ 4 chữ số'); return; }
+    if (!isSuperAdmin() && !['member', 'department'].includes(role)) {
+        await showCustomAlert('Admin chỉ được tạo hoặc phân quyền Thành viên và Phòng Ban.');
+        return;
+    }
+    if (editingUserId && !canManageUser(currentUsersObj?.[editingUserId])) {
+        await showCustomAlert('Bạn không có quyền chỉnh sửa tài khoản này.');
+        return;
+    }
 
     showLoadingAdmin();
     try {
