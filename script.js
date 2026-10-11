@@ -3306,6 +3306,9 @@ async function loadScheduleList() {
                 const label = document.createElement('dt');
                 label.textContent = cell.dataset.label;
                 const value = document.createElement('dd');
+                if (cell.classList.contains('schedule-assignees')) {
+                    value.classList.add('schedule-assignees');
+                }
                 cell.childNodes.forEach(node => value.appendChild(node.cloneNode(true)));
                 item.append(label, value);
                 detailList.appendChild(item);
