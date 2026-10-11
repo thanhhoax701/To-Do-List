@@ -3961,7 +3961,9 @@ td select {
 
     .task-mobile-card-detail dd {
         min-width: 0;
+        max-width: 100%;
         margin: 0;
+        white-space: pre-wrap;
         overflow-wrap: anywhere;
     }
 
@@ -4205,18 +4207,18 @@ td select {
     }
 
     .schedule-mobile-card-detail .schedule-assignees {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
         min-width: 0;
     }
 
     .schedule-mobile-card-detail .schedule-assignees span {
-        display: table;
+        display: block;
         max-width: 100%;
-        margin: 0 0 5px;
+        margin: 0;
         white-space: normal;
-    }
-
-    .schedule-mobile-card-detail .schedule-assignees span:last-child {
-        margin-bottom: 0;
     }
 
     .schedule-mobile-card-actions {
