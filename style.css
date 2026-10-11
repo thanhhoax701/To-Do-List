@@ -3742,3 +3742,18 @@ td select {
         border-radius: 12px;
     }
 }
+
+@media (max-width: 620px) {
+    .employee-table-scroll {
+        max-width: 100%;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .employee-table {
+        width: 100%;
+        min-width: 1150px;
+        table-layout: fixed;
+    }
+}
