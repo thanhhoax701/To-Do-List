@@ -697,6 +697,13 @@ function renderTaskTemplateSheet(worksheet, workbook) {
     const table = document.createElement('table');
     table.className = 'task-template-table';
     const tbody = document.createElement('tbody');
+    const headers = Array.from({ length: lastColumn }, (_, index) => {
+        const text = getTemplateCellText(worksheet.getRow(1).getCell(index + 1), worksheet, workbook).trim();
+        return {
+            label: text || `Cột ${index + 1}`,
+            field: resolveTaskTemplateField(text)
+        };
+    });
     for (let rowNumber = 1; rowNumber <= lastRow; rowNumber++) {
         const rowElement = document.createElement('tr');
         const sourceRow = worksheet.getRow(rowNumber);
@@ -711,6 +718,74 @@ function renderTaskTemplateSheet(worksheet, workbook) {
     table.appendChild(tbody);
     tableWrap.appendChild(table);
     taskTemplateSheetContent.appendChild(tableWrap);
+
+    const cards = document.createElement('div');
+    cards.className = 'task-template-mobile-cards';
+    cards.setAttribute('aria-label', `Nội dung sheet ${worksheet.name}`);
+    for (let rowNumber = 2; rowNumber <= lastRow; rowNumber++) {
+        const values = headers.map((_, index) =>
+            getTemplateCellText(worksheet.getRow(rowNumber).getCell(index + 1), worksheet, workbook).trim()
+        );
+        if (!values.some(Boolean)) continue;
+
+        let titleIndex = headers.findIndex((header, index) => header.field === 'content' && values[index]);
+        if (titleIndex === -1) {
+            titleIndex = headers.findIndex((header, index) =>
+                values[index] && header.field !== 'number' && header.field !== 'date' && header.field !== 'startDate'
+            );
+        }
+        if (titleIndex === -1) titleIndex = values.findIndex(Boolean);
+
+        const card = document.createElement('article');
+        card.className = 'task-template-mobile-card';
+        const heading = document.createElement('div');
+        heading.className = 'task-template-mobile-card-heading';
+
+        const numberIndex = headers.findIndex((header, index) => header.field === 'number' && values[index]);
+        if (numberIndex !== -1) {
+            const number = document.createElement('span');
+            number.className = 'task-template-mobile-card-number';
+            number.textContent = `${headers[numberIndex].label}: ${values[numberIndex]}`;
+            heading.appendChild(number);
+        }
+        const dateIndex = headers.findIndex((header, index) =>
+            (header.field === 'date' || header.field === 'startDate') && values[index]
+        );
+        if (dateIndex !== -1) {
+            const date = document.createElement('span');
+            date.className = 'task-template-mobile-card-date';
+            date.textContent = values[dateIndex];
+            heading.appendChild(date);
+        }
+
+        const title = document.createElement('h5');
+        title.className = 'task-template-mobile-card-title';
+        title.textContent = values[titleIndex];
+        card.append(heading, title);
+
+        const details = document.createElement('details');
+        details.className = 'task-template-mobile-card-more';
+        const summary = document.createElement('summary');
+        const detailList = document.createElement('dl');
+        detailList.className = 'task-template-mobile-card-details';
+        values.forEach((value, index) => {
+            if (!value || index === titleIndex || index === numberIndex || index === dateIndex) return;
+            const item = document.createElement('div');
+            const label = document.createElement('dt');
+            label.textContent = headers[index].label;
+            const detailValue = document.createElement('dd');
+            detailValue.textContent = value;
+            item.append(label, detailValue);
+            detailList.appendChild(item);
+        });
+        if (detailList.childElementCount) {
+            summary.textContent = `Xem chi tiết (${detailList.childElementCount})`;
+            details.append(summary, detailList);
+            card.appendChild(details);
+        }
+        cards.appendChild(card);
+    }
+    tableWrap.after(cards);
 }
 
 async function loadTaskExportTemplate() {
@@ -1852,6 +1927,7 @@ function loadTasks(ds) {
                 openModal("Chỉnh sửa công việc", k, t);
             };
 
+            appendTaskMobileCard(row);
             taskTable.appendChild(row);
         });
     });
@@ -3174,19 +3250,17 @@ async function loadScheduleList() {
             card.className = 'schedule-mobile-card';
             const heading = document.createElement('div');
             heading.className = 'schedule-mobile-card-heading';
-            const dates = document.createElement('div');
-            dates.className = 'schedule-mobile-card-dates';
             const startDate = document.createElement('span');
             startDate.className = 'schedule-mobile-card-date';
-            startDate.textContent = `${requestType === 'maintenance' ? 'Từ ngày ' : ''}${cells[requestType === 'maintenance' ? 2 : 0].textContent.trim()}`;
-            dates.appendChild(startDate);
+            const startDateText = cells[requestType === 'maintenance' ? 2 : 0].textContent.trim();
             if (requestType === 'maintenance') {
-                const endDate = document.createElement('span');
-                endDate.className = 'schedule-mobile-card-date';
-                endDate.textContent = `Đến ngày ${cells[3].textContent.trim()}`;
-                dates.appendChild(endDate);
+                const endDateText = cells[3].textContent.trim();
+                startDate.textContent = `${startDateText} → ${endDateText}`;
+                startDate.setAttribute('aria-label', `Từ ngày ${startDateText} đến ngày ${endDateText}`);
+            } else {
+                startDate.textContent = startDateText;
             }
-            heading.append(dates, cells[5].firstElementChild.cloneNode(true));
+            heading.append(startDate, cells[5].firstElementChild.cloneNode(true));
 
             const title = document.createElement('h3');
             title.className = 'schedule-mobile-card-title';
@@ -5313,6 +5387,7 @@ function loadTasksForWeek(y, m, weekId) {
                             </div>
                         </td>
                     `;
+                    appendTaskMobileCard(row);
                     taskTable.appendChild(row);
                 });
             }
@@ -5682,6 +5757,9 @@ if (document.getElementById('deleteMonthBtn')) {
 selectAllCheckbox.onchange = () => {
     // Lặp qua tất cả checkbox trong bảng công việc
     document.querySelectorAll(".task-checkbox").forEach(cb => {
+        cb.checked = selectAllCheckbox.checked;
+    });
+    document.querySelectorAll(".task-card-checkbox").forEach(cb => {
         cb.checked = selectAllCheckbox.checked;
     });
 };
@@ -6183,6 +6261,128 @@ async function loadSearchedTasks() {
     }
 }
 
+function appendTaskMobileCard(row) {
+    const cells = Array.from(row.cells);
+    if (cells.length < 15) return;
+
+    const fieldLabels = [
+        'Chọn',
+        'STT',
+        'Công việc',
+        'Mô tả',
+        'Người yêu cầu',
+        'Đơn vị',
+        'Phụ trách',
+        'Ngày bắt đầu',
+        'Ngày kết thúc',
+        'Kết quả',
+        'Hướng xử lý',
+        'Trạng thái',
+        '% Hoàn thành',
+        'Ghi chú',
+        'Hành động'
+    ];
+    const sourceCheckbox = cells[0].querySelector('.task-checkbox');
+    const sourceStatus = cells[11].querySelector('select');
+    const mobileCell = document.createElement('td');
+    mobileCell.className = 'task-mobile-cell';
+    mobileCell.colSpan = cells.length;
+
+    const card = document.createElement('article');
+    card.className = 'task-mobile-card';
+
+    const heading = document.createElement('div');
+    heading.className = 'task-mobile-card-heading';
+    const selection = document.createElement('div');
+    selection.className = 'task-mobile-card-selection';
+    if (sourceCheckbox) {
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'task-card-checkbox';
+        checkbox.setAttribute('aria-label', `Chọn công việc ${cells[2].textContent.trim()}`);
+        checkbox.checked = sourceCheckbox.checked;
+        checkbox.disabled = sourceCheckbox.disabled;
+        checkbox.addEventListener('change', () => {
+            sourceCheckbox.checked = checkbox.checked;
+            sourceCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        sourceCheckbox.addEventListener('change', () => {
+            checkbox.checked = sourceCheckbox.checked;
+        });
+        selection.appendChild(checkbox);
+    }
+
+    const date = document.createElement('span');
+    date.className = 'task-mobile-card-date';
+    const taskDate = sourceCheckbox?.dataset.date || selectedDate;
+    date.textContent = taskDate ? formatDisplayDate(taskDate) : '';
+    selection.appendChild(date);
+
+    const sourceStatusText = sourceStatus ? sourceStatus.value : cells[11].textContent.trim();
+    let status;
+    if (sourceStatus) {
+        status = sourceStatus.cloneNode(true);
+        status.classList.add('task-mobile-card-status');
+        status.setAttribute('aria-label', 'Trạng thái');
+        status.disabled = sourceStatus.disabled;
+        status.addEventListener('change', () => {
+            sourceStatus.value = status.value;
+            sourceStatus.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        sourceStatus.addEventListener('change', () => {
+            status.value = sourceStatus.value;
+            status.className = `task-mobile-card-status ${statusClass(sourceStatus.value)}`;
+        });
+    } else {
+        status = document.createElement('span');
+        status.className = `task-mobile-card-status ${statusClass(sourceStatusText || 'Chưa bắt đầu')}`;
+        status.textContent = sourceStatusText;
+    }
+    heading.append(selection, status);
+
+    const title = document.createElement('h3');
+    title.className = 'task-mobile-card-title';
+    title.textContent = cells[2].textContent.trim() || 'Chưa có tên công việc';
+
+    const unit = document.createElement('p');
+    unit.className = 'task-mobile-card-unit';
+    unit.textContent = cells[5].textContent.trim() || 'Chưa có đơn vị';
+
+    const details = document.createElement('details');
+    details.className = 'task-mobile-card-details';
+    const summary = document.createElement('summary');
+    summary.textContent = 'Xem chi tiết';
+    const detailList = document.createElement('dl');
+    detailList.className = 'task-mobile-card-detail-list';
+    const primaryIndexes = new Set([0, 1, 2, 5, 11, 14]);
+    cells.forEach((cell, index) => {
+        if (primaryIndexes.has(index)) return;
+        const item = document.createElement('div');
+        item.className = 'task-mobile-card-detail';
+        const label = document.createElement('dt');
+        label.textContent = fieldLabels[index];
+        const value = document.createElement('dd');
+        cell.childNodes.forEach(node => value.appendChild(node.cloneNode(true)));
+        item.append(label, value);
+        detailList.appendChild(item);
+    });
+    details.append(summary, detailList);
+
+    const actions = document.createElement('div');
+    actions.className = 'task-mobile-card-actions';
+    cells[14].querySelectorAll('button').forEach(button => {
+        const mobileButton = button.cloneNode(true);
+        mobileButton.addEventListener('click', () => {
+            if (!button.disabled) button.click();
+        });
+        actions.appendChild(mobileButton);
+    });
+
+    card.append(heading, title, unit, details, actions);
+    mobileCell.appendChild(card);
+    row.appendChild(mobileCell);
+}
+
 function renderSearchedTasks(tasks) {
     if (searchFilterSection) searchFilterSection.style.display = '';
 
@@ -6366,6 +6566,7 @@ function renderSearchedTasks(tasks) {
         actionsCell.appendChild(actionButtons);
         row.appendChild(actionsCell);
 
+        appendTaskMobileCard(row);
         taskTable.appendChild(row);
     });
 
@@ -6382,6 +6583,7 @@ function renderSearchedTasks(tasks) {
         } else if (currentSearch.period === 'year' && currentSearch.year) {
             title = `Công việc năm ${currentSearch.year}`;
         }
+
     }
     if (currentSearch.search) {
         title += ` (tìm: "${currentSearch.search}")`;

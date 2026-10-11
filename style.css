@@ -120,6 +120,10 @@ th {
     display: none;
 }
 
+td.task-mobile-cell {
+    display: none;
+}
+
 table.task-list-table {
     width: 100%;
     min-width: 1180px;
@@ -1631,6 +1635,10 @@ td select {
     min-width: 0;
 }
 
+.task-template-mobile-cards {
+    display: none;
+}
+
 .task-template-table-wrap {
     max-width: 100%;
     max-height: 360px;
@@ -1716,6 +1724,100 @@ td select {
     .menu-detail-sections {
         grid-template-columns: 1fr;
         gap: 12px;
+    }
+
+    #taskTemplateModal .menu-detail-content {
+        width: calc(100vw - 16px);
+        max-height: calc(100dvh - 16px);
+        padding: 16px 12px;
+        gap: 14px;
+    }
+
+    #taskTemplateModal .menu-section {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    #taskTemplateModal .task-template-table-wrap {
+        display: none;
+    }
+
+    #taskTemplateModal .task-template-mobile-cards {
+        display: grid;
+        max-height: 360px;
+        gap: 8px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 1px 3px 1px 1px;
+    }
+
+    .task-template-mobile-card {
+        min-width: 0;
+        padding: 10px;
+        border: 1px solid #dbe3ec;
+        border-radius: 8px;
+        background: #fff;
+        color: #334155;
+    }
+
+    .task-template-mobile-card-heading {
+        display: flex;
+        min-width: 0;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 4px 8px;
+        color: #64748b;
+        font-size: 11px;
+        line-height: 1.35;
+    }
+
+    .task-template-mobile-card-title {
+        margin: 6px 0 0;
+        color: #1f2937;
+        font-size: 13px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+    }
+
+    .task-template-mobile-card-more {
+        margin-top: 8px;
+        border-top: 1px solid #edf0f4;
+    }
+
+    .task-template-mobile-card-more summary {
+        padding: 7px 0 2px;
+        color: #475569;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .task-template-mobile-card-details {
+        display: grid;
+        gap: 6px;
+        margin: 6px 0 0;
+        padding-bottom: 3px;
+    }
+
+    .task-template-mobile-card-details > div {
+        display: grid;
+        grid-template-columns: minmax(70px, 34%) minmax(0, 1fr);
+        gap: 8px;
+        font-size: 11px;
+        line-height: 1.35;
+    }
+
+    .task-template-mobile-card-details dt {
+        color: #64748b;
+        font-weight: 600;
+        overflow-wrap: anywhere;
+    }
+
+    .task-template-mobile-card-details dd {
+        min-width: 0;
+        margin: 0;
+        overflow-wrap: anywhere;
     }
 }
 
@@ -3554,63 +3656,188 @@ td select {
 
 @media (max-width: 620px) {
     .task-table-scroll {
-        overflow-x: auto;
-        overflow-y: hidden;
-        overscroll-behavior-x: contain;
-        -webkit-overflow-scrolling: touch;
+        overflow: visible;
+        background: transparent;
+        box-shadow: none;
     }
 
     .task-table-scroll-hint {
-        position: sticky;
-        left: 0;
-        z-index: 4;
-        display: flex;
-        width: calc(100vw - 18px);
-        min-height: 36px;
-        align-items: center;
-        justify-content: center;
-        margin: 0;
-        padding: 8px 12px;
-        border-bottom: 1px solid #dce4ec;
-        background: #f1f6fc;
-        color: #315b80;
-        font-size: 12px;
-        font-weight: 600;
-        text-align: center;
+        display: none;
     }
 
     table.task-list-table {
-        display: table;
+        display: block;
         width: 100%;
-        min-width: 1180px;
+        min-width: 0;
+        background: transparent;
+    }
+
+    .task-list-table thead {
+        display: none;
+    }
+
+    .task-list-table tbody {
+        display: grid;
+        gap: 10px;
+        padding: 10px 0;
+    }
+
+    .task-list-table tbody tr {
+        display: block;
+        overflow: hidden;
+        border: 1px solid #e1e8ef;
+        border-radius: 10px;
         background: #fff;
+        box-shadow: 0 3px 10px rgba(25, 42, 62, 0.06);
+    }
+
+    .task-list-table tbody tr:hover td {
+        background: #fff;
+    }
+
+    .task-list-table tbody tr > td {
+        display: none;
+    }
+
+    .task-list-table tbody tr > td.task-mobile-cell,
+    .task-list-table tbody tr > td[colspan] {
+        display: block;
+        width: auto !important;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        text-align: left;
+    }
+
+    .task-mobile-card {
+        padding: 14px;
+        color: #263442;
+        text-align: left;
+    }
+
+    .task-mobile-card-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .task-mobile-card-selection {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .task-mobile-card-selection input {
+        flex: 0 0 auto;
+        margin: 0;
+    }
+
+    .task-mobile-card-date {
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .task-mobile-card-status {
+        max-width: 60%;
+        margin-left: auto;
+        flex: 0 1 auto;
+        font-size: 12px;
+    }
+
+    select.task-mobile-card-status {
+        width: auto;
+        min-width: 0;
+        max-width: 60%;
+        padding: 5px 8px;
+        border-radius: 18px;
+    }
+
+    .task-mobile-card-title {
+        min-width: 0;
+        margin: 10px 0 5px;
+        color: #1f2937;
+        font-size: 15px;
+        line-height: 1.4;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .task-mobile-card-unit {
+        margin: 0;
+        color: #64748b;
+        font-size: 13px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+    }
+
+    .task-mobile-card-details {
+        margin-top: 12px;
+        border-top: 1px solid #edf0f4;
+        border-bottom: 1px solid #edf0f4;
+    }
+
+    .task-mobile-card-details summary {
+        padding: 10px 0;
+        color: #475569;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .task-mobile-card-detail-list {
+        display: grid;
+        gap: 10px;
+        margin: 0;
+        padding: 0 0 12px;
+    }
+
+    .task-mobile-card-detail {
+        display: grid;
+        grid-template-columns: minmax(90px, 32%) minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
+        font-size: 12px;
+        line-height: 1.4;
+        text-align: left;
+    }
+
+    .task-mobile-card-detail dt {
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .task-mobile-card-detail dd {
+        min-width: 0;
+        margin: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .task-mobile-card-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding-top: 12px;
+    }
+
+    .task-mobile-card-actions .icon-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        min-width: 36px;
+        height: 36px;
+        min-height: 36px;
+        margin: 0;
     }
 
     .task-list-table th:nth-child(-n+2),
     .task-list-table td:nth-child(-n+2) {
-        position: sticky;
-        z-index: 2;
-        background: #fff;
-    }
-
-    .task-list-table th:nth-child(-n+2) {
-        z-index: 3;
-        background: #df171f;
-    }
-
-    .task-list-table th:first-child,
-    .task-list-table td:first-child {
-        left: 0;
-    }
-
-    .task-list-table th:nth-child(2),
-    .task-list-table td:nth-child(2) {
-        left: 34px;
-    }
-
-    .task-list-table th:nth-child(2),
-    .task-list-table td:nth-child(2) {
-        box-shadow: 4px 0 6px -4px rgba(25, 42, 62, 0.35);
+        position: static;
+        box-shadow: none;
     }
 }
 
@@ -3705,16 +3932,13 @@ td select {
         gap: 10px;
     }
 
-    .schedule-mobile-card-dates {
-        display: grid;
-        gap: 4px;
-    }
-
     .schedule-mobile-card-date {
+        min-width: 0;
         color: #64748b;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
-        line-height: 1.35;
+        line-height: 1.4;
+        white-space: nowrap;
     }
 
     .schedule-mobile-card-heading .schedule-status {
