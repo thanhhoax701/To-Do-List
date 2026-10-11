@@ -6353,6 +6353,7 @@ function appendTaskMobileCard(row) {
     let status;
     if (sourceStatus) {
         status = sourceStatus.cloneNode(true);
+        status.value = sourceStatus.value;
         status.classList.add('task-mobile-card-status');
         status.setAttribute('aria-label', 'Trạng thái');
         status.disabled = sourceStatus.disabled;
