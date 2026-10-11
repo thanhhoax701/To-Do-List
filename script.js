@@ -3165,6 +3165,77 @@ async function loadScheduleList() {
                 cell.dataset.label = scheduleHeaders[index].getAttribute('aria-label') ||
                     scheduleHeaders[index].textContent.trim() || 'Thao tác';
             });
+            const cells = Array.from(row.cells);
+            const mobileCell = document.createElement('td');
+            mobileCell.className = 'schedule-mobile-cell';
+            mobileCell.colSpan = cells.length;
+
+            const card = document.createElement('article');
+            card.className = 'schedule-mobile-card';
+            const heading = document.createElement('div');
+            heading.className = 'schedule-mobile-card-heading';
+            const dates = document.createElement('div');
+            dates.className = 'schedule-mobile-card-dates';
+            const startDate = document.createElement('span');
+            startDate.className = 'schedule-mobile-card-date';
+            startDate.textContent = `${requestType === 'maintenance' ? 'Từ ngày ' : ''}${cells[requestType === 'maintenance' ? 2 : 0].textContent.trim()}`;
+            dates.appendChild(startDate);
+            if (requestType === 'maintenance') {
+                const endDate = document.createElement('span');
+                endDate.className = 'schedule-mobile-card-date';
+                endDate.textContent = `Đến ngày ${cells[3].textContent.trim()}`;
+                dates.appendChild(endDate);
+            }
+            heading.append(dates, cells[5].firstElementChild.cloneNode(true));
+
+            const title = document.createElement('h3');
+            title.className = 'schedule-mobile-card-title';
+            title.textContent = cells[requestType === 'maintenance' ? 6 : 2].textContent.trim();
+
+            const unit = document.createElement('p');
+            unit.className = 'schedule-mobile-card-unit';
+            unit.textContent = cells[requestType === 'maintenance' ? 1 : 3].textContent.trim();
+
+            const details = document.createElement('details');
+            details.className = 'schedule-mobile-card-details';
+            const summary = document.createElement('summary');
+            summary.textContent = 'Xem chi tiết';
+            const detailList = document.createElement('dl');
+            detailList.className = 'schedule-mobile-card-detail-list';
+            const primaryIndexes = new Set([
+                requestType === 'maintenance' ? 2 : 0,
+                ...(requestType === 'maintenance' ? [3] : []),
+                5,
+                requestType === 'maintenance' ? 6 : 2,
+                requestType === 'maintenance' ? 1 : 3,
+                ...(requestType === 'maintenance' ? [0] : [])
+            ]);
+            cells.forEach((cell, index) => {
+                if (primaryIndexes.has(index) || index === cells.length - 1) return;
+                const item = document.createElement('div');
+                item.className = 'schedule-mobile-card-detail';
+                const label = document.createElement('dt');
+                label.textContent = cell.dataset.label;
+                const value = document.createElement('dd');
+                cell.childNodes.forEach(node => value.appendChild(node.cloneNode(true)));
+                item.append(label, value);
+                detailList.appendChild(item);
+            });
+            details.append(summary, detailList);
+
+            const mobileActions = document.createElement('div');
+            mobileActions.className = 'schedule-mobile-card-actions';
+            Array.from(actions.querySelectorAll('button')).forEach(button => {
+                const mobileButton = button.cloneNode(true);
+                mobileButton.addEventListener('click', () => {
+                    if (!button.disabled) button.click();
+                });
+                mobileActions.appendChild(mobileButton);
+            });
+
+            card.append(heading, title, unit, details, mobileActions);
+            mobileCell.appendChild(card);
+            row.appendChild(mobileCell);
             scheduleList.appendChild(row);
         }
     } catch (e) {

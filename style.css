@@ -2809,6 +2809,10 @@ td select {
     border-radius: 12px;
 }
 
+.schedule-mobile-cell {
+    display: none;
+}
+
 .schedule-table {
     width: 100%;
     min-width: 960px;
@@ -3666,29 +3670,14 @@ td select {
     }
 
     .schedule-management-content .schedule-table tbody td {
-        display: grid;
+        display: none;
+    }
+
+    .schedule-management-content .schedule-table tbody td.schedule-mobile-cell {
+        display: block;
         width: auto !important;
         min-width: 0;
-        grid-template-columns: minmax(92px, 36%) minmax(0, 1fr);
-        align-items: start;
-        gap: 8px;
-        padding: 9px 10px;
-        border-bottom: 1px solid #edf0f4;
-        font-size: 12px;
-        white-space: normal;
-        overflow-wrap: anywhere;
-    }
-
-    .schedule-management-content .schedule-table tbody td::before {
-        color: #68788b;
-        font-size: 10px;
-        font-weight: 700;
-        line-height: 1.4;
-        text-transform: uppercase;
-        content: attr(data-label);
-    }
-
-    .schedule-management-content .schedule-table tbody td:last-child {
+        padding: 0;
         border-bottom: 0;
     }
 
@@ -3702,20 +3691,126 @@ td select {
         content: none;
     }
 
-    .schedule-management-content .schedule-assignees {
+    .schedule-mobile-card {
+        padding: 14px;
+        color: #263442;
+        text-align: left;
+    }
+
+    .schedule-mobile-card-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .schedule-mobile-card-dates {
+        display: grid;
+        gap: 4px;
+    }
+
+    .schedule-mobile-card-date {
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.35;
+    }
+
+    .schedule-mobile-card-heading .schedule-status {
+        flex: 0 0 auto;
+        max-width: 60%;
+        margin-left: auto;
+        white-space: normal;
+        text-align: center;
+    }
+
+    .schedule-mobile-card-title {
+        margin: 10px 0 5px;
+        color: #1f2937;
+        font-size: 15px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+    }
+
+    .schedule-mobile-card-unit {
+        margin: 0;
+        color: #64748b;
+        font-size: 13px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+    }
+
+    .schedule-mobile-card-details {
+        margin-top: 12px;
+        border-top: 1px solid #edf0f4;
+        border-bottom: 1px solid #edf0f4;
+    }
+
+    .schedule-mobile-card-details summary {
+        padding: 10px 0;
+        color: #475569;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .schedule-mobile-card-detail-list {
+        display: grid;
+        gap: 10px;
+        margin: 0;
+        padding: 0 0 12px;
+    }
+
+    .schedule-mobile-card-detail {
+        display: grid;
+        grid-template-columns: minmax(90px, 32%) minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    .schedule-mobile-card-detail dt {
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .schedule-mobile-card-detail dd {
+        min-width: 0;
+        margin: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .schedule-mobile-card-detail .schedule-assignees {
         min-width: 0;
     }
 
-    .schedule-management-content .schedule-assignees span {
-        display: inline-block;
+    .schedule-mobile-card-detail .schedule-assignees span {
+        display: table;
+        max-width: 100%;
+        margin: 0 0 5px;
         white-space: normal;
     }
 
-    .schedule-management-content .schedule-table tbody td.schedule-table-actions {
+    .schedule-mobile-card-detail .schedule-assignees span:last-child {
+        margin-bottom: 0;
+    }
+
+    .schedule-mobile-card-actions {
         display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding-top: 12px;
+    }
+
+    .schedule-mobile-card-actions .schedule-action-btn {
+        display: inline-flex;
         align-items: center;
-        justify-content: flex-start;
-        flex-wrap: wrap;
-        gap: 6px;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        margin: 0;
+        flex: 0 0 auto;
     }
 }
