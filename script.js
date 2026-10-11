@@ -4383,7 +4383,7 @@ const scheduleImportFields = {
         endDate: ['denngay', 'ngayketthuc', 'enddate', 'todate'],
         dueDate: ['ngaydenhan', 'denhan', 'duedate'],
         content: ['noidungbaotri', 'noidung', 'maintenancecontent', 'content'],
-        equipment: ['doituong', 'thietbi', 'hethong', 'equipment', 'object'],
+        equipment: ['doituong', 'doituongthietbi', 'thietbi', 'hethong', 'equipment', 'object'],
         unit: ['donviphongban', 'donvi', 'phongban', 'department', 'unit'],
         assignee: ['nguoithuchien', 'nguoiphutrach', 'assignee', 'personincharge'],
         cycle: ['chuky', 'cycle', 'period'],
