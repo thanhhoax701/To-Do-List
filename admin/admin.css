@@ -369,3 +369,82 @@ body {
     background: #f8d7da;
     color: #721c24;
 }
+
+@media (max-width: 620px) {
+    body {
+        padding: 10px;
+    }
+
+    .admin-login {
+        margin: 20px auto;
+    }
+
+    .login-box-admin {
+        padding: 22px 16px;
+    }
+
+    .login-actions {
+        flex-direction: column;
+    }
+
+    .login-actions button,
+    .login-actions a {
+        width: 100%;
+    }
+
+    .admin-container {
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .admin-sidebar {
+        width: 100%;
+        padding: 8px;
+        border-right: 0;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .admin-sidebar ul {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .admin-sidebar li {
+        flex: 0 0 auto;
+        margin: 0;
+        white-space: nowrap;
+    }
+
+    .admin-main {
+        min-width: 0;
+        padding: 10px 8px;
+    }
+
+    .admin-box {
+        margin: 0 auto 10px;
+        padding: 14px 12px;
+    }
+
+    .user-item,
+    .user-item .meta {
+        flex-wrap: wrap;
+        gap: 8px 12px;
+    }
+
+    .user-item > div:last-child {
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    #tasksContent {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #tasksContent table {
+        min-width: 680px;
+    }
+}

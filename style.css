@@ -1,3 +1,5 @@
+@charset "UTF-8";
+
 /* ===== BODY & TỔNG QUAN ===== */
 html {
     box-sizing: border-box;
@@ -300,15 +302,15 @@ table.task-list-table {
 }
 
 .task-list-table td:last-child button.btn-duplicate::before {
-    content: "🔁";
+    content: "\1f501 ";
 }
 
 .task-list-table td:last-child button.btn-edit::before {
-    content: "✏️";
+    content: "\270f\fe0f";
 }
 
 .task-list-table td:last-child button.btn-delete::before {
-    content: "🗑️";
+    content: "\1f5d1\fe0f";
 }
 
 .task-list-table td:last-child .btn-duplicate,
@@ -2689,7 +2691,7 @@ td select {
     top: 50%;
     right: 14px;
     color: #607386;
-    content: "⌄";
+    content: "\2304";
     font-size: 16px;
     font-weight: 700;
     pointer-events: none;
@@ -3539,4 +3541,204 @@ td select {
 .menu-overlay.show {
     opacity: 1;
     visibility: visible;
+}
+
+@media (max-width: 620px) {
+    .task-table-scroll {
+        overflow: visible;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    table.task-list-table {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        background: transparent;
+    }
+
+    .task-list-table thead,
+    .task-list-table tbody {
+        display: block;
+    }
+
+    .task-list-table thead tr {
+        display: block;
+    }
+
+    .task-list-table thead th {
+        display: none;
+    }
+
+    .task-list-table thead th:first-child {
+        display: flex;
+        width: auto;
+        height: auto;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 0 4px 8px;
+        border: 0;
+        background: transparent;
+        color: #526174;
+        font-size: 12px;
+        text-transform: none;
+    }
+
+    .task-list-table thead th:first-child::after {
+        content: "Ch\1ecd n t\1ea5t c\1ea3";
+    }
+
+    .task-list-table tbody {
+        display: grid;
+        gap: 10px;
+    }
+
+    .task-list-table tbody tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid #e5eaf0;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 5px 16px rgba(25, 42, 62, 0.06);
+    }
+
+    .task-list-table tbody td {
+        display: flex;
+        width: auto !important;
+        min-width: 0;
+        min-height: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        padding: 9px 10px;
+        border-right: 1px solid #edf0f4;
+        border-bottom: 1px solid #edf0f4;
+        font-size: 12px;
+        text-align: left;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+
+    .task-list-table tbody td:not([colspan])::before {
+        color: #79869a;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1.3;
+        text-transform: uppercase;
+    }
+
+    .task-list-table tbody td:nth-child(1)::before {
+        content: "Ch\1ecd n";
+    }
+
+    .task-list-table tbody td:nth-child(2)::before {
+        content: "STT";
+    }
+
+    .task-list-table tbody td:nth-child(3)::before {
+        content: "C\00f4ng vi\1ec7 c";
+    }
+
+    .task-list-table tbody td:nth-child(4)::before {
+        content: "M\00f4  t\1ea3";
+    }
+
+    .task-list-table tbody td:nth-child(5)::before {
+        content: "Ng\01b0 \1eddi y\00eau c\1ea7u";
+    }
+
+    .task-list-table tbody td:nth-child(6)::before {
+        content: "\0110 \01a1n v\1ecb";
+    }
+
+    .task-list-table tbody td:nth-child(7)::before {
+        content: "Ph\1ee5  tr\00e1 ch";
+    }
+
+    .task-list-table tbody td:nth-child(8)::before {
+        content: "Ng\00e0y b\1eaf t \0111 \1ea7u";
+    }
+
+    .task-list-table tbody td:nth-child(9)::before {
+        content: "Ng\00e0y k\1ebf t th\00fa c";
+    }
+
+    .task-list-table tbody td:nth-child(10)::before {
+        content: "K\1ebf t qu\1ea3";
+    }
+
+    .task-list-table tbody td:nth-child(11)::before {
+        content: "H\01b0 \1edbng x\1eed  l\00fd";
+    }
+
+    .task-list-table tbody td:nth-child(12)::before {
+        content: "Tr\1ea1ng th\00e1i";
+    }
+
+    .task-list-table tbody td:nth-child(13)::before {
+        content: "% Ho\00e0n th\00e0nh";
+    }
+
+    .task-list-table tbody td:nth-child(14)::before {
+        content: "Ghi ch\00fa";
+    }
+
+    .task-list-table tbody td:nth-child(15)::before {
+        content: "H\00e0nh \0111 \1ed9ng";
+    }
+
+    .task-list-table tbody td:nth-child(1) {
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .task-list-table tbody td:nth-child(2) {
+        align-items: flex-end;
+        text-align: right;
+    }
+
+    .task-list-table tbody td:nth-child(3),
+    .task-list-table tbody td:nth-child(4),
+    .task-list-table tbody td:nth-child(11),
+    .task-list-table tbody td:nth-child(14),
+    .task-list-table tbody td:nth-child(15),
+    .task-list-table tbody td[colspan] {
+        grid-column: 1 / -1;
+    }
+
+    .task-list-table tbody td:nth-child(12) select {
+        width: 100%;
+        min-width: 0;
+        font-size: 11px;
+    }
+
+    .task-list-table tbody td:last-child .task-actions {
+        flex-direction: row;
+        justify-content: flex-start;
+    }
+
+    .task-list-table tbody td:last-child button.btn-duplicate,
+    .task-list-table tbody td:last-child button.btn-edit,
+    .task-list-table tbody td:last-child button.btn-delete {
+        width: 40px;
+        min-width: 40px;
+        height: 40px;
+        min-height: 40px;
+    }
+
+}
+
+@media (max-width: 420px) {
+    .task-list-table tbody td {
+        padding: 8px;
+    }
+
+    .task-list-table tbody tr {
+        border-radius: 12px;
+    }
 }
