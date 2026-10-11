@@ -228,13 +228,11 @@
                         </div>
                         <div class="schedule-header-actions">
                             <button type="button" id="importScheduleBtn" class="schedule-import-btn">📥 Nhập Excel</button>
-                            <button type="button" id="downloadScheduleTemplateBtn" class="schedule-template-btn">⬇ Mẫu Excel</button>
                             <button type="button" id="exportScheduleBtn" class="schedule-template-btn">📤 Xuất Excel</button>
                             <button type="button" id="openScheduleFormBtn" class="schedule-add-btn">＋ Thêm lịch</button>
                             <input type="file" id="scheduleImportFile" accept=".xlsx,.xls,.csv" hidden>
                         </div>
                     </header>
-                    <p class="schedule-import-hint">Mẫu Excel: điền dữ liệu từ dòng 2. Hệ thống đọc trang tính đầu tiên.</p>
                     <section id="maintenanceDashboard" class="maintenance-dashboard" hidden aria-label="Tổng quan lịch bảo trì">
                         <article class="maintenance-stat-card">
                             <span>Đến hạn</span>
@@ -300,11 +298,11 @@
                     <form id="scheduleForm" class="schedule-form schedule-editor">
                         <div class="schedule-form-field" data-schedule-store-field>
                             <label class="menu-form-label" for="scheduleDate">Ngày</label>
-                            <input type="date" id="scheduleDate" class="menu-form-input" required>
+                            <input type="date" id="scheduleDate" class="menu-form-input">
                         </div>
                         <div class="schedule-form-field" data-schedule-store-field>
                             <label class="menu-form-label" for="scheduleTime">Giờ</label>
-                            <input type="time" id="scheduleTime" class="menu-form-input" value="07:00" required>
+                            <input type="time" id="scheduleTime" class="menu-form-input" value="07:00">
                         </div>
                         <div id="scheduleTypeField" class="schedule-type-field">
                             <label class="menu-form-label" for="scheduleType">Loại lịch:</label>
@@ -340,11 +338,11 @@
                         </div>
                         <div class="schedule-form-field" data-schedule-maintenance-field hidden>
                             <label class="menu-form-label" for="maintenanceStartDate">Từ ngày</label>
-                            <input type="date" id="maintenanceStartDate" class="menu-form-input" required>
+                            <input type="date" id="maintenanceStartDate" class="menu-form-input">
                         </div>
                         <div class="schedule-form-field" data-schedule-maintenance-field hidden>
                             <label class="menu-form-label" for="maintenanceEndDate">Đến ngày</label>
-                            <input type="date" id="maintenanceEndDate" class="menu-form-input" required>
+                            <input type="date" id="maintenanceEndDate" class="menu-form-input">
                         </div>
                         <div class="schedule-form-field" data-schedule-maintenance-field hidden>
                             <label class="menu-form-label" for="maintenanceDueDate">Ngày đến hạn</label>
@@ -496,7 +494,35 @@
                             <span class="menu-category-text">Nhập công việc</span>
                             <span class="menu-category-arrow">›</span>
                         </button>
+                        <button type="button" class="menu-category-btn" data-menu-modal="taskTemplateModal">
+                            <span class="menu-category-icon">📄</span>
+                            <span class="menu-category-text">Mẫu</span>
+                            <span class="menu-category-arrow">›</span>
+                        </button>
                     </div>
+                </div>
+            </div>
+            <div id="taskTemplateModal" class="modal menu-detail-modal" role="dialog" aria-modal="true" aria-labelledby="taskTemplateTitle" aria-hidden="true">
+                <div class="modal-content menu-detail-content">
+                    <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
+                    <h2 id="taskTemplateTitle">Mẫu</h2>
+                    <button type="button" class="menu-detail-back" data-menu-parent="importExportModal">‹ Quay lại</button>
+                    <section class="menu-section">
+                        <h3 class="menu-section-title">MẪU XUẤT CÔNG VIỆC</h3>
+                        <p id="taskTemplateStatus" class="schedule-import-hint" role="status">Đang kiểm tra file mẫu đã lưu...</p>
+                        <button type="button" id="uploadTaskTemplateBtn" class="btn-add" style="width:100%;">📤 Tải mẫu Excel lên</button>
+                        <input type="file" id="taskTemplateFile" accept=".xlsx" hidden>
+                        <div class="task-template-actions">
+                            <button type="button" id="reloadTaskTemplateBtn" class="btn-edit">🔄 Tải lại dữ liệu file mẫu</button>
+                            <button type="button" id="deleteTaskTemplateBtn" class="btn-delete">🗑️ Xóa file mẫu</button>
+                        </div>
+                        <p class="menu-help-text">Tải mẫu lên trước khi xuất. Hỗ trợ file .xlsx tối đa 5 MB, có tiêu đề cột ở dòng đầu tiên.</p>
+                        <div id="taskTemplatePreview" class="task-template-preview" hidden>
+                            <h4 id="taskTemplatePreviewTitle" class="task-template-preview-title"></h4>
+                            <div id="taskTemplateSheetTabs" class="task-template-sheet-tabs" role="tablist" aria-label="Các sheet trong file mẫu"></div>
+                            <div id="taskTemplateSheetContent" class="task-template-sheet-content"></div>
+                        </div>
+                    </section>
                 </div>
             </div>
             <div id="exportTasksModal" class="modal menu-detail-modal" role="dialog" aria-modal="true" aria-labelledby="exportTasksTitle" aria-hidden="true">
@@ -509,7 +535,7 @@
                             <option value="day">Ngày</option>
                             <option value="week">Tuần</option>
                             <option value="month">Tháng</option>
-                            <option value="range">Khoảng</option>
+                            <option value="range">Khoảng thời gian</option>
                         </select>
                         <div id="exportWeek" class="menu-conditional-field">
                             <label class="menu-form-label" for="exportWeekSelect">Chọn tuần:</label>
@@ -861,6 +887,7 @@
             <!-- Vòng xoay loading -->
             <div id="loadingIndicator" class="loading-overlay">
                 <div class="loading-spinner"></div>
+                <p id="loadingMessage" class="loading-message" aria-live="polite"></p>
             </div>
             <!-- Modal thông báo / xác nhận tùy chỉnh -->
             <div id="customAlertModal" class="modal" style="display:none;">
@@ -876,6 +903,7 @@
         <!-- ========== SCRIPT ========== -->
         <!-- Firebase Realtime Database -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
         <script type="module" src="firebase.js"></script>
         <!-- Logic chính của ứng dụng -->
         <script type="module" src="script.js"></script>

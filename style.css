@@ -1234,6 +1234,18 @@ td select {
     animation: spin 1s linear infinite;
 }
 
+.loading-message:empty {
+    display: none;
+}
+
+.loading-message {
+    max-width: 260px;
+    margin: 12px 0 0;
+    color: #334155;
+    font-size: 13px;
+    text-align: center;
+}
+
 @keyframes spin {
     to {
         transform: rotate(360deg);
@@ -1557,6 +1569,111 @@ td select {
     letter-spacing: 0.35px;
 }
 
+.task-template-preview {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.task-template-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.task-template-actions button {
+    min-width: 0;
+    margin: 0;
+}
+
+.task-template-preview-title {
+    margin: 0;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.task-template-sheet-tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.task-template-sheet-tab {
+    flex: 0 0 auto;
+    padding: 7px 12px;
+    border: 1px solid #d7e1ed;
+    border-radius: 7px 7px 0 0;
+    background: #f8fafc;
+    color: #475569;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.task-template-sheet-tab[aria-selected="true"] {
+    border-color: #93c5fd;
+    background: #eaf3ff;
+    color: #0056b3;
+    font-weight: 700;
+}
+
+.task-template-sheet-content {
+    min-width: 0;
+}
+
+.task-template-table-wrap {
+    max-width: 100%;
+    max-height: 360px;
+    overflow: auto;
+    border: 1px solid #dbe3ec;
+    border-radius: 8px;
+}
+
+.task-template-table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: #334155;
+    font-size: 12px;
+}
+
+.task-template-table th,
+.task-template-table td {
+    min-width: 90px;
+    max-width: 260px;
+    padding: 7px 9px;
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+    vertical-align: top;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.task-template-table tr:first-child th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f1f5f9;
+    color: #334155;
+    font-weight: 700;
+}
+
+.task-template-empty {
+    margin: 0;
+    padding: 14px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    color: #64748b;
+    font-size: 13px;
+    text-align: center;
+}
+
 .menu-conditional-field {
     display: none;
     margin-top: 4px;
@@ -1582,6 +1699,10 @@ td select {
 }
 
 @media (max-width: 620px) {
+    .task-template-actions {
+        grid-template-columns: 1fr;
+    }
+
     .menu-detail-content {
         padding: 22px 16px;
     }

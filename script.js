@@ -57,6 +57,7 @@ const saveTaskBtn = document.getElementById("saveTaskBtn"); // Nút lưu
 
 // Chỉ báo loading (vòng xoay chờ đợi khi xử lý async)
 const loadingIndicator = document.getElementById("loadingIndicator");
+const loadingMessage = document.getElementById("loadingMessage");
 
 // Menu sidebar
 const menuToggleBtn = document.getElementById("menuToggleBtn");
@@ -94,9 +95,18 @@ const cancelScheduleEditBtn = document.getElementById('cancelScheduleEditBtn');
 const refreshScheduleBtn = document.getElementById('refreshScheduleBtn');
 const openScheduleFormBtn = document.getElementById('openScheduleFormBtn');
 const importScheduleBtn = document.getElementById('importScheduleBtn');
-const downloadScheduleTemplateBtn = document.getElementById('downloadScheduleTemplateBtn');
 const exportScheduleBtn = document.getElementById('exportScheduleBtn');
 const scheduleImportFile = document.getElementById('scheduleImportFile');
+const uploadTaskTemplateBtn = document.getElementById('uploadTaskTemplateBtn');
+const taskTemplateFile = document.getElementById('taskTemplateFile');
+const taskTemplateStatus = document.getElementById('taskTemplateStatus');
+const reloadTaskTemplateBtn = document.getElementById('reloadTaskTemplateBtn');
+const deleteTaskTemplateBtn = document.getElementById('deleteTaskTemplateBtn');
+const taskTemplatePreview = document.getElementById('taskTemplatePreview');
+const taskTemplatePreviewTitle = document.getElementById('taskTemplatePreviewTitle');
+const taskTemplateSheetTabs = document.getElementById('taskTemplateSheetTabs');
+const taskTemplateSheetContent = document.getElementById('taskTemplateSheetContent');
+const taskExportTemplateCache = new Map();
 const scheduleCount = document.getElementById('scheduleCount');
 const maintenanceDashboard = document.getElementById('maintenanceDashboard');
 const maintenanceDueCount = document.getElementById('maintenanceDueCount');
@@ -422,9 +432,8 @@ function formatExportHeader(header) {
  */
 // Tính toán chiều rộng cột dựa trên nội dung (số ký tự lớn nhất)
 function computeColWidths(header, rows) {
-    const all = [header, ...rows];
     const widths = [];
-    const MAX_CONTENT = 50; // giới hạn chiều rộng ký tự cho cột Nội dung
+    const MAX_CONTENT = 50;
     for (let c = 0; c < header.length; c++) {
         let max = header[c] ? String(header[c]).length : 0;
         for (let r = 0; r < rows.length; r++) {
@@ -434,85 +443,441 @@ function computeColWidths(header, rows) {
                 if (len > max) max = len;
             }
         }
-        // nếu là cột Nội dung, áp dụng giới hạn
-        if (header[c] === 'Nội dung' && max > MAX_CONTENT) {
-            max = MAX_CONTENT;
-        }
+        max = Math.min(max, MAX_CONTENT);
         // thêm một chút padding
-        widths[c] = { wch: max + 2 };
+        widths[c] = max + 2;
     }
     return widths;
 }
 
-// Áp dụng style chung lên worksheet export: header bold, wrap nội dung, set widths, căn giữa cột A
-function styleWorksheet(ws, header, rows) {
-    // hàng đầu bold
-    for (let C = 0; C < header.length; C++) {
-        const cellRef = XLSX.utils.encode_cell({ r: 0, c: C });
-        if (!ws[cellRef]) continue;
-        ws[cellRef].s = ws[cellRef].s || {};
-        ws[cellRef].s.font = ws[cellRef].s.font || {};
-        ws[cellRef].s.font.bold = true;
-    }
-    // wrap text ở cột Công việc (thường là cột B)
-    const contentColIndex = header.findIndex(h => h === 'Công việc');
-    if (contentColIndex !== -1) {
-        for (let r = 1; r < rows.length + 1; r++) {
-            const cellRef = XLSX.utils.encode_cell({ r, c: contentColIndex });
-            if (!ws[cellRef]) continue;
-            ws[cellRef].s = ws[cellRef].s || {};
-            ws[cellRef].s.alignment = ws[cellRef].s.alignment || {};
-            ws[cellRef].s.alignment.wrapText = true;
-            // đặt vertical top để nội dung hiển thị gọn
-            ws[cellRef].s.alignment.vertical = 'top';
-        }
-    }
-    // căn giữa toàn bộ cột A
-    for (let r = 0; r < rows.length + 1; r++) {
-        const cellRef = XLSX.utils.encode_cell({ r, c: 0 });
-        if (!ws[cellRef]) continue;
-        ws[cellRef].s = ws[cellRef].s || {};
-        ws[cellRef].s.alignment = ws[cellRef].s.alignment || {};
-        ws[cellRef].s.alignment.horizontal = 'center';
-    }
-    ws['!cols'] = computeColWidths(header, rows);
+function addExportWorksheet(workbook, name, header, rows) {
+    const worksheet = workbook.addWorksheet(name);
+    worksheet.addRow(header.map(formatExportHeader));
+    rows.forEach(row => worksheet.addRow(row));
+    worksheet.columns = computeColWidths(header, rows);
+    worksheet.views = [{ state: 'frozen', ySplit: 1, topLeftCell: 'A2' }];
+    worksheet.autoFilter = {
+        from: { row: 1, column: 1 },
+        to: { row: rows.length + 1, column: header.length }
+    };
+    worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+        row.eachCell({ includeEmpty: true }, cell => {
+            cell.alignment = { ...cell.alignment, wrapText: true, vertical: 'top' };
+            if (rowNumber === 1) cell.font = { ...cell.font, bold: true };
+        });
+    });
+    return worksheet;
 }
 
-function writeDataToXLSX(header, rows) {
-    const upperHeader = header.map(formatExportHeader);
-    const data = [upperHeader, ...rows];
-    const ws = XLSX.utils.aoa_to_sheet(data);
+const taskTemplateHeaderAliases = {
+    number: ['stt', 'sothutu', 'number', 'no'],
+    date: ['ngay', 'date', 'workdate', 'ngaycongviec'],
+    content: ['congviec', 'task', 'taskname', 'noidungcongviec'],
+    description: ['mota', 'description'],
+    requester: ['nguoiyeucau', 'requester', 'requestedby'],
+    unit: ['donvi', 'unit', 'department'],
+    assignee: ['phutrach', 'nguoiphutrach', 'assignee', 'personincharge'],
+    startDate: ['ngaybatdau', 'startdate', 'fromdate'],
+    endDate: ['ngayketthuc', 'enddate', 'todate'],
+    result: ['ketqua', 'result'],
+    direction: ['huongxuly', 'direction', 'action'],
+    status: ['trangthai', 'status'],
+    completion: ['hoanthanh', 'completion', 'percentcomplete'],
+    note: ['ghichu', 'note']
+};
 
-    // áp dụng style: hàng đầu bold
-    for (let C = 0; C < upperHeader.length; C++) {
-        const cellRef = XLSX.utils.encode_cell({ r: 0, c: C });
-        if (!ws[cellRef]) continue;
-        ws[cellRef].s = ws[cellRef].s || {};
-        ws[cellRef].s.font = ws[cellRef].s.font || {};
-        ws[cellRef].s.font.bold = true;
+function resolveTaskTemplateField(value) {
+    const header = normalizeEmployeeText(String(value ?? '')).replace(/[^a-z0-9]/g, '');
+    return Object.keys(taskTemplateHeaderAliases).find(field =>
+        taskTemplateHeaderAliases[field].some(alias =>
+            alias.replace(/[^a-z0-9]/g, '') === header
+        )
+    ) || null;
+}
+
+function getTaskTemplateColumns(worksheet) {
+    const headerRow = worksheet.getRow(1);
+    const columns = [];
+    for (let column = 1; column <= headerRow.cellCount; column++) {
+        const field = resolveTaskTemplateField(headerRow.getCell(column).text);
+        if (field) columns.push({ column, field });
+    }
+    if (!columns.length) {
+        throw new Error('Mẫu Excel cần có tiêu đề cột công việc ở dòng đầu tiên.');
+    }
+    return columns;
+}
+
+async function loadTaskExportTemplateBytes() {
+    if (taskExportTemplateCache.has('task')) return taskExportTemplateCache.get('task');
+    const templatePromise = (async () => {
+        const snapshot = await withTaskTemplateTimeout(
+            get(ref(db, 'taskExportTemplates/task')),
+            'Hết thời gian chờ đọc file mẫu từ cơ sở dữ liệu.'
+        );
+        if (!snapshot.exists()) return null;
+        const savedTemplate = snapshot.val();
+        if (!savedTemplate || typeof savedTemplate.data !== 'string') {
+            throw new Error('Dữ liệu file mẫu đã lưu không hợp lệ.');
+        }
+        return base64ToArrayBuffer(savedTemplate.data);
+    })();
+    taskExportTemplateCache.set('task', templatePromise);
+    try {
+        return await templatePromise;
+    } catch (error) {
+        taskExportTemplateCache.delete('task');
+        throw error;
+    }
+}
+
+function withTaskTemplateTimeout(operation, message) {
+    let timeoutId;
+    return Promise.race([
+        operation,
+        new Promise((_, reject) => {
+            timeoutId = setTimeout(() => reject(new Error(message)), 20000);
+        })
+    ]).finally(() => clearTimeout(timeoutId));
+}
+
+function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    let binary = '';
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+    }
+    return btoa(binary);
+}
+
+function base64ToArrayBuffer(value) {
+    const binary = atob(value);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index++) {
+        bytes[index] = binary.charCodeAt(index);
+    }
+    return bytes.buffer;
+}
+
+async function refreshTaskTemplateStatus(forceReload = false) {
+    if (!taskTemplateStatus) return;
+    if (forceReload) taskExportTemplateCache.delete('task');
+    taskTemplateStatus.textContent = 'Đang kiểm tra file mẫu đã lưu...';
+    try {
+        const bytes = await loadTaskExportTemplateBytes();
+        if (!bytes) {
+            taskTemplateStatus.textContent = 'Chưa có file mẫu. Hãy tải mẫu Excel lên trước khi xuất Công việc.';
+            clearTaskTemplatePreview();
+            return;
+        }
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(bytes.slice(0));
+        if (!workbook.worksheets.length) throw new Error('File mẫu không có sheet.');
+        taskTemplateStatus.textContent = `Đã có file mẫu trên hệ thống (${workbook.worksheets.length} sheet); có thể xuất Công việc.`;
+        renderTaskTemplatePreview(workbook);
+    } catch (error) {
+        console.error('Lỗi kiểm tra file mẫu Công việc:', error);
+        taskTemplateStatus.textContent = `Không kiểm tra được file mẫu: ${error?.message || String(error)}`;
+        clearTaskTemplatePreview();
+    }
+}
+
+async function deleteTaskExportTemplate() {
+    if (!isAdmin()) throw new Error('Bạn không có quyền xóa file mẫu.');
+    await withTaskTemplateTimeout(
+        remove(ref(db, 'taskExportTemplates/task')),
+        'Hết thời gian chờ xóa file mẫu. Vui lòng kiểm tra kết nối hoặc quyền ghi cơ sở dữ liệu.'
+    );
+    taskExportTemplateCache.delete('task');
+    clearTaskTemplatePreview();
+}
+
+function clearTaskTemplatePreview() {
+    if (taskTemplatePreview) taskTemplatePreview.hidden = true;
+    if (taskTemplatePreviewTitle) taskTemplatePreviewTitle.textContent = '';
+    if (taskTemplateSheetTabs) taskTemplateSheetTabs.replaceChildren();
+    if (taskTemplateSheetContent) taskTemplateSheetContent.replaceChildren();
+}
+
+function getTemplateCellText(cell, worksheet, workbook) {
+    const value = cell.value;
+    if (value && typeof value === 'object' && 'formula' in value) {
+        const formula = String(value.formula).replace(/^=/, '');
+        const countIfMatch = formula.match(/^COUNTIF\(\s*(?:'((?:[^']|'')+)'|([^!]+))!\$?([A-Z]+)\$?(\d+):\$?([A-Z]+)\$?(\d+)\s*,\s*\$?([A-Z]+)\$?(\d+)\s*\)$/i);
+        if (countIfMatch && workbook) {
+            const sourceSheetName = (countIfMatch[1] || countIfMatch[2]).replace(/''/g, "'");
+            const sourceWorksheet = workbook.getWorksheet(sourceSheetName);
+            const columnNumber = letters => [...letters.toUpperCase()].reduce((number, letter) =>
+                number * 26 + letter.charCodeAt(0) - 64, 0);
+            if (sourceWorksheet) {
+                const startColumn = columnNumber(countIfMatch[3]);
+                const startRow = Number(countIfMatch[4]);
+                const endColumn = columnNumber(countIfMatch[5]);
+                const endRow = Number(countIfMatch[6]);
+                const criteria = worksheet.getCell(`${countIfMatch[7]}${countIfMatch[8]}`).value;
+                const criteriaValue = criteria && typeof criteria === 'object' && 'result' in criteria
+                    ? criteria.result
+                    : criteria;
+                const normalizedCriteria = String(criteriaValue ?? '').toLocaleLowerCase();
+                let count = 0;
+                for (let row = startRow; row <= endRow; row++) {
+                    for (let column = startColumn; column <= endColumn; column++) {
+                        const sourceValue = sourceWorksheet.getCell(row, column).value;
+                        const comparableValue = sourceValue && typeof sourceValue === 'object' && 'result' in sourceValue
+                            ? sourceValue.result
+                            : sourceValue;
+                        if (String(comparableValue ?? '').toLocaleLowerCase() === normalizedCriteria) count++;
+                    }
+                }
+                return String(count);
+            }
+        }
+        if (value.result !== undefined && value.result !== null) return String(value.result);
+        return `=${value.formula}`;
+    }
+    if (typeof cell.text === 'string' && cell.text !== '') return cell.text;
+    if (value && typeof value === 'object' && 'text' in value) return String(value.text ?? '');
+    return value === null || value === undefined ? '' : String(value);
+}
+
+function renderTaskTemplatePreview(workbook) {
+    if (!taskTemplatePreview || !taskTemplateSheetTabs || !taskTemplateSheetContent) return;
+    taskTemplatePreview.hidden = false;
+    taskTemplatePreviewTitle.textContent = `NỘI DUNG FILE MẪU (${workbook.worksheets.length} SHEET)`;
+    taskTemplateSheetTabs.replaceChildren();
+    taskTemplateSheetContent.replaceChildren();
+
+    workbook.worksheets.forEach((worksheet, sheetIndex) => {
+        const tab = document.createElement('button');
+        tab.type = 'button';
+        tab.className = 'task-template-sheet-tab';
+        tab.id = `taskTemplateSheetTab${sheetIndex}`;
+        tab.setAttribute('role', 'tab');
+        tab.setAttribute('aria-controls', 'taskTemplateSheetContent');
+        tab.textContent = worksheet.name;
+        tab.addEventListener('click', () => {
+            taskTemplateSheetTabs.querySelectorAll('[role="tab"]').forEach(existingTab => {
+                existingTab.setAttribute('aria-selected', String(existingTab === tab));
+            });
+            renderTaskTemplateSheet(worksheet, workbook);
+        });
+        taskTemplateSheetTabs.appendChild(tab);
+    });
+
+    taskTemplateSheetTabs.firstElementChild?.setAttribute('aria-selected', 'true');
+    renderTaskTemplateSheet(workbook.worksheets[0], workbook);
+}
+
+function renderTaskTemplateSheet(worksheet, workbook) {
+    if (!taskTemplateSheetContent) return;
+    taskTemplateSheetContent.replaceChildren();
+
+    let lastRow = 0;
+    let lastColumn = 0;
+    worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+        row.eachCell({ includeEmpty: false }, (cell, columnNumber) => {
+            if (getTemplateCellText(cell, worksheet, workbook).trim()) {
+                lastRow = Math.max(lastRow, rowNumber);
+                lastColumn = Math.max(lastColumn, columnNumber);
+            }
+        });
+    });
+
+    if (!lastRow || !lastColumn) {
+        const emptyMessage = document.createElement('p');
+        emptyMessage.className = 'task-template-empty';
+        emptyMessage.textContent = 'Sheet này chưa có nội dung.';
+        taskTemplateSheetContent.appendChild(emptyMessage);
+        return;
     }
 
-    // bọc văn bản ở cột "Công việc"
-    const contentColIndex = header.findIndex(h => h === 'Công việc');
-    if (contentColIndex !== -1) {
-        for (let r = 1; r < data.length; r++) {
-            const cellRef = XLSX.utils.encode_cell({ r, c: contentColIndex });
-            if (!ws[cellRef]) continue;
-            ws[cellRef].s = ws[cellRef].s || {};
-            ws[cellRef].s.alignment = ws[cellRef].s.alignment || {};
-            ws[cellRef].s.alignment.wrapText = true;
+    const tableWrap = document.createElement('div');
+    tableWrap.className = 'task-template-table-wrap';
+    const table = document.createElement('table');
+    table.className = 'task-template-table';
+    const tbody = document.createElement('tbody');
+    for (let rowNumber = 1; rowNumber <= lastRow; rowNumber++) {
+        const rowElement = document.createElement('tr');
+        const sourceRow = worksheet.getRow(rowNumber);
+        for (let columnNumber = 1; columnNumber <= lastColumn; columnNumber++) {
+            const cell = document.createElement(rowNumber === 1 ? 'th' : 'td');
+            if (rowNumber === 1) cell.scope = 'col';
+            cell.textContent = getTemplateCellText(sourceRow.getCell(columnNumber), worksheet, workbook);
+            rowElement.appendChild(cell);
+        }
+        tbody.appendChild(rowElement);
+    }
+    table.appendChild(tbody);
+    tableWrap.appendChild(table);
+    taskTemplateSheetContent.appendChild(tableWrap);
+}
+
+async function loadTaskExportTemplate() {
+    const bytes = await loadTaskExportTemplateBytes();
+    if (!bytes) return null;
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(bytes.slice(0));
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) throw new Error('Mẫu Excel không có trang tính.');
+    return { workbook, worksheet, columns: getTaskTemplateColumns(worksheet) };
+}
+
+async function uploadTaskExportTemplate(file) {
+    if (!isAdmin()) throw new Error('Bạn không có quyền tải mẫu xuất lên.');
+    if (!file || !/\.xlsx$/i.test(file.name)) throw new Error('Mẫu xuất phải là tệp Excel định dạng .xlsx.');
+    if (file.size > 5 * 1024 * 1024) throw new Error('Mẫu Excel không được vượt quá 5 MB.');
+    showLoading('Đang kiểm tra file mẫu Excel...');
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    const bytes = await file.arrayBuffer();
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(bytes.slice(0));
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) throw new Error('Mẫu Excel không có trang tính.');
+    getTaskTemplateColumns(worksheet);
+    showLoading('Đang lưu file mẫu lên hệ thống...');
+    await withTaskTemplateTimeout(
+        set(ref(db, 'taskExportTemplates/task'), {
+            fileName: file.name,
+            contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            data: arrayBufferToBase64(bytes),
+            updatedAt: Date.now()
+        }),
+        'Hết thời gian chờ lưu file mẫu. Vui lòng kiểm tra kết nối hoặc quyền ghi cơ sở dữ liệu.'
+    );
+    taskExportTemplateCache.set('task', Promise.resolve(bytes));
+}
+
+function applyTaskRowsToTemplate(template, headers, rows) {
+    const { worksheet, columns } = template;
+    const headerRow = worksheet.getRow(1);
+    const outputIndexes = new Map();
+    headers.forEach((header, index) => {
+        const field = resolveTaskTemplateField(header);
+        if (field) outputIndexes.set(field, index);
+    });
+    const missingHeaders = headers.filter(header => {
+        const field = resolveTaskTemplateField(header);
+        return field && !columns.some(column => column.field === field);
+    });
+    if (missingHeaders.length) {
+        throw new Error(`Mẫu Excel thiếu cột: ${missingHeaders.join(', ')}.`);
+    }
+
+    for (let column = 1; column <= headerRow.cellCount; column++) {
+        const cell = headerRow.getCell(column);
+        if (cell.value !== null && cell.value !== undefined && String(cell.text).trim()) {
+            cell.value = String(cell.text).toLocaleUpperCase('vi');
+            cell.font = { ...cell.font, bold: true };
+            cell.alignment = { ...cell.alignment, wrapText: true, vertical: 'top' };
         }
     }
+    const templateDataRow = worksheet.getRow(2);
+    const templateRowHeight = templateDataRow.height;
+    const templateStyles = [];
+    for (let column = 1; column <= headerRow.cellCount; column++) {
+        templateStyles[column] = JSON.parse(JSON.stringify(templateDataRow.getCell(column).style || {}));
+    }
+    for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
+        worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, cell => { cell.value = null; });
+    }
 
-    // đặt chiều rộng cột
-    ws['!cols'] = computeColWidths(header, rows);
+    rows.forEach((values, index) => {
+        const row = worksheet.getRow(index + 2);
+        if (templateRowHeight) row.height = templateRowHeight;
+        for (let column = 1; column <= headerRow.cellCount; column++) {
+            row.getCell(column).style = JSON.parse(JSON.stringify(templateStyles[column] || {}));
+        }
+        columns.forEach(({ column, field }) => {
+            const outputIndex = outputIndexes.get(field);
+            row.getCell(column).value = outputIndex === undefined ? '' : (values[outputIndex] ?? '');
+        });
+        row.eachCell({ includeEmpty: true }, cell => {
+            cell.alignment = { ...cell.alignment, wrapText: true, vertical: 'top' };
+            cell.font = { ...cell.font, bold: false };
+        });
+    });
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Tasks');
+    worksheet.autoFilter = {
+        from: { row: 1, column: 1 },
+        to: { row: rows.length + 1, column: headerRow.cellCount }
+    };
+    worksheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 1, topLeftCell: 'A2' }];
+}
+
+async function createTaskExportWorkbook(header, rows, options = {}) {
+    const template = await loadTaskExportTemplate();
+    if (!template) {
+        throw new Error('Chưa có file mẫu xuất Công việc. Vui lòng vào mục “Mẫu” và tải file mẫu lên trước.');
+    }
+
+    const worksheet = template.worksheet;
+    applyTaskRowsToTemplate(template, header, rows);
+    configureTaskExportSheets(template.workbook, worksheet, options);
+    return { workbook: template.workbook, worksheet };
+}
+
+function configureTaskExportSheets(workbook, mainWorksheet, options) {
+    const reportType = options.reportType || 'day';
+    let mainSheetName;
+    let planSheetName = '';
+    let summarySheet = null;
+    let planSheet = null;
+
+    if (reportType === 'week' || reportType === 'month') {
+        summarySheet = workbook.worksheets.find(worksheet =>
+            normalizeEmployeeText(worksheet.name).replace(/[^a-z0-9]/g, '') === 'tonghop'
+        );
+        planSheet = workbook.worksheets.find(worksheet =>
+            normalizeEmployeeText(worksheet.name).replace(/[^a-z0-9]/g, '').includes('kehoach')
+        );
+        if (!summarySheet || !planSheet || summarySheet === mainWorksheet || planSheet === mainWorksheet || planSheet === summarySheet) {
+            throw new Error('Mẫu tuần/tháng cần có 3 sheet riêng: Báo cáo, Kế hoạch và Tổng hợp.');
+        }
+        mainSheetName = reportType === 'week' ? 'Báo cáo tuần' : 'Báo cáo tháng';
+        planSheetName = reportType === 'week' ? 'Kế hoạch tuần tới' : 'Kế hoạch tháng tới';
+    } else if (reportType === 'range') {
+        mainSheetName = `BC từ ${formatDisplayDate(options.startDate)} đến ${formatDisplayDate(options.endDate)}`;
+    } else {
+        mainSheetName = `Báo cáo ngày ${formatDisplayDate(options.startDate || selectedDate)}`;
+    }
+    mainSheetName = mainSheetName.replace(/[\\/*?:[\]]/g, '-').slice(0, 31);
+
+    const retainedSheets = reportType === 'week' || reportType === 'month'
+        ? [mainWorksheet, planSheet, summarySheet]
+        : [mainWorksheet];
+    workbook.worksheets.slice().forEach(worksheet => {
+        if (!retainedSheets.includes(worksheet)) workbook.removeWorksheet(worksheet.id);
+    });
+
+    retainedSheets.forEach((worksheet, index) => {
+        worksheet.name = `__export_${index + 1}__`;
+    });
+    mainWorksheet.name = mainSheetName;
+    if (planSheet) planSheet.name = planSheetName;
+    if (summarySheet) summarySheet.name = 'Tổng hợp';
+}
+
+async function downloadTaskWorkbook(workbook, filename) {
+    const buffer = await workbook.xlsx.writeBuffer();
+    const file = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    const url = URL.createObjectURL(file);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function writeDataToXLSX(header, rows, options = {}) {
+    const { workbook } = await createTaskExportWorkbook(header, rows, options);
     const now = new Date();
     const filename = `tasks_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}.xlsx`;
-    // xuất với cellStyles để font bold và căn giữa được bảo toàn
-    XLSX.writeFile(wb, filename, { bookType: 'xlsx', cellStyles: true });
+    await downloadTaskWorkbook(workbook, filename);
 }
 
 // ==== IMPORT XLSX FUNCTIONS ====
@@ -862,7 +1227,7 @@ async function exportTasksForDay() {
     const header = ['Ngày', ...selectedCols];
     const formattedDate = formatDisplayDate(selectedDate).replace(/-/g, '/');
     const newRows = rows.map(row => [formattedDate, ...row]);
-    writeDataToXLSX(header, newRows);
+    await writeDataToXLSX(header, newRows, { reportType: 'day', startDate: selectedDate });
 }
 
 // ===========================
@@ -917,7 +1282,7 @@ async function fetchTasksForRange(startDate, endDate) {
     return result;
 }
 
-async function exportTasksForCollection(taskList, includeDate) {
+async function exportTasksForCollection(taskList, includeDate, options) {
     const selectedCols = getSelectedColumns();
     if (selectedCols.length === 0) {
         await showCustomAlert('Vui lòng chọn ít nhất một cột để xuất.');
@@ -958,46 +1323,66 @@ async function exportTasksForCollection(taskList, includeDate) {
         await showCustomAlert('Không có công việc để xuất.');
         return;
     }
-    // Nếu có nhiều ngày (ví dụ xuất tuần/tháng/khoảng), tạo workbook gồm nhiều sheet chuẩn
-    const wb = XLSX.utils.book_new();
+    const taskWorkbook = await createTaskExportWorkbook(header, rows, options);
+    const exportWorkbook = taskWorkbook.workbook;
+    const actualMainSheetName = taskWorkbook.worksheet.name;
+    if (options.reportType === 'week' || options.reportType === 'month') {
+        const summarySheet = exportWorkbook.worksheets.find(worksheet =>
+            normalizeEmployeeText(worksheet.name).replace(/[^a-z0-9]/g, '') === 'tonghop'
+        );
+        if (!summarySheet) {
+            throw new Error('File mẫu xuất báo cáo cần có sheet Tổng hợp.');
+        }
 
-    const upperHeader = header.map(formatExportHeader);
-    const mainSheet = XLSX.utils.aoa_to_sheet([upperHeader, ...rows]);
-    styleWorksheet(mainSheet, upperHeader, rows);
-    const mainSheetName = rows.length > 1 ? 'Báo cáo tuần' : 'Báo cáo';
-    XLSX.utils.book_append_sheet(wb, mainSheet, mainSheetName);
-
-    // Kế hoạch tuần tới: hiện chưa có dữ liệu kế hoạch, để trống chỉ với header
-    const planRows = [];
-    const planHeader = ['STT', 'Công việc', 'Mô tả', 'Hướng xử lý', 'Mục tiêu', 'Phụ trách', 'Deadline', 'Độ ưu tiên', 'Trạng thái', 'Ghi chú'];
-    const upperPlanHeader = planHeader.map(formatExportHeader);
-    const planSheet = XLSX.utils.aoa_to_sheet([upperPlanHeader, ...planRows]);
-    styleWorksheet(planSheet, upperPlanHeader, planRows);
-    XLSX.utils.book_append_sheet(wb, planSheet, 'Kế hoạch tuần tới');
-
-    // Tổng hợp: số liệu tóm tắt
-    const summaryRows = [];
-    summaryRows.push(['Tổng số công việc', rows.length]);
-    const statuses = ['Hoàn thành', 'Đang thực hiện', 'Chưa bắt đầu', 'Chậm tiến độ'];
-    statuses.forEach(status => {
-        summaryRows.push([status, taskList.filter(({ task }) => task.status === status).length]);
-    });
-
-    const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
-    // In đậm hàng đầu tiên của sheet Tổng hợp
-    for (let c = 0; c < summaryRows[0].length; c++) {
-        const cellRef = XLSX.utils.encode_cell({ r: 0, c });
-        if (!summarySheet[cellRef]) continue;
-        summarySheet[cellRef].s = summarySheet[cellRef].s || {};
-        summarySheet[cellRef].s.font = summarySheet[cellRef].s.font || {};
-        summarySheet[cellRef].s.font.bold = true;
+        const summaryRows = new Map();
+        summarySheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+            const label = normalizeEmployeeText(String(row.getCell(1).text || '')).replace(/[^a-z0-9]/g, '');
+            if (label) summaryRows.set(label, rowNumber);
+        });
+        const summaryDefinitions = [
+            { label: 'Tổng số công việc', key: 'tongsocongviec', formula: 'total' },
+            { label: 'Hoàn thành', key: 'hoanthanh', formula: 'status' },
+            { label: 'Đang thực hiện', key: 'dangthuchien', formula: 'status' },
+            { label: 'Chưa bắt đầu', key: 'chuabatdau', formula: 'status' },
+            { label: 'Chậm tiến độ', key: 'chamtiendo', formula: 'status' }
+        ];
+        const quotedMainSheetName = `'${actualMainSheetName.replace(/'/g, "''")}'`;
+        const contentColumn = getTaskExportColumnLetter(taskWorkbook.worksheet, 'content');
+        const statusColumn = getTaskExportColumnLetter(taskWorkbook.worksheet, 'status');
+        const lastDataRow = rows.length + 1;
+        for (const definition of summaryDefinitions) {
+            const summaryRowNumber = summaryRows.get(definition.key);
+            if (summaryRowNumber === undefined) {
+                throw new Error(`Sheet Tổng hợp trong file mẫu thiếu dòng "${definition.label}".`);
+            }
+            const formula = definition.formula === 'total'
+                ? contentColumn ? `COUNTA(${quotedMainSheetName}!${contentColumn}2:${contentColumn}${lastDataRow})` : '0'
+                : statusColumn ? `COUNTIF(${quotedMainSheetName}!${statusColumn}2:${statusColumn}${lastDataRow},A${summaryRowNumber})` : '0';
+            const cell = summarySheet.getCell(summaryRowNumber, 2);
+            cell.value = { formula };
+            cell.alignment = { ...cell.alignment, wrapText: true, vertical: 'top' };
+        }
     }
-    summarySheet['!cols'] = [{ wch: 30 }, { wch: 15 }];
-    XLSX.utils.book_append_sheet(wb, summarySheet, 'Tổng hợp');
 
     const now = new Date();
     const filename = `tasks_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}.xlsx`;
-    XLSX.writeFile(wb, filename, { bookType: 'xlsx', cellStyles: true });
+    await downloadTaskWorkbook(exportWorkbook, filename);
+}
+
+function getTaskExportColumnLetter(worksheet, field) {
+    const headerRow = worksheet.getRow(1);
+    for (let column = 1; column <= headerRow.cellCount; column++) {
+        if (resolveTaskTemplateField(headerRow.getCell(column).text) !== field) continue;
+        let remainder = column;
+        let letter = '';
+        while (remainder > 0) {
+            const digit = (remainder - 1) % 26;
+            letter = String.fromCharCode(65 + digit) + letter;
+            remainder = Math.floor((remainder - 1) / 26);
+        }
+        return letter;
+    }
+    return null;
 }
 
 // Hàm chính gọi theo loại
@@ -1011,20 +1396,20 @@ async function performExport(type) {
             if (!sel || !sel.value) { await showCustomAlert('Vui lòng chọn tuần!'); return; }
             const [y, m, w] = sel.value.split('|');
             const tasks = await fetchTasksForWeek(y, m, w);
-            await exportTasksForCollection(tasks, true);
+            await exportTasksForCollection(tasks, true, { reportType: 'week' });
         } else if (type === 'month') {
             const mp = document.getElementById('exportMonthPicker');
             if (!mp || !mp.value) { await showCustomAlert('Vui lòng chọn tháng!'); return; }
             const [y, m] = mp.value.split('-');
             const tasks = await fetchTasksForMonth(y, m);
-            await exportTasksForCollection(tasks, true);
+            await exportTasksForCollection(tasks, true, { reportType: 'month' });
         } else if (type === 'range') {
             const s = document.getElementById('exportRangeStart').value;
             const e = document.getElementById('exportRangeEnd').value;
             if (!s || !e) { await showCustomAlert('Vui lòng chọn cả ngày bắt đầu và kết thúc!'); return; }
             if (s > e) { await showCustomAlert('Ngày bắt đầu phải <= ngày kết thúc'); return; }
             const tasks = await fetchTasksForRange(s, e);
-            await exportTasksForCollection(tasks, true);
+            await exportTasksForCollection(tasks, true, { reportType: 'range', startDate: s, endDate: e });
         }
     } catch (e) {
         console.error('Lỗi khi xuất công việc:', e);
@@ -1187,13 +1572,15 @@ function showCustomConfirm(html) {
 }
 
 // Hiển thị vòng xoay loading khi xử lý dữ liệu từ database
-function showLoading() {
+function showLoading(message = '') {
+    if (loadingMessage) loadingMessage.textContent = message;
     if (loadingIndicator) loadingIndicator.classList.add('active');
 }
 
 // Ẩn vòng xoay loading
 function hideLoading() {
     if (loadingIndicator) loadingIndicator.classList.remove('active');
+    if (loadingMessage) loadingMessage.textContent = '';
 }
 
 // Chuyển chuỗi YYYY-MM-DD sang định dạng DD-MM-YYYY để hiển thị cho người dùng dễ đọc
@@ -1666,6 +2053,66 @@ if (exportTypeSelect) {
         exportWeekDiv.style.display = (t === 'week') ? 'block' : 'none';
         exportMonthDiv.style.display = (t === 'month') ? 'block' : 'none';
         exportRangeDiv.style.display = (t === 'range') ? 'block' : 'none';
+    };
+}
+
+if (uploadTaskTemplateBtn && taskTemplateFile) {
+    uploadTaskTemplateBtn.onclick = () => taskTemplateFile.click();
+    taskTemplateFile.addEventListener('change', async () => {
+        const file = taskTemplateFile.files?.[0];
+        if (!file) return;
+        uploadTaskTemplateBtn.disabled = true;
+        showLoading();
+        try {
+            await uploadTaskExportTemplate(file);
+            await refreshTaskTemplateStatus();
+            await showCustomAlert('Đã tải mẫu xuất công việc lên thành công.');
+        } catch (error) {
+            console.error('Lỗi tải mẫu xuất công việc lên:', error);
+            if (taskTemplateStatus) {
+                taskTemplateStatus.textContent = `Tải file mẫu thất bại: ${error?.message || String(error)}`;
+            }
+            await showCustomAlert(`Không thể tải mẫu xuất: ${error?.message || String(error)}`);
+        } finally {
+            taskTemplateFile.value = '';
+            uploadTaskTemplateBtn.disabled = false;
+            hideLoading();
+        }
+    });
+}
+
+if (reloadTaskTemplateBtn) {
+    reloadTaskTemplateBtn.onclick = async () => {
+        reloadTaskTemplateBtn.disabled = true;
+        showLoading('Đang tải lại dữ liệu file mẫu...');
+        try {
+            await refreshTaskTemplateStatus(true);
+        } finally {
+            reloadTaskTemplateBtn.disabled = false;
+            hideLoading();
+        }
+    };
+}
+
+if (deleteTaskTemplateBtn) {
+    deleteTaskTemplateBtn.onclick = async () => {
+        if (!await showCustomConfirm('Bạn có chắc muốn xóa file mẫu xuất Công việc đã lưu không?')) return;
+        deleteTaskTemplateBtn.disabled = true;
+        showLoading('Đang xóa file mẫu...');
+        try {
+            await deleteTaskExportTemplate();
+            taskTemplateStatus.textContent = 'Đã xóa file mẫu. Hãy tải mẫu Excel lên trước khi xuất Công việc.';
+            await showCustomAlert('Đã xóa file mẫu thành công.');
+        } catch (error) {
+            console.error('Lỗi xóa file mẫu Công việc:', error);
+            if (taskTemplateStatus) {
+                taskTemplateStatus.textContent = `Không thể xóa file mẫu: ${error?.message || String(error)}`;
+            }
+            await showCustomAlert(`Không thể xóa file mẫu: ${error?.message || String(error)}`);
+        } finally {
+            deleteTaskTemplateBtn.disabled = false;
+            hideLoading();
+        }
     };
 }
 
@@ -2283,6 +2730,18 @@ let editingScheduleData = null;
 let scheduleLoadToken = 0;
 let activeScheduleType = 'storeVisit';
 
+function scheduleAllowsMissingDate(status) {
+    return ['Chờ', 'Chưa bắt đầu', 'Chưa xử lý'].includes(status);
+}
+
+function syncScheduleDateRequirements() {
+    const required = !scheduleAllowsMissingDate(scheduleStatusInput.value);
+    const dateInputs = activeScheduleType === 'maintenance'
+        ? [maintenanceStartDateInput, maintenanceEndDateInput]
+        : [scheduleDateInput, scheduleTimeInput];
+    dateInputs.forEach(input => { input.required = required; });
+}
+
 function setScheduleTypeMode(type) {
     activeScheduleType = type === 'maintenance' ? 'maintenance' : 'storeVisit';
     scheduleTypeInput.value = activeScheduleType;
@@ -2341,6 +2800,7 @@ function setScheduleTypeMode(type) {
     scheduleStatusInput.value = statuses.some(([value]) => value === currentStatus)
         ? currentStatus
         : statuses[0][0];
+    syncScheduleDateRequirements();
 }
 
 function getSafeScheduleUrl(value) {
@@ -2378,17 +2838,18 @@ function setScheduleFormMode(schedule = null) {
         maintenanceEvidenceCurrent.textContent = '';
         maintenanceLinkInput.value = '';
         scheduleStatusInput.value = activeScheduleType === 'maintenance' ? 'Đã lên lịch' : 'Chưa bắt đầu';
+        syncScheduleDateRequirements();
         saveScheduleBtn.textContent = 'Lưu lịch';
         scheduleEditorTitle.textContent = activeScheduleType === 'maintenance' ? 'Tạo lịch bảo trì' : 'Thêm lịch';
         return;
     }
 
     editingScheduleId = schedule.id;
-    editingScheduleDate = schedule.date;
+    editingScheduleDate = schedule.storageDate || schedule.date;
     editingScheduleCreatedAt = schedule.createdAt || null;
     editingScheduleData = schedule;
     scheduleDateInput.value = schedule.date;
-    scheduleTimeInput.value = schedule.time || '07:00';
+    scheduleTimeInput.value = schedule.time || (schedule.date ? '07:00' : '');
     scheduleTypeInput.value = schedule.type === 'maintenance' ? 'maintenance' : 'storeVisit';
     scheduleLocationInput.value = schedule.content || schedule.location || '';
     scheduleUnitInput.value = schedule.unit || schedule.location || '';
@@ -2417,6 +2878,7 @@ function setScheduleFormMode(schedule = null) {
     scheduleStatusInput.value = activeScheduleType === 'maintenance'
         ? maintenanceStatusMap[schedule.status] || schedule.status || 'Đã lên lịch'
         : schedule.status || 'Chưa bắt đầu';
+    syncScheduleDateRequirements();
     saveScheduleBtn.textContent = 'Lưu lịch';
     scheduleEditorTitle.textContent = activeScheduleType === 'maintenance' ? 'Sửa lịch bảo trì' : 'Sửa lịch';
 }
@@ -2448,7 +2910,12 @@ async function loadScheduleList() {
                         daySnapshot.forEach(scheduleSnapshot => {
                             const schedule = scheduleSnapshot.val();
                             if (schedule && typeof schedule === 'object' && schedule.type === requestType) {
-                                records.push({ ...schedule, id: scheduleSnapshot.key, date });
+                                records.push({
+                                    ...schedule,
+                                    id: scheduleSnapshot.key,
+                                    date: typeof schedule.date === 'string' ? schedule.date : date,
+                                    storageDate: date
+                                });
                             }
                         });
                     });
@@ -2456,7 +2923,7 @@ async function loadScheduleList() {
             });
         }
         records.sort((a, b) =>
-            a.date.localeCompare(b.date) ||
+            (a.date || '9999-99-99').localeCompare(b.date || '9999-99-99') ||
             String(a.time || '07:00').localeCompare(String(b.time || '07:00')) ||
             Number(a.createdAt || 0) - Number(b.createdAt || 0)
         );
@@ -2502,9 +2969,9 @@ async function loadScheduleList() {
                 const unitCell = document.createElement('td');
                 unitCell.textContent = schedule.unit || schedule.location || '—';
                 const startCell = document.createElement('td');
-                startCell.textContent = formatDisplayDate(schedule.startDate || schedule.date);
+                startCell.textContent = formatDisplayDate(schedule.startDate || schedule.date) || '—';
                 const endCell = document.createElement('td');
-                endCell.textContent = formatDisplayDate(schedule.endDate || schedule.date);
+                endCell.textContent = formatDisplayDate(schedule.endDate || schedule.date) || '—';
                 const assigneeCell = document.createElement('td');
                 assigneeCell.className = 'schedule-assignees';
                 String(schedule.assignee || '—').split(',').map(name => name.trim()).filter(Boolean).forEach(name => {
@@ -2516,9 +2983,9 @@ async function loadScheduleList() {
             } else {
                 const dateCell = document.createElement('td');
                 dateCell.className = 'schedule-date-cell';
-                dateCell.textContent = formatDisplayDate(schedule.date).replace(/-/g, '/');
+                dateCell.textContent = schedule.date ? formatDisplayDate(schedule.date).replace(/-/g, '/') : '—';
                 const timeCell = document.createElement('td');
-                timeCell.textContent = schedule.time || '07:00';
+                timeCell.textContent = schedule.time || (schedule.date ? '07:00' : '—');
                 const contentCell = document.createElement('td');
                 contentCell.className = 'schedule-content-cell';
                 contentCell.textContent = schedule.content || '—';
@@ -2616,35 +3083,39 @@ async function loadScheduleList() {
             }
             const actions = document.createElement('td');
             actions.className = 'schedule-table-actions';
-            const editButton = document.createElement('button');
-            editButton.type = 'button';
-            editButton.className = 'schedule-action-btn schedule-copy-btn';
-            editButton.textContent = '▢';
-            editButton.title = 'Sao chép lịch';
-            editButton.setAttribute('aria-label', 'Sao chép lịch');
-            editButton.onclick = async () => {
-                const summary = [
-                    requestType === 'maintenance'
-                        ? formatDisplayDate(schedule.startDate || schedule.date)
-                        : formatDisplayDate(schedule.date).replace(/-/g, '/'),
-                    requestType === 'maintenance' ? schedule.endDate || '' : schedule.time || '07:00',
-                    requestType === 'maintenance' ? schedule.maintenanceContent || schedule.content || '' : schedule.content || '',
-                    schedule.unit || schedule.location || '',
-                    schedule.assignee || '',
-                    schedule.status || 'Chưa bắt đầu',
-                    schedule.note || '',
-                    schedule.equipment || '',
-                    schedule.cycle || '',
-                    schedule.result || '',
-                    schedule.dueDate || '',
-                    schedule.link || ''
-                ].join('\t');
+            const duplicateButton = document.createElement('button');
+            duplicateButton.type = 'button';
+            duplicateButton.className = 'schedule-action-btn schedule-duplicate-btn';
+            duplicateButton.textContent = '🔁';
+            duplicateButton.title = 'Nhân bản lịch';
+            duplicateButton.setAttribute('aria-label', 'Nhân bản lịch');
+            duplicateButton.onclick = async () => {
+                if (!isAdmin()) { await showCustomAlert('Bạn không có quyền nhân bản lịch.'); return; }
+                if (!await showCustomConfirm('Bạn có muốn nhân bản lịch này không?')) return;
+
+                duplicateButton.disabled = true;
+                showLoading();
                 try {
-                    await navigator.clipboard.writeText(summary);
-                    await showCustomAlert('Đã sao chép thông tin lịch.');
+                    const storageDate = schedule.storageDate || schedule.date;
+                    if (!isValidYmd(storageDate)) throw new Error('Không xác định được ngày lưu lịch.');
+                    const [year, month, day] = storageDate.split('-');
+                    const scheduleCopy = { ...schedule };
+                    delete scheduleCopy.id;
+                    delete scheduleCopy.storageDate;
+                    const now = Date.now();
+                    await push(scheduleRef(year, month, day), {
+                        ...scheduleCopy,
+                        createdAt: now,
+                        updatedAt: now
+                    });
+                    await loadScheduleList();
+                    await showCustomAlert('🔁 Đã nhân bản lịch thành công.');
                 } catch (error) {
-                    console.error('Lỗi sao chép lịch:', error);
-                    await showCustomAlert('Không thể sao chép lịch. Vui lòng kiểm tra quyền truy cập clipboard.');
+                    console.error('Lỗi nhân bản lịch cửa hàng/bảo trì:', error);
+                    await showCustomAlert(`Không thể nhân bản lịch: ${error && error.message ? error.message : String(error)}`);
+                } finally {
+                    duplicateButton.disabled = false;
+                    hideLoading();
                 }
             };
             const updateButton = document.createElement('button');
@@ -2671,9 +3142,9 @@ async function loadScheduleList() {
                 deleteButton.disabled = true;
                 showLoading();
                 try {
-                    const [year, month, day] = schedule.date.split('-');
+                    const [year, month, day] = (schedule.storageDate || schedule.date).split('-');
                     await remove(scheduleRef(year, month, day, schedule.id));
-                    if (editingScheduleId === schedule.id && editingScheduleDate === schedule.date) {
+                    if (editingScheduleId === schedule.id && editingScheduleDate === (schedule.storageDate || schedule.date)) {
                         setScheduleFormMode();
                     }
                     await loadScheduleList();
@@ -2686,7 +3157,7 @@ async function loadScheduleList() {
                     hideLoading();
                 }
             };
-            actions.append(editButton, updateButton, deleteButton);
+            actions.append(duplicateButton, updateButton, deleteButton);
             row.appendChild(actions);
             scheduleList.appendChild(row);
         }
@@ -3869,6 +4340,8 @@ function parseScheduleImportRows(rows, type) {
         if (type === 'maintenance') {
             const rawDueDate = getCell('dueDate');
             const hasDueDate = String(rawDueDate ?? '').trim() !== '';
+            const hasStartDate = String(getCell('startDate') ?? '').trim() !== '';
+            const hasEndDate = String(getCell('endDate') ?? '').trim() !== '';
             const cycleOptions = ['Hàng tuần', 'Hàng tháng', 'Hàng quý', '6 tháng', 'Hàng năm', 'Không định kỳ'];
             const rawCycle = String(getCell('cycle') ?? '').trim();
             record.startDate = normalizeScheduleImportDate(getCell('startDate'));
@@ -3889,22 +4362,35 @@ function parseScheduleImportRows(rows, type) {
                     rowErrors.push(`Dòng ${excelRow}: liên kết phải bắt đầu bằng http:// hoặc https://.`);
                 }
             }
-            if (!record.startDate || !record.endDate || record.endDate < record.startDate ||
-                (hasDueDate && (!record.dueDate || !isValidYmd(record.dueDate) || record.dueDate < record.startDate))) {
+            const datesOptional = scheduleAllowsMissingDate(status);
+            if ((hasStartDate && !record.startDate) || (hasEndDate && !record.endDate) ||
+                (!record.startDate && !record.endDate && !datesOptional) ||
+                Boolean(record.startDate) !== Boolean(record.endDate) ||
+                (record.startDate && (!isValidYmd(record.startDate) || !isValidYmd(record.endDate) || record.endDate < record.startDate)) ||
+                (hasDueDate && (!record.dueDate || !isValidYmd(record.dueDate) ||
+                    (record.startDate && record.dueDate < record.startDate)))) {
                 rowErrors.push(`Dòng ${excelRow}: ngày bắt đầu, ngày kết thúc hoặc ngày đến hạn không hợp lệ.`);
             }
             if (!record.equipment) rowErrors.push(`Dòng ${excelRow}: cần nhập đối tượng / thiết bị.`);
             if (!cycleOptions.includes(record.cycle)) rowErrors.push(`Dòng ${excelRow}: chu kỳ bảo trì không hợp lệ.`);
         } else {
             const rawDate = getCell('date');
-            const parsedDate = String(rawDate ?? '').trim()
+            const hasDate = String(rawDate ?? '').trim() !== '';
+            const datesOptional = scheduleAllowsMissingDate(status);
+            const parsedDate = hasDate
                 ? normalizeScheduleImportDate(rawDate)
-                : previousStoreVisitDate;
+                : datesOptional ? '' : previousStoreVisitDate;
             record.date = parsedDate;
             if (parsedDate) previousStoreVisitDate = parsedDate;
-            record.time = normalizeScheduleImportTime(getCell('time'));
+            const rawTime = getCell('time');
+            const hasTime = rawTime !== null && rawTime !== undefined && String(rawTime).trim() !== '';
+            record.time = normalizeScheduleImportTime(rawTime);
             record.location = content;
-            if (!record.date || !record.time) {
+            if ((hasDate && !record.date) || (hasTime && !record.time) ||
+                (!record.date && !datesOptional) ||
+                (record.date && !isValidYmd(record.date)) ||
+                (!record.time && !datesOptional) ||
+                (record.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(record.time))) {
                 rowErrors.push(`Dòng ${excelRow}: ngày hoặc giờ không hợp lệ.`);
             }
         }
@@ -3930,16 +4416,6 @@ function parseScheduleImportRows(rows, type) {
     return imported;
 }
 
-function downloadScheduleImportTemplate(type) {
-    const headers = type === 'maintenance'
-        ? ['Đơn vị / phòng ban', 'Từ ngày', 'Đến ngày', 'Người thực hiện', 'Trạng thái', 'Nội dung bảo trì', 'Đối tượng', 'Chu kỳ', 'Ngày đến hạn', 'Kết quả', 'Ghi chú', 'Liên kết']
-        : ['Ngày', 'Giờ', 'Nội dung xử lý', 'Đơn vị', 'Người thực hiện', 'Trạng thái', 'Ghi chú'];
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.aoa_to_sheet([headers]);
-    XLSX.utils.book_append_sheet(workbook, worksheet, type === 'maintenance' ? 'Lịch bảo trì' : 'Lịch cửa hàng');
-    XLSX.writeFile(workbook, type === 'maintenance' ? 'mau-nhap-lich-bao-tri.xlsx' : 'mau-nhap-lich-cua-hang.xlsx');
-}
-
 async function exportScheduleWorkbook(type) {
     if (!isAdmin()) throw new Error('Bạn không có quyền xuất lịch.');
     const requestUserId = getCurrentUserId();
@@ -3957,7 +4433,11 @@ async function exportScheduleWorkbook(type) {
                     daySnapshot.forEach(scheduleSnapshot => {
                         const schedule = scheduleSnapshot.val();
                         if (schedule && typeof schedule === 'object' && schedule.type === type) {
-                            records.push({ ...schedule, id: scheduleSnapshot.key, date });
+                            records.push({
+                                ...schedule,
+                                id: scheduleSnapshot.key,
+                                date: typeof schedule.date === 'string' ? schedule.date : date
+                            });
                         }
                     });
                 });
@@ -3994,47 +4474,56 @@ async function exportScheduleWorkbook(type) {
             'Chờ': 'CHỜ',
             'Đã hủy': 'ĐÃ HỦY'
         };
+    const formatExcelDate = value => {
+        if (!isValidYmd(value)) return '';
+        const [year, month, day] = value.split('-').map(Number);
+        return new Date(year, month - 1, day);
+    };
     const headers = type === 'maintenance'
-        ? ['STT', 'Đơn vị / phòng ban', 'Từ ngày', 'Đến ngày', 'Người thực hiện', 'Trạng thái', 'Nội dung bảo trì', 'Đối tượng', 'Chu kỳ', 'Kết quả', 'Ghi chú', 'Bằng chứng', 'Liên kết']
+        ? ['STT', 'Đơn vị', 'Từ ngày', 'Đến ngày', 'Người thực hiện', 'Trạng thái', 'Nội dung bảo trì', 'Đối tượng / thiết bị', 'Chu kỳ', 'Ngày đến hạn', 'Kết quả', 'Ghi chú', 'Bằng chứng', 'Liên kết']
         : ['Ngày', 'Giờ', 'Nội dung xử lý', 'Đơn vị', 'Người thực hiện', 'Trạng thái', 'Ghi chú'];
     const rows = records.map((schedule, index) => type === 'maintenance'
         ? [
             index + 1,
             schedule.unit || schedule.location || '',
-            schedule.startDate || schedule.date,
-            schedule.endDate || schedule.date,
+            formatExcelDate(schedule.startDate || schedule.date),
+            formatExcelDate(schedule.endDate || schedule.date),
             schedule.assignee || '',
             statusLabels[schedule.status] || statusLabels['Đã lên lịch'],
             schedule.maintenanceContent || schedule.content || '',
             schedule.equipment || '',
             schedule.cycle || '',
+            formatExcelDate(schedule.dueDate),
             schedule.result || '',
             schedule.note || '',
-            schedule.evidenceUrl || schedule.evidenceName || '',
+            schedule.evidenceName || schedule.evidenceUrl || '',
             schedule.link || ''
         ]
         : [
-            schedule.date,
-            schedule.time || '07:00',
+            formatExcelDate(schedule.date),
+            schedule.time || '',
             schedule.content || '',
             schedule.unit || schedule.location || '',
             schedule.assignee || '',
             statusLabels[schedule.status] || statusLabels['Chưa bắt đầu'],
             schedule.note || ''
         ]);
-    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    worksheet['!cols'] = type === 'maintenance'
-        ? [{ wch: 8 }, { wch: 24 }, { wch: 14 }, { wch: 14 }, { wch: 28 }, { wch: 18 }, { wch: 36 }, { wch: 24 }, { wch: 18 }, { wch: 32 }, { wch: 32 }, { wch: 42 }, { wch: 42 }]
-        : [{ wch: 14 }, { wch: 10 }, { wch: 42 }, { wch: 26 }, { wch: 34 }, { wch: 18 }, { wch: 32 }];
-    worksheet['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: headers.length - 1 } }) };
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, type === 'maintenance' ? 'Lịch bảo trì' : 'Lịch cửa hàng');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = addExportWorksheet(
+        workbook,
+        type === 'maintenance' ? 'Lịch bảo trì' : 'Lịch cửa hàng',
+        headers,
+        rows
+    );
+    (type === 'maintenance' ? [3, 4, 10] : [1]).forEach(column => {
+        worksheet.getColumn(column).numFmt = 'dd-mm-yyyy';
+    });
     const now = new Date();
     const dateSuffix = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
     const fileName = type === 'maintenance'
         ? `lich-bao-tri_${dateSuffix}.xlsx`
         : `lich-cua-hang_${dateSuffix}.xlsx`;
-    XLSX.writeFile(workbook, fileName, { bookType: 'xlsx' });
+    await downloadTaskWorkbook(workbook, fileName);
 }
 
 async function importScheduleWorkbook(file, type) {
@@ -4054,7 +4543,8 @@ async function importScheduleWorkbook(file, type) {
     if (!userId) throw new Error('Không xác định được tài khoản đang đăng nhập.');
     const updates = {};
     records.forEach(record => {
-        const [year, month, day] = record.date.split('-');
+        const storageDate = record.date || getTodayString();
+        const [year, month, day] = storageDate.split('-');
         const id = push(scheduleRef(year, month, day)).key;
         if (!id) throw new Error('Không thể tạo mã cho một trong các lịch cần nhập.');
         updates[`storeMaintenanceSchedules/${userId}/${year}/${month}/${day}/${id}`] = record;
@@ -4068,6 +4558,8 @@ if (scheduleForm) {
     scheduleDateInput.value = getTodayString();
     maintenanceStartDateInput.value = getTodayString();
     maintenanceEndDateInput.value = getTodayString();
+    scheduleStatusInput.addEventListener('change', syncScheduleDateRequirements);
+    syncScheduleDateRequirements();
     scheduleForm.addEventListener('submit', async event => {
         event.preventDefault();
         if (!isAdmin()) { await showCustomAlert('Bạn không có quyền quản lý lịch.'); return; }
@@ -4083,14 +4575,20 @@ if (scheduleForm) {
         const assignee = scheduleAssigneeInput.value.trim();
         const type = scheduleTypeInput.value;
         const status = scheduleStatusInput.value;
+        const datesOptional = scheduleAllowsMissingDate(status);
+        const storageDate = date || editingScheduleDate || getTodayString();
         const selectedEvidence = isMaintenance ? maintenanceEvidenceInput.files[0] : null;
         if (parseScheduleAssignees(assignee).length > 5) {
             await showCustomAlert('Chỉ được chọn tối đa 5 người thực hiện.');
             return;
         }
-        if (!isValidYmd(date) || !isValidYmd(endDate) || endDate < date ||
+        if ((!date && !datesOptional) || (!endDate && !datesOptional) ||
+            (isMaintenance && Boolean(date) !== Boolean(endDate)) ||
+            (date && !isValidYmd(date)) || (endDate && !isValidYmd(endDate)) ||
+            (date && endDate && endDate < date) ||
             (dueDate && !isValidYmd(dueDate)) ||
-            (!isMaintenance && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) ||
+            (!isMaintenance && ((!time && !datesOptional) ||
+                (time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)))) ||
             !content || !unit || !assignee ||
             (isMaintenance && !equipment)) {
             await showCustomAlert(isMaintenance
@@ -4099,7 +4597,7 @@ if (scheduleForm) {
             return;
         }
         if (isMaintenance && (!maintenanceCycleInput.value ||
-            (dueDate && dueDate < date))) {
+            (dueDate && date && dueDate < date))) {
             await showCustomAlert('Vui lòng chọn chu kỳ và ngày đến hạn hợp lệ.');
             return;
         }
@@ -4126,7 +4624,7 @@ if (scheduleForm) {
             }
         }
 
-        const [year, month, day] = date.split('-');
+        const [year, month, day] = storageDate.split('-');
         const now = Date.now();
         const isEditing = Boolean(editingScheduleId);
         const schedule = {
@@ -4177,7 +4675,7 @@ if (scheduleForm) {
             }
             if (editingScheduleId) {
                 const [oldYear, oldMonth, oldDay] = editingScheduleDate.split('-');
-                if (editingScheduleDate === date) {
+                if (editingScheduleDate === storageDate) {
                     await update(scheduleRef(oldYear, oldMonth, oldDay, scheduleId), schedule);
                 } else {
                     await update(ref(db), {
@@ -4208,14 +4706,6 @@ if (scheduleForm) {
         openScheduleEditorModal();
     };
     importScheduleBtn.onclick = () => scheduleImportFile.click();
-    downloadScheduleTemplateBtn.onclick = () => {
-        try {
-            downloadScheduleImportTemplate(activeScheduleType);
-        } catch (error) {
-            console.error('Lỗi tải mẫu nhập lịch:', error);
-            showCustomAlert(`Không thể tải mẫu Excel: ${error?.message || String(error)}`);
-        }
-    };
     exportScheduleBtn.onclick = async () => {
         exportScheduleBtn.disabled = true;
         showLoading();
@@ -5910,6 +6400,7 @@ document.querySelectorAll('.menu-category-btn[data-menu-modal]').forEach(button 
         if (closeButton) closeButton.focus();
         if (menuModal.id === 'scheduleManagementModal') loadScheduleList();
         if (menuModal.id === 'employeesModal') loadEmployees();
+        if (menuModal.id === 'taskTemplateModal') refreshTaskTemplateStatus();
     });
 });
 
