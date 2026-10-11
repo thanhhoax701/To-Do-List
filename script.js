@@ -3159,6 +3159,12 @@ async function loadScheduleList() {
             };
             actions.append(duplicateButton, updateButton, deleteButton);
             row.appendChild(actions);
+            const scheduleHeaders = (requestType === 'maintenance' ? maintenanceScheduleHead : storeScheduleHead)
+                .querySelectorAll('th');
+            row.querySelectorAll('td').forEach((cell, index) => {
+                cell.dataset.label = scheduleHeaders[index].getAttribute('aria-label') ||
+                    scheduleHeaders[index].textContent.trim() || 'Thao tác';
+            });
             scheduleList.appendChild(row);
         }
     } catch (e) {
