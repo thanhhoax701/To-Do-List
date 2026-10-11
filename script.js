@@ -176,6 +176,12 @@ const searchYear = document.getElementById("searchYear");
 const searchBtn = document.getElementById("searchBtn");
 const clearSearchBtn = document.getElementById("clearSearchBtn");
 const searchFilterSection = document.getElementById("searchFilterSection");
+const deleteSelectedMobileBtn = document.getElementById("deleteSelectedMobileBtn");
+
+function syncMobileDeleteActionVisibility() {
+    if (!deleteSelectedMobileBtn) return;
+    deleteSelectedMobileBtn.hidden = !isAdmin() || !deleteSelect || deleteSelect.style.display === 'none';
+}
 
 // Current search state
 let currentSearch = {
@@ -185,6 +191,7 @@ let currentSearch = {
     month: null,
     year: null
 };
+let taskSearchRequestId = 0;
 
 /* ========== BIẾN TOÀN CỤC ========== */
 // Ngày hiện tại đang hiển thị trên lịch
@@ -1766,6 +1773,7 @@ function createColorSelect(options, value, getClass, callback) {
  * @param {string} ds - Ngày dưới dạng string (YYYY-MM-DD)
  */
 function loadTasks(ds) {
+    taskSearchRequestId += 1;
     // Kiểm tra nếu ngày đặc biệt: NL trước, NB tiếp theo
     const addBtn = document.getElementById('openAddModal');
     const expBtn = document.getElementById('exportBtn');
@@ -1776,6 +1784,7 @@ function loadTasks(ds) {
         if (addBtn) addBtn.style.display = 'none';
         if (expBtn) expBtn.style.display = 'none';
         if (deleteDropdown) deleteDropdown.style.display = 'none';
+        syncMobileDeleteActionVisibility();
         if (searchFilterSection) searchFilterSection.style.display = 'none';
         return;
     } else if (isNbDay(ds)) {
@@ -1784,6 +1793,7 @@ function loadTasks(ds) {
         if (addBtn) addBtn.style.display = 'none';
         if (expBtn) expBtn.style.display = 'none';
         if (deleteDropdown) deleteDropdown.style.display = 'none';
+        syncMobileDeleteActionVisibility();
         if (searchFilterSection) searchFilterSection.style.display = 'none';
         return;
     } else {
@@ -1794,6 +1804,7 @@ function loadTasks(ds) {
         if (addBtn) addBtn.style.display = isReadOnlyRole ? 'none' : 'inline-block';
         if (expBtn) expBtn.style.display = 'inline-block';
         if (deleteDropdown) deleteDropdown.style.display = isReadOnlyRole ? 'none' : 'inline-block';
+        syncMobileDeleteActionVisibility();
     }
 
     const [y, m] = ds.split("-");
@@ -2018,8 +2029,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (searchInput) {
         searchInput.addEventListener('input', function () {
             currentSearch.search = this.value.toLowerCase();
+            updateClearSearchButton();
             searchTasks();
         });
+        updateClearSearchButton();
     }
 });
 
@@ -5814,6 +5827,13 @@ if (deleteSelect) {
     };
 }
 
+if (deleteSelectedMobileBtn && deleteSelect) {
+    deleteSelectedMobileBtn.addEventListener('click', () => {
+        deleteSelect.value = 'selected';
+        deleteSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+}
+
 /* ========== LOGIN / PIN (4 chữ số) ========== */
 const loginOverlay = document.getElementById('loginOverlay');
 const pinDotsEl = document.getElementById('pinDots');
@@ -6000,6 +6020,7 @@ function applyRolePermissions() {
     const deleteSelectMain = document.getElementById('deleteSelectMain');
     if (deleteSelectMain) deleteSelectMain.style.display = isReadOnlyRole ? 'none' : 'inline-block';
     if (deleteSelect) deleteSelect.style.display = isReadOnlyRole ? 'none' : 'inline-block';
+    syncMobileDeleteActionVisibility();
 
     // Ẩn label + dropdown chọn tuần cho member
     const weekLabel = Array.from(document.querySelectorAll('label')).find(l => l.textContent.includes('Chọn tuần'));
@@ -6048,6 +6069,7 @@ if (logoutBtn) logoutBtn.onclick = logout;
 
 // ========== SEARCH & FILTER FUNCTIONS ==========
 async function searchTasks() {
+    const requestId = ++taskSearchRequestId;
     // Always use the latest search input value on button click
     currentSearch.search = searchInput.value.trim().toLowerCase();
     currentSearch.period = searchPeriod.value;
@@ -6058,51 +6080,44 @@ async function searchTasks() {
     if (currentSearch.period === 'all' && !currentSearch.search) {
         // If no search, load normal selected date
         if (selectedDate) {
-            loadTasks(selectedDate);
+            const selectedDay = document.querySelector('#calendar .day.selected-day');
+            if (selectedDay) {
+                selectDate(selectedDate, selectedDay);
+            } else {
+                selectedDateTitle.innerText = `Công việc ngày ${formatDisplayDate(selectedDate)}`;
+                loadTasks(selectedDate);
+            }
+        } else {
+            const today = getTodayString();
+            const todayCell = document.querySelector('#calendar .day.today');
+            if (todayCell) {
+                selectDate(today, todayCell);
+            } else {
+                selectedDate = today;
+                selectedDateTitle.innerText = `Công việc ngày ${formatDisplayDate(today)}`;
+                loadTasks(today);
+            }
         }
         return;
     }
 
     // Load searched tasks
-    await loadSearchedTasks();
+    await loadSearchedTasks(requestId);
 }
 
 async function clearSearch() {
-    // Reset search state
-    currentSearch = {
-        search: '',
-        period: 'all',
-        date: null,
-        month: null,
-        year: null
-    };
-
-    // Reset UI
+    if (!searchInput) return;
     searchInput.value = '';
-    searchPeriod.value = 'all';
-    searchDate.value = '';
-    searchMonth.value = '';
-    searchYear.value = '';
-    searchDate.style.display = 'none';
-    searchMonth.style.display = 'none';
-    searchYear.style.display = 'none';
-
-    // Load normal view
-    if (selectedDate) {
-        loadTasks(selectedDate);
-    }
-
-    // Show add and delete controls
-    const addBtn = document.getElementById('openAddModal');
-    const expBtn = document.getElementById('exportBtn');
-    const deleteDropdown = document.getElementById('deleteSelect');
-    const isReadOnlyRole = !isAdmin();
-    if (addBtn) addBtn.style.display = isReadOnlyRole ? 'none' : 'inline-block';
-    if (expBtn) expBtn.style.display = 'inline-block';
-    if (deleteDropdown) deleteDropdown.style.display = isReadOnlyRole ? 'none' : 'inline-block';
+    currentSearch.search = '';
+    updateClearSearchButton();
+    await searchTasks();
 }
 
-async function loadSearchedTasks() {
+function updateClearSearchButton() {
+    if (clearSearchBtn) clearSearchBtn.hidden = !searchInput?.value;
+}
+
+async function loadSearchedTasks(requestId = ++taskSearchRequestId) {
     // Show loading
     loadingIndicator.style.display = 'block';
 
@@ -6250,14 +6265,17 @@ async function loadSearchedTasks() {
             );
         }
 
+        if (requestId !== taskSearchRequestId) return;
+
         // Render searched tasks
         renderSearchedTasks(tasks);
 
     } catch (error) {
+        if (requestId !== taskSearchRequestId) return;
         console.error('Error loading searched tasks:', error);
         await showCustomAlert('Lỗi khi tải công việc đã tìm kiếm');
     } finally {
-        loadingIndicator.style.display = 'none';
+        if (requestId === taskSearchRequestId) loadingIndicator.style.display = 'none';
     }
 }
 
@@ -6342,11 +6360,12 @@ function appendTaskMobileCard(row) {
 
     const title = document.createElement('h3');
     title.className = 'task-mobile-card-title';
-    title.textContent = cells[2].textContent.trim() || 'Chưa có tên công việc';
+    const taskTitle = cells[2].textContent.trim() || 'Chưa có tên công việc';
+    appendEmployeeSearchHighlights(title, taskTitle, currentSearch.search);
 
     const unit = document.createElement('p');
     unit.className = 'task-mobile-card-unit';
-    unit.textContent = cells[5].textContent.trim() || 'Chưa có đơn vị';
+    appendEmployeeSearchHighlights(unit, cells[5].textContent.trim() || 'Chưa có đơn vị', currentSearch.search);
 
     const details = document.createElement('details');
     details.className = 'task-mobile-card-details';
@@ -6566,6 +6585,11 @@ function renderSearchedTasks(tasks) {
         actionsCell.appendChild(actionButtons);
         row.appendChild(actionsCell);
 
+        if (currentSearch.search) {
+            [2, 3, 4, 5, 6, 9, 10, 13].forEach(index => {
+                appendEmployeeSearchHighlights(row.cells[index], row.cells[index].textContent, currentSearch.search);
+            });
+        }
         appendTaskMobileCard(row);
         taskTable.appendChild(row);
     });
@@ -6597,6 +6621,7 @@ function renderSearchedTasks(tasks) {
     if (addBtn) addBtn.style.display = 'none';
     if (expBtn) expBtn.style.display = 'none';
     if (deleteDropdown) deleteDropdown.style.display = 'none';
+    syncMobileDeleteActionVisibility();
 }
 
 // Mở / đóng sidebar menu (☰ Menu)

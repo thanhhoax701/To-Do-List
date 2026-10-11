@@ -287,10 +287,12 @@ table.task-list-table {
     width: 100%;
 }
 
-.task-list-table td:last-child button.btn-duplicate,
-.task-list-table td:last-child button.btn-edit,
-.task-list-table td:last-child button.btn-delete {
+.task-list-table button.btn-duplicate.icon-action,
+.task-list-table button.btn-edit.icon-action,
+.task-list-table button.btn-delete.icon-action {
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 34px;
     min-width: 34px;
     height: 34px;
@@ -302,39 +304,39 @@ table.task-list-table {
     line-height: 1;
 }
 
-.task-list-table td:last-child button.btn-duplicate::before,
-.task-list-table td:last-child button.btn-edit::before,
-.task-list-table td:last-child button.btn-delete::before {
+.task-list-table button.btn-duplicate.icon-action::before,
+.task-list-table button.btn-edit.icon-action::before,
+.task-list-table button.btn-delete.icon-action::before {
     font-size: 16px;
     line-height: 1;
 }
 
-.task-list-table td:last-child button.btn-duplicate::before {
+.task-list-table button.btn-duplicate.icon-action::before {
     content: "\1f501 ";
 }
 
-.task-list-table td:last-child button.btn-edit::before {
+.task-list-table button.btn-edit.icon-action::before {
     content: "\270f\fe0f";
 }
 
-.task-list-table td:last-child button.btn-delete::before {
+.task-list-table button.btn-delete.icon-action::before {
     content: "\1f5d1\fe0f";
 }
 
-.task-list-table td:last-child .btn-duplicate,
-.task-list-table td:last-child .btn-edit,
-.task-list-table td:last-child .btn-delete {
+.task-list-table button.btn-duplicate.icon-action,
+.task-list-table button.btn-edit.icon-action,
+.task-list-table button.btn-delete.icon-action {
     border: 1px solid #e0e6ed;
     background: #fff;
     color: #334155;
 }
 
-.task-list-table td:last-child .btn-delete {
+.task-list-table button.btn-delete.icon-action {
     border-color: #f2c7ca;
     color: #d71920;
 }
 
-.task-list-table td:last-child button:hover {
+.task-list-table button.icon-action:hover {
     background: #f5f7fa;
     transform: translateY(-1px);
 }
@@ -873,11 +875,45 @@ td select {
 
 .task-modal-title {
     margin: 0 0 8px !important;
-    padding: 0 38px 8px;
-    border-bottom: 1px solid #e8edf2;
+    padding: 0;
+    border-bottom: 0;
     color: #172b43;
     font-size: 21px !important;
     line-height: 1.25;
+}
+
+.task-modal-header {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) 32px;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.task-modal-header .task-modal-title {
+    min-width: 0;
+    margin: 0 !important;
+    padding: 0;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.task-modal-header .close {
+    position: static;
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #526174;
+    font: inherit;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.task-modal-header .close:hover {
+    background: #f1f5f9;
 }
 
 .task-form-grid {
@@ -1003,6 +1039,47 @@ td select {
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
+.task-search-input-wrap {
+    position: relative;
+    flex: 1 1 200px;
+    min-width: 200px;
+}
+
+#searchFilterSection .task-search-input-wrap input {
+    width: 100%;
+    padding-right: 40px;
+}
+
+#clearSearchBtn {
+    position: absolute;
+    top: 50%;
+    right: 7px;
+    display: grid;
+    width: 28px;
+    height: 28px;
+    min-height: 28px;
+    place-items: center;
+    padding: 0;
+    transform: translateY(-50%);
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #64748b;
+    font: inherit;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+#clearSearchBtn:hover {
+    background: #eef1f5;
+    color: #1f2937;
+}
+
+#clearSearchBtn[hidden] {
+    display: none;
+}
+
 #searchBtn {
     background: #28a745;
     color: white;
@@ -1018,19 +1095,12 @@ td select {
     background: #218838;
 }
 
-#clearSearchBtn {
-    background: #6c757d;
-    color: white;
-    border: none;
-    padding: 0 16px;
-    border-radius: 4px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background 0.2s ease;
-}
-
 #clearFilterBtn:hover {
     background: #545b62;
+}
+
+.delete-selected-mobile-btn {
+    display: none;
 }
 
 /* ===== NÚT NHÂN BẢN & NHÂN BẢN NGÀY ===== */
@@ -2757,6 +2827,13 @@ td select {
     font-weight: 600;
 }
 
+.task-form-field > label,
+.schedule-form .menu-form-label,
+.employee-edit-form label,
+.menu-form-label {
+    color: #111827;
+}
+
 .schedule-form .menu-form-input {
     width: 100%;
     min-width: 0;
@@ -2944,6 +3021,42 @@ td select {
 
 .schedule-table th:last-child {
     border-top-right-radius: 10px;
+}
+
+.task-list-table th,
+.schedule-table th,
+.employee-table th,
+.task-template-table tr:first-child th {
+    height: 48px;
+    padding: 10px 7px;
+    border: 0;
+    border-right: 1px solid rgba(255, 255, 255, 0.28);
+    border-bottom: 1px solid #c9151c;
+    background: #df171f;
+    color: #fff;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: normal;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: 0.01em;
+    vertical-align: middle;
+}
+
+.task-list-table th:first-child,
+.schedule-table th:first-child,
+.employee-table th:first-child,
+.task-template-table tr:first-child th:first-child {
+    border-top-left-radius: 12px;
+}
+
+.task-list-table th:last-child,
+.schedule-table th:last-child,
+.employee-table th:last-child,
+.task-template-table tr:first-child th:last-child {
+    border-top-right-radius: 12px;
+    border-right: 0;
 }
 
 .schedule-table td {
@@ -3261,16 +3374,19 @@ td select {
         gap: 9px !important;
     }
 
-    #searchInput,
+    .task-search-input-wrap,
     #searchPeriod,
     #searchDate,
     #searchMonth,
     #searchYear,
-    #searchBtn,
-    #clearSearchBtn {
+    #searchBtn {
         width: 100% !important;
         min-width: 0 !important;
         flex: 1 1 auto;
+    }
+
+    .task-search-input-wrap {
+        flex-basis: auto;
     }
 
     #searchFilterSection input,
@@ -3290,8 +3406,7 @@ td select {
         box-shadow: 0 0 0 3px rgba(223, 23, 31, 0.1);
     }
 
-    #searchBtn,
-    #clearSearchBtn {
+    #searchBtn {
         min-height: 42px;
         border-radius: 10px;
         font-size: 14px;
@@ -3301,11 +3416,6 @@ td select {
     #searchBtn {
         background: #df171f;
         box-shadow: 0 4px 10px rgba(223, 23, 31, 0.16);
-    }
-
-    #clearSearchBtn {
-        background: #eef1f5 !important;
-        color: #526174 !important;
     }
 
     #taskActions {
@@ -3328,9 +3438,27 @@ td select {
     }
 
     #deleteSelect {
-        border-color: #e0e6ed !important;
-        background-color: #fff !important;
-        color: #526174;
+        display: none !important;
+    }
+
+    .delete-selected-mobile-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #f2c7ca;
+        background: #fff;
+        color: #c9151c;
+        font-weight: 700;
+        box-shadow: 0 3px 9px rgba(201, 21, 28, 0.08);
+    }
+
+    .delete-selected-mobile-btn:hover {
+        border-color: #df171f;
+        background: #fff5f5;
+    }
+
+    .delete-selected-mobile-btn[hidden] {
+        display: none !important;
     }
 
     .side-menu-panel {
@@ -3395,8 +3523,6 @@ td select {
     }
 
     .task-modal-title {
-        margin-bottom: 12px !important;
-        padding: 0 38px 12px;
         font-size: 23px !important;
     }
 
@@ -3490,7 +3616,13 @@ td select {
     .schedule-management-content {
         width: 100%;
         max-height: 94vh;
-        padding: 20px 14px;
+        overflow-x: hidden;
+        scrollbar-width: none;
+        padding: 20px 8px;
+    }
+
+    .schedule-management-content::-webkit-scrollbar {
+        display: none;
     }
 
     .schedule-editor-content {
@@ -3614,13 +3746,12 @@ td select {
         padding: 8px !important;
     }
 
-    #searchInput,
+    .task-search-input-wrap,
     #searchPeriod,
     #searchDate,
     #searchMonth,
     #searchYear,
-    #searchBtn,
-    #clearSearchBtn {
+    #searchBtn {
         min-height: 42px;
     }
 }
@@ -3659,6 +3790,8 @@ td select {
         overflow: visible;
         background: transparent;
         box-shadow: none;
+        border: 0;
+        border-radius: 0;
     }
 
     .task-table-scroll-hint {
@@ -3679,7 +3812,7 @@ td select {
     .task-list-table tbody {
         display: grid;
         gap: 10px;
-        padding: 10px 0;
+        padding: 0;
     }
 
     .task-list-table tbody tr {
@@ -3823,7 +3956,8 @@ td select {
         padding-top: 12px;
     }
 
-    .task-mobile-card-actions .icon-action {
+    .task-mobile-card-actions .icon-action,
+    .schedule-mobile-card-actions .schedule-action-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -3832,6 +3966,42 @@ td select {
         height: 36px;
         min-height: 36px;
         margin: 0;
+        padding: 4px;
+        border: 1px solid #e0e6ed;
+        border-radius: 7px;
+        background: #fff;
+        color: #334155;
+        font-size: 0;
+        line-height: 1;
+        box-shadow: none;
+    }
+
+    .schedule-mobile-card-actions .schedule-action-btn::before {
+        font-size: 16px;
+        line-height: 1;
+    }
+
+    .schedule-mobile-card-actions .schedule-duplicate-btn::before {
+        content: "\1f501 ";
+    }
+
+    .schedule-mobile-card-actions .schedule-edit-btn::before {
+        content: "\270f\fe0f";
+    }
+
+    .schedule-mobile-card-actions .schedule-delete-btn {
+        border-color: #f2c7ca;
+        color: #d71920;
+    }
+
+    .schedule-mobile-card-actions .schedule-delete-btn::before {
+        content: "\1f5d1\fe0f";
+    }
+
+    .task-mobile-card-actions .icon-action:hover,
+    .schedule-mobile-card-actions .schedule-action-btn:hover {
+        background: #f5f7fa;
+        transform: translateY(-1px);
     }
 
     .task-list-table th:nth-child(-n+2),
@@ -3857,8 +4027,16 @@ td select {
 }
 
 @media (max-width: 620px) {
+    .schedule-management-content .schedule-page {
+        width: 100%;
+        align-self: stretch;
+        box-sizing: border-box;
+    }
+
     .schedule-management-content .schedule-table-wrap {
         overflow: visible;
+        border: 0;
+        border-radius: 0;
     }
 
     .schedule-management-content .schedule-table {
@@ -3879,17 +4057,15 @@ td select {
         display: grid;
         width: 100%;
         gap: 10px;
-        padding: 10px;
+        padding: 0;
     }
 
     .schedule-management-content .schedule-table tbody tr {
         display: block;
         width: 100%;
-        overflow: hidden;
-        border: 1px solid #e1e8ef;
-        border-radius: 10px;
-        background: #fff;
-        box-shadow: 0 3px 10px rgba(25, 42, 62, 0.06);
+        border: 0;
+        background: transparent;
+        box-shadow: none;
     }
 
     .schedule-management-content .schedule-table tbody tr:hover td {
@@ -3902,10 +4078,12 @@ td select {
 
     .schedule-management-content .schedule-table tbody td.schedule-mobile-cell {
         display: block;
-        width: auto !important;
+        width: 100% !important;
         min-width: 0;
         padding: 0;
         border-bottom: 0;
+        margin: 0 !important;
+        box-sizing: border-box;
     }
 
     .schedule-management-content .schedule-table tbody td.schedule-empty {
@@ -3919,7 +4097,11 @@ td select {
     }
 
     .schedule-mobile-card {
-        padding: 14px;
+        padding: 10px;
+        box-sizing: border-box;
+        border: 1px solid #e1e8ef;
+        border-radius: 10px;
+        background: #fff;
         color: #263442;
         text-align: left;
     }

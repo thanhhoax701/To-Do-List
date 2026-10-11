@@ -73,12 +73,15 @@
             <!-- Search và Filter Section -->
             <div id="searchFilterSection" style="margin-bottom: 12px; padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
                 <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                    <input
-                        type="text"
-                        id="searchInput"
-                        placeholder="Tìm kiếm công việc..."
-                        style="flex: 1; min-width: 200px; height: 36px; padding: 0 12px; border: 1px solid #ccc; border-radius: 4px;"
-                    >
+                    <div class="task-search-input-wrap">
+                        <input
+                            type="text"
+                            id="searchInput"
+                            placeholder="Tìm kiếm công việc..."
+                            aria-label="Tìm kiếm công việc"
+                        >
+                        <button type="button" id="clearSearchBtn" aria-label="Xóa nội dung tìm kiếm" title="Xóa nội dung tìm kiếm" hidden>×</button>
+                    </div>
                     <select id="searchPeriod" style="height: 36px; padding: 0 12px; border: 1px solid #ccc; border-radius: 4px;">
                         <option value="all">Tất cả</option>
                         <option value="day">Theo ngày</option>
@@ -102,7 +105,6 @@
                         class="btn-add"
                         style="height: 36px; padding: 0 16px;"
                     >🔍 Tìm kiếm</button>
-                    <button type="button" id="clearSearchBtn" style="height: 36px; padding: 0 16px; background: #6c757d; border: none; color: white; border-radius: 4px;">🗑️ Xóa</button>
                 </div>
             </div>
             <!-- Nút thêm công việc -->
@@ -112,6 +114,7 @@
                     <option value="">Xóa...</option>
                     <option value="selected">Xóa đã chọn</option>
                 </select>
+                <button type="button" id="deleteSelectedMobileBtn" class="delete-selected-mobile-btn" aria-label="Xóa công việc đã chọn" hidden>🗑️ Xóa đã chọn</button>
             </div>
             <!-- Sidebar Menu -->
             <div id="sideMenuPanel" class="side-menu-panel">
@@ -772,8 +775,11 @@
             <!-- Modal thêm / sửa công việc -->
             <div id="taskModal" class="modal">
                 <div class="modal-content task-modal-content">
-                    <span class="close" aria-label="Đóng">&times;</span>
-                    <h2 id="modalTitle" class="task-modal-title">Thêm công việc</h2>
+                    <div class="task-modal-header">
+                        <span aria-hidden="true"></span>
+                        <h2 id="modalTitle" class="task-modal-title">Thêm công việc</h2>
+                        <button type="button" class="close" aria-label="Đóng">&times;</button>
+                    </div>
                     <input type="hidden" id="taskId">
                     <div class="task-form-grid">
                         <div class="task-form-field task-form-field-wide">
