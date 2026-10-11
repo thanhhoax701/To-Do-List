@@ -2652,11 +2652,27 @@ td select {
 }
 
 .schedule-editor-title {
-    margin: 0 0 2px !important;
-    padding: 0 38px 8px;
-    border-bottom: 1px solid #e8edf2;
+    grid-column: 1 / -1;
+    grid-row: 1;
+    margin: 0 !important;
+    padding: 0 38px;
     color: #172b43;
     font-size: 21px !important;
+    text-align: center;
+}
+
+.schedule-editor-header {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) 34px;
+    align-items: center;
+    width: 100%;
+}
+
+.schedule-editor-header .menu-detail-close {
+    position: static;
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
 }
 
 .schedule-page-header {
