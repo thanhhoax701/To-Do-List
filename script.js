@@ -110,9 +110,13 @@ const taskTemplateSheetContent = document.getElementById('taskTemplateSheetConte
 const taskExportTemplateCache = new Map();
 const scheduleCount = document.getElementById('scheduleCount');
 const maintenanceDashboard = document.getElementById('maintenanceDashboard');
+const storeVisitDashboard = document.getElementById('storeVisitDashboard');
 const maintenanceDueCount = document.getElementById('maintenanceDueCount');
 const maintenanceCompletedCount = document.getElementById('maintenanceCompletedCount');
 const maintenanceAttentionCount = document.getElementById('maintenanceAttentionCount');
+const storeVisitPendingCount = document.getElementById('storeVisitPendingCount');
+const storeVisitCompletedCount = document.getElementById('storeVisitCompletedCount');
+const storeVisitDelayedCount = document.getElementById('storeVisitDelayedCount');
 const storeScheduleHead = document.getElementById('storeScheduleHead');
 const maintenanceScheduleHead = document.getElementById('maintenanceScheduleHead');
 const employeeTableContainer = document.getElementById('employeeTableContainer');
@@ -2862,9 +2866,10 @@ function setScheduleTypeMode(type) {
         });
     });
     maintenanceDashboard.hidden = !isMaintenance;
+    storeVisitDashboard.hidden = isMaintenance;
     storeScheduleHead.hidden = isMaintenance;
     maintenanceScheduleHead.hidden = !isMaintenance;
-    scheduleManagementTitle.textContent = isMaintenance ? 'Bảo trì' : 'Lịch đi cửa hàng';
+    scheduleManagementTitle.textContent = isMaintenance ? 'Lịch bảo trì' : 'Lịch đi cửa hàng';
     scheduleListTitle.textContent = activeScheduleType === 'maintenance'
         ? 'Danh sách bảo trì'
         : 'Danh sách lịch đi cửa hàng';
@@ -3045,6 +3050,16 @@ async function loadScheduleList() {
             ).length);
             maintenanceAttentionCount.textContent = String(activeRecords.filter(schedule =>
                 schedule.status === 'Cần chú ý' || (schedule.dueDate && schedule.dueDate < today)
+            ).length);
+        } else {
+            storeVisitPendingCount.textContent = String(records.filter(schedule =>
+                !['Hoàn thành', 'Đã hủy'].includes(schedule.status)
+            ).length);
+            storeVisitCompletedCount.textContent = String(records.filter(schedule =>
+                schedule.status === 'Hoàn thành'
+            ).length);
+            storeVisitDelayedCount.textContent = String(records.filter(schedule =>
+                schedule.status === 'Chậm tiến độ'
             ).length);
         }
 

@@ -2265,7 +2265,7 @@ td select {
 }
 
 #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table {
-    min-width: 1450px;
+    min-width: 1600px;
 }
 
 .employees-modal {
@@ -2870,6 +2870,7 @@ td select {
     color: #172b43;
     font-size: 32px;
     letter-spacing: -0.025em;
+    text-align: left;
 }
 
 .schedule-count {
@@ -2877,6 +2878,7 @@ td select {
     color: #7890a8;
     font-size: 14px;
     line-height: 1.45;
+    text-align: left;
 }
 
 .schedule-import-hint {
@@ -3156,7 +3158,7 @@ td select {
 }
 
 .schedule-list-heading {
-    margin: 8px 0 10px;
+    margin: 0 0 4px;
     color: #334155;
 }
 
@@ -3178,6 +3180,7 @@ td select {
     background: #fff;
     color: #263442;
     font-size: 14px;
+    margin-top: 0;
 }
 
 #maintenanceScheduleHead[hidden],
@@ -3186,12 +3189,12 @@ td select {
 }
 
 .schedule-table th {
-    padding: 16px 14px;
+    padding: 12px 10px;
     background: #df171e;
     color: #fff;
     font-weight: 700;
     text-align: left;
-    white-space: nowrap;
+    white-space: normal;
 }
 
 .schedule-table th:first-child {
@@ -3239,11 +3242,12 @@ td select {
 }
 
 .schedule-table td {
-    padding: 13px 14px;
+    padding: 13px 10px;
     border-bottom: 1px solid #e9eef3;
     vertical-align: top;
     line-height: 1.35;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 .schedule-table tbody tr:last-child td {
@@ -3265,18 +3269,19 @@ td select {
 }
 
 .schedule-assignees {
-    min-width: 165px;
+    min-width: 0;
 }
 
 .schedule-assignees span {
     display: table;
     max-width: 100%;
-    margin: 0 0 5px;
-    padding: 5px 12px;
+    margin: 0 0 6px;
+    padding: 5px 10px;
     border-radius: 18px;
     background: #e7f3f7;
     color: #41677a;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .schedule-assignees span:last-child {
@@ -3337,9 +3342,9 @@ td select {
 }
 
 .schedule-table-actions .schedule-action-btn {
-    margin-right: 4px;
-    width: 38px;
-    height: 38px;
+    margin-right: 3px;
+    width: 34px;
+    height: 34px;
     padding: 0;
     border: 1px solid #dce4ec;
     border-radius: 9px;
@@ -3365,6 +3370,213 @@ td select {
 
 .schedule-table td.schedule-error {
     color: #b42318;
+}
+
+@media (min-width: 621px) {
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table {
+        min-width: 1320px;
+        table-layout: fixed;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table th:nth-child(1),
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table td:nth-child(1) {
+        width: 8%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table th:nth-child(2),
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table td:nth-child(2) {
+        width: 6%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table th:nth-child(3),
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table td:nth-child(3) {
+        width: 25%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table th:nth-child(4),
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table td:nth-child(4) {
+        width: 13%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table th:nth-child(5),
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table td:nth-child(5) {
+        width: 19%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table th:nth-child(6),
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table td:nth-child(6) {
+        width: 10%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table th:nth-child(7),
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table td:nth-child(7) {
+        width: 8%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table th:nth-child(8),
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table td:nth-child(8) {
+        width: 11%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table th {
+        text-transform: none;
+    }
+
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table {
+        min-width: 1600px;
+        table-layout: fixed;
+    }
+
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table th {
+        text-transform: none;
+    }
+
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table th:nth-child(1),
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table td:nth-child(1) {
+        width: 48px;
+        min-width: 48px;
+        max-width: 48px;
+    }
+
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table th:nth-child(2),
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table td:nth-child(2) {
+        width: 10%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table th:nth-child(3),
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table td:nth-child(3),
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table th:nth-child(4),
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table td:nth-child(4) {
+        width: 6%;
+        white-space: nowrap;
+    }
+
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table th:nth-child(5),
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table td:nth-child(5) {
+        width: 14%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table th:nth-child(6),
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table td:nth-child(6) {
+        width: 8%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table th:nth-child(7),
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table td:nth-child(7) {
+        width: 14%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table th:nth-child(8),
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table td:nth-child(8) {
+        width: 6%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table th:nth-child(9),
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table td:nth-child(9) {
+        width: 5%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table th:nth-child(10),
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table td:nth-child(10) {
+        width: 6%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table th:nth-child(11),
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table td:nth-child(11) {
+        width: 6%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table th:nth-child(12),
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table td:nth-child(12) {
+        width: 8%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table th:nth-child(13),
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table td:nth-child(13) {
+        width: 7%;
+    }
+
+    .schedule-table .schedule-date-cell,
+    .schedule-table td:nth-child(3),
+    .schedule-table td:nth-child(4) {
+        font-weight: 700;
+    }
+
+    .schedule-table-actions {
+        text-align: center;
+    }
+}
+
+@media (min-width: 1024px) {
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table {
+        width: 100%;
+        min-width: 0;
+        table-layout: fixed;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table th:nth-child(2),
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table td:nth-child(2) {
+        width: 5%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table th:nth-child(3),
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table td:nth-child(3) {
+        width: 28%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table th:nth-child(4),
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table td:nth-child(4) {
+        width: 10%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table th:nth-child(5),
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table td:nth-child(5) {
+        width: 20%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table th:nth-child(7),
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table td:nth-child(7) {
+        width: 9%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table th:nth-child(8),
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table td:nth-child(8) {
+        width: 10%;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table-actions .schedule-action-btn {
+        display: inline-flex;
+        box-sizing: border-box;
+        width: 28px;
+        min-width: 28px;
+        height: 28px;
+        margin: 0 2px;
+        border-radius: 7px;
+        font-size: 15px;
+        vertical-align: middle;
+    }
+
+    #scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table td.schedule-table-actions {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table-actions .schedule-action-btn {
+        display: inline-flex;
+        box-sizing: border-box;
+        width: 28px;
+        min-width: 28px;
+        height: 28px;
+        margin: 0 2px;
+        border-radius: 7px;
+        font-size: 15px;
+        vertical-align: middle;
+    }
+
+    #scheduleManagementModal[data-schedule-type="maintenance"] .schedule-table td.schedule-table-actions {
+        text-align: center;
+        vertical-align: middle;
+    }
 }
 
 @media (max-width: 620px) {
