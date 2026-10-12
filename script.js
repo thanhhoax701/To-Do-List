@@ -608,6 +608,11 @@ function clearTaskTemplatePreview() {
     if (taskTemplateSheetContent) taskTemplateSheetContent.replaceChildren();
 }
 
+function formatTemplateDate(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+}
+
 function getTemplateCellText(cell, worksheet, workbook) {
     const value = cell.value;
     if (value && typeof value === 'object' && 'formula' in value) {
@@ -641,9 +646,13 @@ function getTemplateCellText(cell, worksheet, workbook) {
                 return String(count);
             }
         }
+        const formattedResultDate = formatTemplateDate(value.result);
+        if (formattedResultDate) return formattedResultDate;
         if (value.result !== undefined && value.result !== null) return String(value.result);
         return `=${value.formula}`;
     }
+    const formattedDate = formatTemplateDate(value);
+    if (formattedDate) return formattedDate;
     if (typeof cell.text === 'string' && cell.text !== '') return cell.text;
     if (value && typeof value === 'object' && 'text' in value) return String(value.text ?? '');
     return value === null || value === undefined ? '' : String(value);
@@ -3579,7 +3588,8 @@ function renderEmployeeAutocomplete() {
     const { input, popup, type } = activeEmployeeAutocomplete;
     const isUnitField = type === 'unit' || type === 'scheduleUnit';
     const isScheduleAssignee = type === 'scheduleAssignee';
-    const queryValue = isScheduleAssignee ? input.value.split(',').pop().trim() : input.value;
+    const isMultiPersonField = type === 'requester' || type === 'assignee' || isScheduleAssignee;
+    const queryValue = isMultiPersonField ? input.value.split(',').pop().trim() : input.value;
     const query = normalizeEmployeeText(queryValue);
     const hasReachedAssigneeLimit = isScheduleAssignee &&
         parseScheduleAssignees(input.value.split(',').slice(0, -1).join(',')).length >= 5;
@@ -3648,6 +3658,13 @@ function renderEmployeeAutocomplete() {
                 }
                 if (!alreadySelected) assignees.push(item.value);
                 input.value = assignees.join(', ');
+            } else if (isMultiPersonField) {
+                const values = parseScheduleAssignees(input.value.split(',').slice(0, -1).join(','));
+                const alreadySelected = values.some(value =>
+                    normalizeEmployeeText(value) === normalizeEmployeeText(item.value)
+                );
+                if (!alreadySelected) values.push(item.value);
+                input.value = values.join(', ');
             } else {
                 input.value = item.value;
             }
@@ -6375,22 +6392,48 @@ function appendTaskMobileCard(row) {
     }
     heading.append(selection, status);
 
-    const title = document.createElement('h3');
-    title.className = 'task-mobile-card-title';
-    const taskTitle = cells[2].textContent.trim() || 'Chưa có tên công việc';
-    appendEmployeeSearchHighlights(title, taskTitle, currentSearch.search);
+    const createSummaryField = (labelText, valueText, className) => {
+        const field = document.createElement('div');
+        field.className = `task-mobile-card-field ${className}`;
+        const label = document.createElement('span');
+        label.className = 'task-mobile-card-field-label';
+        label.textContent = labelText;
+        const value = document.createElement('span');
+        value.className = 'task-mobile-card-field-value';
+        appendEmployeeSearchHighlights(value, valueText, currentSearch.search);
+        field.append(label, value);
+        return field;
+    };
 
-    const unit = document.createElement('p');
-    unit.className = 'task-mobile-card-unit';
-    appendEmployeeSearchHighlights(unit, cells[5].textContent.trim() || 'Chưa có đơn vị', currentSearch.search);
+    const title = createSummaryField('Công việc', cells[2].textContent.trim() || 'Chưa có tên công việc', 'task-mobile-card-title');
+    const description = createSummaryField('Mô tả', cells[3].textContent.trim() || 'Chưa có mô tả', 'task-mobile-card-description');
+    const requester = createSummaryField('Người yêu cầu', cells[4].textContent.trim() || 'Chưa có thông tin', 'task-mobile-card-requester');
+    const unit = createSummaryField('Đơn vị', cells[5].textContent.trim() || 'Chưa có thông tin', 'task-mobile-card-unit');
+    const assignee = createSummaryField('Phụ trách', cells[6].textContent.trim() || 'Chưa có thông tin', 'task-mobile-card-assignee');
+    const assigneeValue = assignee.querySelector('.task-mobile-card-field-value');
+    const assignees = parseScheduleAssignees(cells[6].textContent);
+    if (assignees.length) {
+        assigneeValue.replaceChildren();
+        assignees.forEach(person => {
+            const personElement = document.createElement('span');
+            personElement.className = 'task-mobile-card-assignee-person';
+            appendEmployeeSearchHighlights(personElement, person, currentSearch.search);
+            assigneeValue.appendChild(personElement);
+        });
+    }
+    const result = createSummaryField('Kết quả', cells[9].textContent.trim() || 'Chưa có thông tin', 'task-mobile-card-result');
+    const completion = createSummaryField('% Hoàn thành', cells[12].textContent.trim() || 'Chưa cập nhật', 'task-mobile-card-completion');
 
     const details = document.createElement('details');
     details.className = 'task-mobile-card-details';
+    details.addEventListener('toggle', () => {
+        row.classList.toggle('task-details-open', details.open);
+    });
     const summary = document.createElement('summary');
     summary.textContent = 'Xem chi tiết';
     const detailList = document.createElement('dl');
     detailList.className = 'task-mobile-card-detail-list';
-    const primaryIndexes = new Set([0, 1, 2, 5, 11, 14]);
+    const primaryIndexes = new Set([0, 1, 2, 3, 4, 5, 6, 9, 11, 12, 14]);
     cells.forEach((cell, index) => {
         if (primaryIndexes.has(index)) return;
         const item = document.createElement('div');
@@ -6414,7 +6457,7 @@ function appendTaskMobileCard(row) {
         actions.appendChild(mobileButton);
     });
 
-    card.append(heading, title, unit, details, actions);
+    card.append(heading, title, description, requester, unit, assignee, result, completion, details, actions);
     mobileCell.appendChild(card);
     row.appendChild(mobileCell);
 }

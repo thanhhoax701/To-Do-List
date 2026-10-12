@@ -110,6 +110,7 @@
             <!-- Nút thêm công việc -->
             <div id="taskActions" style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
                 <button id="openAddModal" class="btn-add" style="height:40px; font-size:17px; padding:0 22px; display:flex; align-items:center;">➕ Thêm công việc</button>
+                <label class="task-select-all"><input type="checkbox" id="selectAllCheckbox"> Chọn tất cả</label>
                 <select id="deleteSelect" style="height:40px; font-size:16px; padding:0 16px; border-radius:6px; border:1px solid #bbb; background:#fff;">
                     <option value="">Xóa...</option>
                     <option value="selected">Xóa đã chọn</option>
@@ -501,7 +502,7 @@
                         </button>
                         <button type="button" class="menu-category-btn" data-menu-modal="taskTemplateModal">
                             <span class="menu-category-icon">📄</span>
-                            <span class="menu-category-text">Mẫu</span>
+                            <span class="menu-category-text">Mẫu công việc</span>
                             <span class="menu-category-arrow">›</span>
                         </button>
                     </div>
@@ -510,7 +511,7 @@
             <div id="taskTemplateModal" class="modal menu-detail-modal" role="dialog" aria-modal="true" aria-labelledby="taskTemplateTitle" aria-hidden="true">
                 <div class="modal-content menu-detail-content">
                     <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
-                    <h2 id="taskTemplateTitle">Mẫu</h2>
+                    <h2 id="taskTemplateTitle">Mẫu công việc</h2>
                     <button type="button" class="menu-detail-back" data-menu-parent="importExportModal">‹ Quay lại</button>
                     <section class="menu-section">
                         <h3 class="menu-section-title">MẪU XUẤT CÔNG VIỆC</h3>
@@ -659,16 +660,13 @@
                     </section>
                 </div>
             </div>
-            <!-- ========== BẢNG CÔNG VIỆC ========== -->
-            <!-- Hiển thị danh sách công việc của ngày được chọn -->
+            <!-- ========== DANH SÁCH CÔNG VIỆC ========== -->
+            <!-- Hiển thị các thẻ công việc của ngày được chọn -->
             <div class="task-table-scroll">
-                <p class="task-table-scroll-hint">← Vuốt ngang để xem đầy đủ các cột →</p>
                 <table class="task-list-table">
                     <thead>
                         <tr>
-                            <th>
-                                <input type="checkbox" id="selectAllCheckbox">
-                            </th>
+                            <th></th>
                             <th>STT</th>
                             <th>Công việc</th>
                             <th>Mô tả</th>
@@ -796,8 +794,10 @@
                             <label for="requester">Người yêu cầu</label>
                             <div class="employee-autocomplete-field">
                                 <input type="text" id="requester" autocomplete="off" role="combobox"
-                                    aria-autocomplete="list" aria-expanded="false" aria-controls="employeeRequesterList">
+                                    aria-autocomplete="list" aria-expanded="false" aria-controls="employeeRequesterList"
+                                    aria-describedby="requesterHint" placeholder="Tìm và chọn người yêu cầu">
                             </div>
+                            <small id="requesterHint" class="task-form-hint">Có thể chọn nhiều người; phân cách bằng dấu phẩy.</small>
                         </div>
                         <div class="task-form-field task-form-field-wide">
                             <label for="unit">Đơn vị thực hiện</label>
@@ -810,8 +810,10 @@
                             <label for="assignee">Phụ trách</label>
                             <div class="employee-autocomplete-field">
                                 <input type="text" id="assignee" autocomplete="off" role="combobox"
-                                    aria-autocomplete="list" aria-expanded="false" aria-controls="employeeAssigneeList">
+                                    aria-autocomplete="list" aria-expanded="false" aria-controls="employeeAssigneeList"
+                                    aria-describedby="assigneeHint" placeholder="Tìm và chọn người phụ trách">
                             </div>
+                            <small id="assigneeHint" class="task-form-hint">Có thể chọn nhiều người; phân cách bằng dấu phẩy.</small>
                         </div>
                         <div class="task-form-field">
                             <label for="taskStartDate">Ngày bắt đầu</label>
