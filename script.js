@@ -347,6 +347,125 @@ function isNlDay(dateStr) {
 
 // ========== LỊCH ========== 
 // Vẽ lịch tháng và populate tuần dropdown
+function jdFromDate(day, month, year) {
+    const a = Math.floor((14 - month) / 12);
+    const y = year + 4800 - a;
+    const m = month + 12 * a - 3;
+    let jd = day + Math.floor((153 * m + 2) / 5) + 365 * y
+        + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+    if (jd < 2299161) {
+        jd = day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - 32083;
+    }
+    return jd;
+}
+
+function getNewMoonDay(k, timeZone) {
+    const t = k / 1236.85;
+    const t2 = t * t;
+    const t3 = t2 * t;
+    const dr = Math.PI / 180;
+    let jd = 2415020.75933 + 29.53058868 * k + 0.0001178 * t2 - 0.000000155 * t3;
+    jd += 0.00033 * Math.sin((166.56 + 132.87 * t - 0.009173 * t2) * dr);
+    const meanAnomaly = 359.2242 + 29.10535608 * k - 0.0000333 * t2 - 0.00000347 * t3;
+    const moonAnomaly = 306.0253 + 385.81691806 * k + 0.0107306 * t2 + 0.00001236 * t3;
+    const moonArgument = 21.2964 + 390.67050646 * k - 0.0016528 * t2 - 0.00000239 * t3;
+    let correction = (0.1734 - 0.000393 * t) * Math.sin(meanAnomaly * dr)
+        + 0.0021 * Math.sin(2 * meanAnomaly * dr)
+        - 0.4068 * Math.sin(moonAnomaly * dr)
+        + 0.0161 * Math.sin(2 * moonAnomaly * dr)
+        - 0.0004 * Math.sin(3 * moonAnomaly * dr)
+        + 0.0104 * Math.sin(2 * moonArgument * dr)
+        - 0.0051 * Math.sin((meanAnomaly + moonAnomaly) * dr)
+        - 0.0074 * Math.sin((meanAnomaly - moonAnomaly) * dr)
+        + 0.0004 * Math.sin((2 * moonArgument + meanAnomaly) * dr)
+        - 0.0004 * Math.sin((2 * moonArgument - meanAnomaly) * dr)
+        - 0.0006 * Math.sin((2 * moonArgument + moonAnomaly) * dr)
+        + 0.0010 * Math.sin((2 * moonArgument - moonAnomaly) * dr)
+        + 0.0005 * Math.sin((2 * moonAnomaly + meanAnomaly) * dr);
+    const deltaT = t < -11
+        ? 0.001 + 0.000839 * t + 0.0002261 * t2 - 0.00000845 * t3 - 0.000000081 * t * t3
+        : -0.000278 + 0.000265 * t + 0.000262 * t2;
+    return Math.floor(jd + correction - deltaT + 0.5 + timeZone / 24);
+}
+
+function getSunLongitude(dayNumber, timeZone) {
+    const t = (dayNumber - 2451545.5 - timeZone / 24) / 36525;
+    const t2 = t * t;
+    const dr = Math.PI / 180;
+    const meanAnomaly = 357.52910 + 35999.05030 * t - 0.0001559 * t2 - 0.00000048 * t * t2;
+    const meanLongitude = 280.46645 + 36000.76983 * t + 0.0003032 * t2;
+    const longitude = meanLongitude + (1.914600 - 0.004817 * t - 0.000014 * t2) * Math.sin(dr * meanAnomaly)
+        + (0.019993 - 0.000101 * t) * Math.sin(2 * dr * meanAnomaly)
+        + 0.000290 * Math.sin(3 * dr * meanAnomaly);
+    return Math.floor(((longitude % 360) + 360) % 360 / 30);
+}
+
+function getLunarMonth11(year, timeZone) {
+    const off = jdFromDate(31, 12, year) - 2415021;
+    const k = Math.floor(off / 29.530588853);
+    let monthStart = getNewMoonDay(k, timeZone);
+    if (getSunLongitude(monthStart, timeZone) >= 9) {
+        monthStart = getNewMoonDay(k - 1, timeZone);
+    }
+    return monthStart;
+}
+
+function getLeapMonthOffset(monthStart, timeZone) {
+    const k = Math.floor(0.5 + (monthStart - 2415021.076998695) / 29.530588853);
+    let last = 0;
+    let arc = getSunLongitude(getNewMoonDay(k + 1, timeZone), timeZone);
+    let i = 1;
+    while (arc !== last && i < 14) {
+        last = arc;
+        i++;
+        arc = getSunLongitude(getNewMoonDay(k + i, timeZone), timeZone);
+    }
+    return i - 1;
+}
+
+function convertSolarToLunar(day, month, year, timeZone = 7) {
+    const dayNumber = jdFromDate(day, month, year);
+    let k = Math.floor((dayNumber - 2415021.076998695) / 29.530588853);
+    let monthStart = getNewMoonDay(k, timeZone);
+    while (monthStart > dayNumber) {
+        k--;
+        monthStart = getNewMoonDay(k, timeZone);
+    }
+    let nextMonthStart = getNewMoonDay(k + 1, timeZone);
+    while (nextMonthStart <= dayNumber) {
+        k++;
+        monthStart = nextMonthStart;
+        nextMonthStart = getNewMoonDay(k + 1, timeZone);
+    }
+
+    let month11 = getLunarMonth11(year, timeZone);
+    let nextMonth11 = month11;
+    let lunarYear;
+    if (month11 >= monthStart) {
+        lunarYear = year;
+        month11 = getLunarMonth11(year - 1, timeZone);
+    } else {
+        lunarYear = year + 1;
+        nextMonth11 = getLunarMonth11(year + 1, timeZone);
+    }
+
+    const lunarDay = dayNumber - monthStart + 1;
+    const monthDiff = Math.floor((monthStart - month11) / 29);
+    let lunarMonth = monthDiff + 11;
+    let isLeapMonth = false;
+    if (nextMonth11 - month11 > 365) {
+        const leapMonthOffset = getLeapMonthOffset(month11, timeZone);
+        if (monthDiff >= leapMonthOffset) {
+            lunarMonth = monthDiff + 10;
+            isLeapMonth = monthDiff === leapMonthOffset;
+        }
+    }
+    if (lunarMonth > 12) lunarMonth -= 12;
+    if (lunarMonth >= 11 && monthDiff < 4) lunarYear--;
+
+    return { day: lunarDay, month: lunarMonth, year: lunarYear, isLeapMonth };
+}
+
 function renderCalendar() {
     const y = currentDate.getFullYear();
     const m = currentDate.getMonth();
@@ -366,7 +485,14 @@ function renderCalendar() {
         const ds = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
         const div = document.createElement("div");
         div.className = "day";
-        div.innerHTML = `<div>${d}</div>`;
+        const lunarDate = convertSolarToLunar(d, m + 1, y);
+        const lunarLabel = lunarDate.day === 1
+            ? `${lunarDate.day}/${lunarDate.month}${lunarDate.isLeapMonth ? '*' : ''}`
+            : String(lunarDate.day);
+        div.dataset.date = ds;
+        div.setAttribute("aria-label", `${d}/${m + 1}/${y}, ngày ${lunarDate.day} tháng ${lunarDate.month}${lunarDate.isLeapMonth ? ' nhuận' : ''} âm lịch`);
+        div.title = `Âm lịch: ${lunarDate.day}/${lunarDate.month}/${lunarDate.year}${lunarDate.isLeapMonth ? ' (tháng nhuận)' : ''}`;
+        div.innerHTML = `<span class="solar-day-number">${d}</span><span class="lunar-day-number">${lunarLabel}</span>`;
         div.onclick = () => selectDate(ds, div);
 
         // đánh dấu NB / NL bằng màu sắc nền và viền (không hiển thị chữ)
@@ -400,7 +526,7 @@ function renderCalendar() {
         const chosenDateStr = `${y}-${pad(m + 1)}-${pad(chooseDay)}`;
         const dayEls = calendarDiv.querySelectorAll('.day');
         dayEls.forEach(dayEl => {
-            if (dayEl.innerText.trim() == String(chooseDay)) {
+            if (dayEl.dataset.date === chosenDateStr) {
                 selectDate(chosenDateStr, dayEl);
             }
         });
