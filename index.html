@@ -218,6 +218,11 @@
                             <span class="menu-category-text">Lịch bảo trì</span>
                             <span class="menu-category-arrow">›</span>
                         </button>
+                        <button type="button" class="menu-category-btn" data-menu-modal="nbItScheduleModal">
+                            <span class="menu-category-icon">🗓️</span>
+                            <span class="menu-category-text">LỊCH NB - IT</span>
+                            <span class="menu-category-arrow">›</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -307,6 +312,65 @@
                             </table>
                         </div>
                     </section>
+                </div>
+            </div>
+            <div id="nbItScheduleModal" class="modal menu-detail-modal nb-it-schedule-modal" role="dialog" aria-modal="true" aria-labelledby="nbItScheduleTitle" aria-hidden="true">
+                <div class="modal-content nb-it-schedule-content">
+                    <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
+                    <button type="button" class="menu-detail-back" data-menu-parent="workScheduleModal">‹ Quay lại</button>
+                    <header class="nb-it-header">
+                        <div>
+                            <h2 id="nbItScheduleTitle">LỊCH NB - IT</h2>
+                            <p id="nbItScheduleCount" aria-live="polite">Đang tải lịch...</p>
+                        </div>
+                        <div class="nb-it-year-controls">
+                            <button type="button" id="nbItPreviousYear" aria-label="Năm trước">‹</button>
+                            <label for="nbItYear">Năm</label>
+                            <input id="nbItYear" type="number" min="2000" max="2100" inputmode="numeric">
+                            <button type="button" id="nbItNextYear" aria-label="Năm sau">›</button>
+                            <button type="button" id="nbItRefreshBtn">↻ Tải lại</button>
+                            <button type="button" id="nbItAddBtn" class="nb-it-add-btn">＋ Thêm lịch</button>
+                        </div>
+                    </header>
+                    <form id="nbItEntryForm" class="nb-it-entry-form" hidden>
+                        <input id="nbItEntryId" type="hidden">
+                        <div class="nb-it-field">
+                            <label for="nbItEmployee">Nhân viên IT</label>
+                            <select id="nbItEmployee" required></select>
+                        </div>
+                        <div class="nb-it-field">
+                            <label for="nbItKind">Loại</label>
+                            <select id="nbItKind" required>
+                                <option value="NB">NB - Nghỉ bù</option>
+                                <option value="TC">TC - Tăng ca</option>
+                                <option value="HD">HD - Công tác</option>
+                            </select>
+                        </div>
+                        <div class="nb-it-field">
+                            <label for="nbItLabel">Nội dung hiển thị</label>
+                            <input id="nbItLabel" type="text" maxlength="30" placeholder="Ví dụ: HD1">
+                        </div>
+                        <div class="nb-it-field">
+                            <label for="nbItStartDate">Từ ngày</label>
+                            <input id="nbItStartDate" type="date" required>
+                        </div>
+                        <div class="nb-it-field">
+                            <label for="nbItEndDate">Đến ngày</label>
+                            <input id="nbItEndDate" type="date" required>
+                        </div>
+                        <div class="nb-it-form-actions">
+                            <button type="button" id="nbItCancelBtn">Hủy</button>
+                            <button type="button" id="nbItDeleteBtn" class="nb-it-delete-btn" hidden>Xóa lịch</button>
+                            <button type="submit" id="nbItSaveBtn">Lưu lịch</button>
+                        </div>
+                    </form>
+                    <div class="nb-it-legend" aria-label="Chú giải">
+                        <span><i class="nb-it-legend-swatch nb-it-legend-nb"></i>NB - Nghỉ bù</span>
+                        <span><i class="nb-it-legend-swatch nb-it-legend-tc"></i>TC - Tăng ca</span>
+                        <span><i class="nb-it-legend-swatch nb-it-legend-hd"></i>HD - Công tác</span>
+                    </div>
+                    <p class="nb-it-entry-hint">Nhập nhanh ngày nghỉ bù: chọn ô trống, gõ NB rồi nhấn Enter.</p>
+                    <div id="nbItCalendar" class="nb-it-calendar" aria-live="polite"></div>
                 </div>
             </div>
             <div id="scheduleEditorModal" class="modal menu-detail-modal schedule-editor-modal" role="dialog" aria-modal="true" aria-labelledby="scheduleEditorTitle" aria-hidden="true">

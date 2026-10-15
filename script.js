@@ -66,6 +66,23 @@ const menuCloseBtn = document.getElementById("menuCloseBtn");
 const sideMenuPanel = document.getElementById("sideMenuPanel");
 const scheduleForm = document.getElementById('scheduleForm');
 const scheduleEditorModal = document.getElementById('scheduleEditorModal');
+const nbItCalendar = document.getElementById('nbItCalendar');
+const nbItScheduleCount = document.getElementById('nbItScheduleCount');
+const nbItYearInput = document.getElementById('nbItYear');
+const nbItEntryForm = document.getElementById('nbItEntryForm');
+const nbItEntryIdInput = document.getElementById('nbItEntryId');
+const nbItEmployeeInput = document.getElementById('nbItEmployee');
+const nbItKindInput = document.getElementById('nbItKind');
+const nbItLabelInput = document.getElementById('nbItLabel');
+const nbItStartDateInput = document.getElementById('nbItStartDate');
+const nbItEndDateInput = document.getElementById('nbItEndDate');
+const nbItSaveBtn = document.getElementById('nbItSaveBtn');
+const nbItAddBtn = document.getElementById('nbItAddBtn');
+const nbItCancelBtn = document.getElementById('nbItCancelBtn');
+const nbItDeleteBtn = document.getElementById('nbItDeleteBtn');
+const nbItRefreshBtn = document.getElementById('nbItRefreshBtn');
+const nbItPreviousYearBtn = document.getElementById('nbItPreviousYear');
+const nbItNextYearBtn = document.getElementById('nbItNextYear');
 const scheduleEditorTitle = document.getElementById('scheduleEditorTitle');
 const scheduleDateInput = document.getElementById('scheduleDate');
 const scheduleTimeInput = document.getElementById('scheduleTime');
@@ -233,6 +250,10 @@ function nlRef(...parts) {
 function scheduleRef(...parts) {
     const uid = getCurrentUserId();
     return ref(db, `storeMaintenanceSchedules/${uid}${parts.length ? '/' + parts.join('/') : ''}`);
+}
+function nbItScheduleRef(...parts) {
+    const uid = getCurrentUserId();
+    return ref(db, `nbItSchedules/${uid}${parts.length ? '/' + parts.join('/') : ''}`);
 }
 function employeesRef(...parts) {
     return ref(db, `employees${parts.length ? '/' + parts.join('/') : ''}`);
@@ -2959,6 +2980,360 @@ let editingScheduleCreatedAt = null;
 let editingScheduleData = null;
 let scheduleLoadToken = 0;
 let activeScheduleType = 'storeVisit';
+let nbItEmployees = [];
+let nbItEntries = [];
+let nbItLoadToken = 0;
+
+function isItEmployee(employee) {
+    const details = normalizeEmployeeText([
+        employee.department,
+        employee.position,
+        employee.positionDetail
+    ].join(' '));
+    return /(^|[^a-z0-9])(it|cntt)(?=$|[^a-z0-9])|cong nghe thong tin/.test(details);
+}
+
+function resetNbItEntryForm() {
+    nbItEntryForm.reset();
+    nbItEntryIdInput.value = '';
+    const month = new Date().getMonth() + 1;
+    const lastDay = new Date(Number(nbItYearInput.value), month, 0).getDate();
+    const day = Math.min(new Date().getDate(), lastDay);
+    nbItStartDateInput.value = `${nbItYearInput.value}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    nbItEndDateInput.value = nbItStartDateInput.value;
+    nbItKindInput.value = 'NB';
+    nbItLabelInput.value = '';
+    nbItSaveBtn.textContent = 'Lưu lịch';
+    nbItDeleteBtn.hidden = true;
+}
+
+function renderNbItCalendar() {
+    const year = Number(nbItYearInput.value);
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+        nbItCalendar.replaceChildren();
+        nbItScheduleCount.textContent = 'Vui lòng chọn năm từ 2000 đến 2100.';
+        return;
+    }
+    nbItCalendar.replaceChildren();
+    if (!nbItEmployees.length) {
+        const empty = document.createElement('p');
+        empty.className = 'nb-it-empty';
+        empty.textContent = 'Chưa có nhân viên thuộc bộ phận IT trong danh sách nhân viên.';
+        nbItCalendar.appendChild(empty);
+    }
+
+    const yearStart = `${year}-01-01`;
+    const yearEnd = `${year}-12-31`;
+    const yearEntries = nbItEntries.filter(entry =>
+        entry.startDate <= yearEnd && (entry.endDate || entry.startDate) >= yearStart
+    );
+    nbItScheduleCount.textContent = `${nbItEmployees.length} nhân viên IT · ${yearEntries.length} lịch trong năm ${year}`;
+    const weekDays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const hdColors = ['#c6d9f0', '#d9c7df', '#f4e2c7', '#d5e6d1', '#ffe49a', '#d4e6eb'];
+    const getHdColor = entry => {
+        let hash = 0;
+        for (const character of String(entry.id || entry.label || 'HD')) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+        return hdColors[hash % hdColors.length];
+    };
+
+    for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+        const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+        const month = document.createElement('section');
+        month.className = 'nb-it-month';
+        const title = document.createElement('h3');
+        title.className = 'nb-it-month-title';
+        title.textContent = `THÁNG ${monthIndex + 1}`;
+        month.appendChild(title);
+
+        const table = document.createElement('table');
+        table.className = 'nb-it-month-table';
+        table.setAttribute('aria-label', `Lịch NB - IT tháng ${monthIndex + 1} năm ${year}`);
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        const addStaffHeader = (text, className) => {
+            const cell = document.createElement('th');
+            cell.scope = 'col';
+            cell.className = className;
+            cell.textContent = text;
+            headerRow.appendChild(cell);
+        };
+        addStaffHeader('MÃ NV', 'nb-it-code-column');
+        addStaffHeader('HỌ VÀ TÊN', 'nb-it-name-column');
+        for (let day = 1; day <= 31; day += 1) {
+            const dayHeader = document.createElement('th');
+            dayHeader.scope = 'col';
+            if (day <= daysInMonth) {
+                const weekday = new Date(year, monthIndex, day).getDay();
+                const solarLabel = document.createElement('span');
+                solarLabel.className = 'nb-it-solar-date';
+                solarLabel.textContent = String(day);
+                const weekdayLabel = document.createElement('span');
+                weekdayLabel.className = 'nb-it-weekday';
+                weekdayLabel.textContent = weekDays[weekday];
+                const lunarDate = convertSolarToLunar(day, monthIndex + 1, year);
+                const lunarLabel = document.createElement('span');
+                lunarLabel.className = 'nb-it-lunar-date';
+                lunarLabel.textContent = lunarDate.day === 1
+                    ? `${lunarDate.day}/${lunarDate.month}${lunarDate.isLeapMonth ? '*' : ''}`
+                    : String(lunarDate.day);
+                dayHeader.append(solarLabel, weekdayLabel, lunarLabel);
+                dayHeader.title = `Dương lịch: ${day}/${monthIndex + 1}/${year} · Thứ: ${weekDays[weekday]} · Âm lịch: ${lunarDate.day}/${lunarDate.month}/${lunarDate.year}${lunarDate.isLeapMonth ? ' (tháng nhuận)' : ''}`;
+                if (weekday === 0 || weekday === 6) dayHeader.classList.add('nb-it-weekend');
+            } else {
+                dayHeader.setAttribute('aria-hidden', 'true');
+            }
+            headerRow.appendChild(dayHeader);
+        }
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
+        nbItEmployees.forEach(employee => {
+            const row = document.createElement('tr');
+            const codeCell = document.createElement('td');
+            codeCell.className = 'nb-it-code-column';
+            codeCell.textContent = employee.code || '—';
+            const nameCell = document.createElement('td');
+            nameCell.className = 'nb-it-name-column';
+            nameCell.textContent = employee.name || '—';
+            row.append(codeCell, nameCell);
+            for (let day = 1; day <= 31; day += 1) {
+                const cell = document.createElement('td');
+                if (day > daysInMonth) {
+                    cell.setAttribute('aria-hidden', 'true');
+                    row.appendChild(cell);
+                    continue;
+                }
+                const date = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const weekday = new Date(year, monthIndex, day).getDay();
+                if (weekday === 0 || weekday === 6) cell.classList.add('nb-it-weekend');
+                cell.dataset.employeeKey = employee.key;
+                cell.dataset.date = date;
+                cell.tabIndex = 0;
+                const entries = yearEntries.filter(entry =>
+                    entry.employeeKey === employee.key &&
+                    entry.startDate <= date &&
+                    (entry.endDate || entry.startDate) >= date
+                );
+                cell.setAttribute('aria-label', `${employee.name || employee.code}, ${date}${entries.length ? `, ${entries.map(entry => entry.label || entry.kind).join(', ')}` : ', trống. Gõ NB để thêm nghỉ bù'}`);
+                if (entries.length) {
+                    cell.classList.add('nb-it-event-cell');
+                    entries.forEach(entry => {
+                        const chip = document.createElement('button');
+                        const kind = ['NB', 'TC', 'HD'].includes(entry.kind) ? entry.kind : 'HD';
+                        const label = String(entry.label || kind).trim() || kind;
+                        chip.type = 'button';
+                        chip.className = 'nb-it-entry-chip';
+                        chip.dataset.entryId = entry.id;
+                        chip.dataset.kind = kind;
+                        chip.title = `${label} · ${employee.name} · ${entry.startDate}${entry.endDate !== entry.startDate ? ` đến ${entry.endDate}` : ''}`;
+                        chip.setAttribute('aria-label', `Sửa ${chip.title}`);
+                        if (kind === 'HD') chip.style.setProperty('--nb-it-hd-color', getHdColor(entry));
+                        chip.textContent = entry.startDate === date || date.endsWith('-01') ? label : '';
+                        cell.appendChild(chip);
+                    });
+                } else {
+                    const addButton = document.createElement('button');
+                    addButton.type = 'button';
+                    addButton.className = 'nb-it-cell-add';
+                    addButton.dataset.employeeKey = employee.key;
+                    addButton.dataset.date = date;
+                    addButton.setAttribute('aria-label', `Thêm lịch cho ${employee.name} ngày ${date}`);
+                    addButton.textContent = '＋';
+                    cell.appendChild(addButton);
+                }
+                row.appendChild(cell);
+            }
+            tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        month.appendChild(table);
+        nbItCalendar.appendChild(month);
+    }
+}
+
+async function loadNbItSchedule() {
+    if (!nbItCalendar || !isAdmin()) return;
+    const userId = getCurrentUserId();
+    const requestToken = ++nbItLoadToken;
+    nbItCalendar.replaceChildren();
+    nbItScheduleCount.textContent = 'Đang tải lịch...';
+    try {
+        const [employeesSnapshot, entriesSnapshot] = await Promise.all([
+            get(employeesRef()),
+            get(nbItScheduleRef())
+        ]);
+        if (requestToken !== nbItLoadToken || userId !== getCurrentUserId() || !isAdmin()) return;
+        nbItEmployees = [];
+        if (employeesSnapshot.exists()) {
+            employeesSnapshot.forEach(child => {
+                const employee = child.val();
+                if (employee && typeof employee === 'object' && isItEmployee(employee)) {
+                    nbItEmployees.push({ ...employee, key: child.key });
+                }
+            });
+        }
+        nbItEmployees.sort(employeeComparator);
+        nbItEmployeeInput.replaceChildren(new Option('Chọn nhân viên IT', ''));
+        nbItEmployees.forEach(employee => {
+            nbItEmployeeInput.add(new Option(
+                `${employee.code || '—'} · ${employee.name || 'Chưa có tên'}`,
+                employee.key
+            ));
+        });
+        nbItEntries = [];
+        if (entriesSnapshot.exists()) {
+            entriesSnapshot.forEach(child => {
+                const entry = child.val();
+                if (!entry || typeof entry !== 'object' || !isValidYmd(entry.startDate) ||
+                    !isValidYmd(entry.endDate || entry.startDate) ||
+                    (entry.endDate || entry.startDate) < entry.startDate ||
+                    !['NB', 'TC', 'HD'].includes(entry.kind)) return;
+                nbItEntries.push({ ...entry, id: child.key, endDate: entry.endDate || entry.startDate });
+            });
+        }
+        renderNbItCalendar();
+    } catch (error) {
+        if (requestToken !== nbItLoadToken || userId !== getCurrentUserId() || !isAdmin()) return;
+        console.error('Lỗi tải LỊCH NB - IT:', error);
+        nbItScheduleCount.textContent = 'Không thể tải lịch NB - IT.';
+        const message = document.createElement('p');
+        message.className = 'nb-it-error';
+        message.textContent = `Không thể tải dữ liệu. Vui lòng thử tải lại. ${error?.message || String(error)}`;
+        nbItCalendar.replaceChildren(message);
+    }
+}
+
+function openNbItEntryForm(entry = null, employeeKey = '', date = '') {
+    resetNbItEntryForm();
+    nbItEntryForm.hidden = false;
+    nbItEmployeeInput.value = employeeKey;
+    if (date) {
+        nbItStartDateInput.value = date;
+        nbItEndDateInput.value = date;
+    }
+    if (entry) {
+        nbItEntryIdInput.value = entry.id;
+        nbItEmployeeInput.value = entry.employeeKey;
+        nbItKindInput.value = entry.kind;
+        nbItLabelInput.value = entry.label || entry.kind;
+        nbItStartDateInput.value = entry.startDate;
+        nbItEndDateInput.value = entry.endDate || entry.startDate;
+        nbItSaveBtn.textContent = 'Cập nhật';
+        nbItDeleteBtn.hidden = false;
+    }
+    nbItEntryForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    nbItEmployeeInput.focus();
+}
+
+function startNbItCellEdit(cell, initialValue = '') {
+    if (!(cell instanceof HTMLTableCellElement) || cell.querySelector('.nb-it-cell-editor')) return false;
+    const entries = nbItEntries.filter(entry =>
+        entry.employeeKey === cell.dataset.employeeKey &&
+        entry.startDate <= cell.dataset.date &&
+        (entry.endDate || entry.startDate) >= cell.dataset.date
+    );
+    const editableEntry = entries.length === 1 &&
+        entries[0].kind === 'NB' &&
+        entries[0].startDate === cell.dataset.date &&
+        (entries[0].endDate || entries[0].startDate) === cell.dataset.date
+        ? entries[0]
+        : null;
+    if (entries.length && !editableEntry) return false;
+
+    const editor = document.createElement('input');
+    editor.type = 'text';
+    editor.className = 'nb-it-cell-editor';
+    editor.maxLength = 2;
+    editor.autocomplete = 'off';
+    editor.spellcheck = false;
+    editor.value = initialValue || (editableEntry ? 'NB' : '');
+    editor.setAttribute('aria-label', `Nhập NB cho ngày ${cell.dataset.date}`);
+    cell.replaceChildren(editor);
+    editor.focus();
+    if (!initialValue) editor.select();
+
+    let finished = false;
+    const finish = async save => {
+        if (finished) return;
+        finished = true;
+        const value = editor.value.trim().toUpperCase();
+        if (!save) {
+            renderNbItCalendar();
+            return;
+        }
+        if (!value) {
+            if (!editableEntry) {
+                renderNbItCalendar();
+                return;
+            }
+            const userId = getCurrentUserId();
+            try {
+                if (!isAdmin() || !userId || userId !== getCurrentUserId()) {
+                    throw new Error('Không có quyền hoặc tài khoản đã thay đổi.');
+                }
+                await remove(nbItScheduleRef(editableEntry.id));
+                await loadNbItSchedule();
+            } catch (error) {
+                console.error('Lỗi xóa nhanh NB:', error);
+                renderNbItCalendar();
+                await showCustomAlert(`Không thể xóa ngày NB: ${error?.message || String(error)}`);
+            }
+            return;
+        }
+        if (value !== 'NB') {
+            renderNbItCalendar();
+            await showCustomAlert('Ô nhập nhanh chỉ nhận giá trị NB. Nhấn Escape để hủy.');
+            return;
+        }
+        if (editableEntry) {
+            renderNbItCalendar();
+            return;
+        }
+        const userId = getCurrentUserId();
+        const employee = nbItEmployees.find(item => item.key === cell.dataset.employeeKey);
+        if (!isAdmin() || !userId || !employee || !isValidYmd(cell.dataset.date)) {
+            renderNbItCalendar();
+            await showCustomAlert('Không thể lưu NB: vui lòng kiểm tra quyền, nhân viên và ngày.');
+            return;
+        }
+        editor.disabled = true;
+        try {
+            if (userId !== getCurrentUserId()) throw new Error('Tài khoản đã thay đổi. Vui lòng thử lại.');
+            const entryRef = push(nbItScheduleRef());
+            if (!entryRef.key) throw new Error('Không thể tạo mã lịch.');
+            const now = Date.now();
+            await set(entryRef, {
+                employeeKey: employee.key,
+                employeeCode: String(employee.code || ''),
+                employeeName: String(employee.name || ''),
+                kind: 'NB',
+                label: 'NB',
+                startDate: cell.dataset.date,
+                endDate: cell.dataset.date,
+                createdAt: now,
+                updatedAt: now
+            });
+            await loadNbItSchedule();
+        } catch (error) {
+            console.error('Lỗi nhập nhanh NB:', error);
+            renderNbItCalendar();
+            await showCustomAlert(`Không thể lưu ngày NB: ${error?.message || String(error)}`);
+        }
+    };
+
+    editor.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            void finish(true);
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            void finish(false);
+        }
+    });
+    editor.addEventListener('blur', () => { void finish(true); }, { once: true });
+    return true;
+}
 
 function scheduleAllowsMissingDate(status) {
     return ['Chờ', 'Chưa bắt đầu', 'Chưa xử lý'].includes(status);
@@ -6147,6 +6522,7 @@ function syncMenuToggleVisibility() {
         if (sideMenuPanel) sideMenuPanel.classList.remove('show');
         menuDetailModals.forEach(closeMenuDetailModal);
         scheduleLoadToken++;
+        nbItLoadToken++;
         return;
     }
     const panelOpen = sideMenuPanel && sideMenuPanel.classList.contains('show');
@@ -6230,6 +6606,7 @@ function logout() {
     if (sideMenuPanel) sideMenuPanel.classList.remove('show');
     menuDetailModals.forEach(menuModal => closeMenuDetailModal(menuModal, false));
     scheduleLoadToken++;
+    nbItLoadToken++;
     if (scheduleList) scheduleList.replaceChildren();
     if (scheduleForm) setScheduleFormMode();
     if (scheduleDateInput) scheduleDateInput.value = getTodayString();
@@ -6904,9 +7281,116 @@ document.querySelectorAll('.menu-category-btn[data-menu-modal]').forEach(button 
         const closeButton = menuModal.querySelector('.menu-detail-close');
         if (closeButton) closeButton.focus();
         if (menuModal.id === 'scheduleManagementModal') loadScheduleList();
+        if (menuModal.id === 'nbItScheduleModal') loadNbItSchedule();
         if (menuModal.id === 'employeesModal') loadEmployees();
         if (menuModal.id === 'taskTemplateModal') refreshTaskTemplateStatus();
     });
+});
+
+nbItYearInput.value = String(new Date().getFullYear());
+nbItAddBtn.addEventListener('click', () => openNbItEntryForm());
+nbItCancelBtn.addEventListener('click', () => {
+    nbItEntryForm.hidden = true;
+    resetNbItEntryForm();
+});
+nbItRefreshBtn.addEventListener('click', loadNbItSchedule);
+nbItYearInput.addEventListener('change', renderNbItCalendar);
+nbItPreviousYearBtn.addEventListener('click', () => {
+    nbItYearInput.value = String(Math.max(2000, Number(nbItYearInput.value) - 1));
+    renderNbItCalendar();
+});
+nbItNextYearBtn.addEventListener('click', () => {
+    nbItYearInput.value = String(Math.min(2100, Number(nbItYearInput.value) + 1));
+    renderNbItCalendar();
+});
+nbItKindInput.addEventListener('change', () => {
+    if (!nbItEntryIdInput.value) nbItLabelInput.value = '';
+    nbItLabelInput.placeholder = nbItKindInput.value === 'HD' ? 'Ví dụ: HD1' : `Mặc định: ${nbItKindInput.value}`;
+});
+nbItCalendar.addEventListener('keydown', event => {
+    const cell = event.target.closest('td[data-employee-key]');
+    if (!cell || (event.target !== cell && !event.target.matches('.nb-it-cell-add, .nb-it-entry-chip')) ||
+        event.key.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (startNbItCellEdit(cell, event.key)) event.preventDefault();
+});
+nbItCalendar.addEventListener('dblclick', event => {
+    const cell = event.target.closest('td[data-employee-key]');
+    if (cell && !event.target.closest('button, input')) startNbItCellEdit(cell);
+});
+nbItCalendar.addEventListener('click', event => {
+    const entryButton = event.target.closest('.nb-it-entry-chip');
+    if (entryButton) {
+        const entry = nbItEntries.find(item => item.id === entryButton.dataset.entryId);
+        if (entry) openNbItEntryForm(entry);
+        return;
+    }
+    const addButton = event.target.closest('.nb-it-cell-add');
+    if (addButton) openNbItEntryForm(null, addButton.dataset.employeeKey, addButton.dataset.date);
+});
+nbItEntryForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!isAdmin()) {
+        await showCustomAlert('Bạn không có quyền quản lý LỊCH NB - IT.');
+        return;
+    }
+    const userId = getCurrentUserId();
+    const employee = nbItEmployees.find(item => item.key === nbItEmployeeInput.value);
+    const startDate = nbItStartDateInput.value;
+    const endDate = nbItEndDateInput.value;
+    const kind = nbItKindInput.value;
+    if (!userId || !employee || !['NB', 'TC', 'HD'].includes(kind) ||
+        !isValidYmd(startDate) || !isValidYmd(endDate) || endDate < startDate) {
+        await showCustomAlert('Vui lòng chọn nhân viên, loại lịch và khoảng ngày hợp lệ.');
+        return;
+    }
+    const label = nbItLabelInput.value.trim() || (kind === 'HD' ? 'HD1' : kind);
+    const entryId = nbItEntryIdInput.value;
+    const existingEntry = nbItEntries.find(item => item.id === entryId);
+    const entry = {
+        employeeKey: employee.key,
+        employeeCode: String(employee.code || ''),
+        employeeName: String(employee.name || ''),
+        kind,
+        label,
+        startDate,
+        endDate,
+        createdAt: existingEntry?.createdAt || Date.now(),
+        updatedAt: Date.now()
+    };
+    nbItSaveBtn.disabled = true;
+    try {
+        if (userId !== getCurrentUserId()) throw new Error('Tài khoản đã thay đổi. Vui lòng thử lại.');
+        if (entryId) await set(nbItScheduleRef(entryId), entry);
+        else {
+            const newEntry = push(nbItScheduleRef());
+            if (!newEntry.key) throw new Error('Không thể tạo mã lịch.');
+            await set(newEntry, entry);
+        }
+        nbItEntryForm.hidden = true;
+        resetNbItEntryForm();
+        await loadNbItSchedule();
+    } catch (error) {
+        console.error('Lỗi lưu LỊCH NB - IT:', error);
+        await showCustomAlert(`Không thể lưu lịch: ${error?.message || String(error)}`);
+    } finally {
+        nbItSaveBtn.disabled = false;
+    }
+});
+nbItDeleteBtn.addEventListener('click', async () => {
+    if (!isAdmin() || !nbItEntryIdInput.value) return;
+    const userId = getCurrentUserId();
+    const entryId = nbItEntryIdInput.value;
+    if (!await showCustomConfirm('Bạn có chắc chắn muốn xóa lịch này?')) return;
+    try {
+        if (!userId || userId !== getCurrentUserId()) throw new Error('Tài khoản đã thay đổi. Vui lòng thử lại.');
+        await remove(nbItScheduleRef(entryId));
+        nbItEntryForm.hidden = true;
+        resetNbItEntryForm();
+        await loadNbItSchedule();
+    } catch (error) {
+        console.error('Lỗi xóa LỊCH NB - IT:', error);
+        await showCustomAlert(`Không thể xóa lịch: ${error?.message || String(error)}`);
+    }
 });
 
 document.querySelectorAll('.menu-detail-back[data-menu-parent]').forEach(button => {
