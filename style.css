@@ -1643,10 +1643,60 @@ td select {
     }
 
     .nb-it-entry-hint {
-        flex: 0 0 auto;
-        margin: -8px 0 0;
+        margin: 0;
         color: #64748b;
         font-size: 12px;
+    }
+
+    .nb-it-entry-tools {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+    }
+
+    .nb-it-bulk-tools {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        color: #475569;
+        font-size: 12px;
+    }
+
+    .nb-it-bulk-tools button {
+        min-height: 34px;
+        padding: 0 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 7px;
+        background: #fff;
+        color: #334155;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .nb-it-bulk-tools button[hidden] {
+        display: none;
+    }
+
+    .nb-it-bulk-tools button[aria-pressed="true"] {
+        border-color: #2563eb;
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+    .nb-it-bulk-tools button:last-child:not(:disabled) {
+        border-color: #177245;
+        background: #168148;
+        color: #fff;
+    }
+
+    .nb-it-bulk-tools button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
     }
 
     .nb-it-month {
@@ -1769,8 +1819,9 @@ td select {
         font-style: italic;
     }
 
-    .nb-it-month-table .nb-it-weekend {
-        background-color: #e8f4e1 !important;
+    .nb-it-month-table td.nb-it-cell-selected {
+        background: #dbeafe;
+        box-shadow: inset 0 0 0 2px #2563eb;
     }
 
     .nb-it-month-table .nb-it-event-cell {
@@ -1846,6 +1897,11 @@ td select {
         opacity: 1;
     }
 
+    .nb-it-month-table.nb-it-selecting .nb-it-cell-add {
+        background: #f8fafc;
+        opacity: 0.45;
+    }
+
     .nb-it-empty,
     .nb-it-error {
         padding: 18px;
@@ -1878,6 +1934,21 @@ td select {
 
         .nb-it-header h2 {
             font-size: 20px;
+        }
+
+        .nb-it-entry-tools {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .nb-it-bulk-tools {
+            width: 100%;
+        }
+
+        .nb-it-bulk-tools button {
+            min-height: 36px;
+            padding: 0 8px;
+            font-size: 12px;
         }
 
         .nb-it-year-controls {

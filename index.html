@@ -369,7 +369,15 @@
                         <span><i class="nb-it-legend-swatch nb-it-legend-tc"></i>TC - Tăng ca</span>
                         <span><i class="nb-it-legend-swatch nb-it-legend-hd"></i>HD - Công tác</span>
                     </div>
-                    <p class="nb-it-entry-hint">Nhập nhanh ngày nghỉ bù: chọn ô trống, gõ NB rồi nhấn Enter.</p>
+                    <div class="nb-it-entry-tools">
+                        <p class="nb-it-entry-hint">Nhập nhanh ngày nghỉ bù: chọn ô trống, gõ NB rồi nhấn Enter.</p>
+                        <div class="nb-it-bulk-tools">
+                            <span id="nbItSelectionCount" aria-live="polite">Chưa chọn ngày</span>
+                            <button type="button" id="nbItSelectionModeBtn" aria-pressed="false">Chọn nhiều ngày NB</button>
+                            <button type="button" id="nbItClearSelectionBtn" hidden>Bỏ chọn</button>
+                            <button type="button" id="nbItSaveSelectionBtn" disabled>Thêm NB đã chọn</button>
+                        </div>
+                    </div>
                     <div id="nbItCalendar" class="nb-it-calendar" aria-live="polite"></div>
                 </div>
             </div>
