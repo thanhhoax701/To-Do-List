@@ -855,6 +855,14 @@ td select {
     border: 2px solid #1d4ed8;
 }
 
+.day.nb-day:hover:not(.selected-day) {
+    color: #7a3e00;
+}
+
+.day.nl-day:hover:not(.selected-day) {
+    color: #173b73;
+}
+
 /* Animation hiện modal */
 @keyframes modalFade {
     from {
@@ -3732,7 +3740,8 @@ td select {
 }
 
 .schedule-import-btn,
-.schedule-template-btn {
+.schedule-template-btn,
+.schedule-delete-all-btn {
     min-height: 42px;
     padding: 0 12px;
     border: 1px solid #d8e0e8;
@@ -3748,6 +3757,22 @@ td select {
 .schedule-template-btn:hover {
     border-color: #b8c8d8;
     background: #f6f8fa;
+}
+
+.schedule-delete-all-btn {
+    border-color: #efb7bb;
+    background: #fff5f5;
+    color: #b4232c;
+}
+
+.schedule-delete-all-btn:hover:not(:disabled) {
+    border-color: #df171e;
+    background: #ffe8e9;
+}
+
+.schedule-delete-all-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
 }
 
 .schedule-import-btn {
@@ -4075,7 +4100,7 @@ td select {
 }
 
 .schedule-table .schedule-date-cell,
-.schedule-table td:nth-child(2) {
+#scheduleManagementModal[data-schedule-type="storeVisit"] .schedule-table td:nth-child(2) {
     white-space: nowrap;
 }
 

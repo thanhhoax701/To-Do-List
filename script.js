@@ -122,6 +122,7 @@ const refreshScheduleBtn = document.getElementById('refreshScheduleBtn');
 const openScheduleFormBtn = document.getElementById('openScheduleFormBtn');
 const importScheduleBtn = document.getElementById('importScheduleBtn');
 const exportScheduleBtn = document.getElementById('exportScheduleBtn');
+const deleteAllSchedulesBtn = document.getElementById('deleteAllSchedulesBtn');
 const scheduleImportFile = document.getElementById('scheduleImportFile');
 const uploadTaskTemplateBtn = document.getElementById('uploadTaskTemplateBtn');
 const taskTemplateFile = document.getElementById('taskTemplateFile');
@@ -3774,6 +3775,7 @@ async function loadScheduleList() {
     const requestToken = ++scheduleLoadToken;
     scheduleList.replaceChildren();
     if (scheduleCount) scheduleCount.textContent = 'Đang tải lịch...';
+    if (deleteAllSchedulesBtn) deleteAllSchedulesBtn.disabled = true;
     try {
         const snapshot = await get(scheduleRef());
         if (requestToken !== scheduleLoadToken || requestType !== activeScheduleType ||
@@ -3805,6 +3807,7 @@ async function loadScheduleList() {
             String(a.time || '07:00').localeCompare(String(b.time || '07:00')) ||
             Number(a.createdAt || 0) - Number(b.createdAt || 0)
         );
+        if (deleteAllSchedulesBtn) deleteAllSchedulesBtn.disabled = records.length === 0;
         if (scheduleCount) {
             scheduleCount.textContent = requestType === 'maintenance'
                 ? `Theo dõi lịch bảo trì thiết bị và hệ thống · ${records.length} hạng mục`
@@ -5707,6 +5710,77 @@ if (scheduleForm) {
     openScheduleFormBtn.onclick = () => {
         setScheduleFormMode();
         openScheduleEditorModal();
+    };
+    deleteAllSchedulesBtn.onclick = async () => {
+        if (!isAdmin()) {
+            await showCustomAlert('Bạn không có quyền xóa lịch.');
+            return;
+        }
+
+        const requestUserId = getCurrentUserId();
+        const requestType = activeScheduleType;
+        const typeLabel = requestType === 'maintenance' ? 'bảo trì' : 'đi cửa hàng';
+        const wasDisabled = deleteAllSchedulesBtn.disabled;
+        let listReloaded = false;
+        deleteAllSchedulesBtn.disabled = true;
+        showLoading();
+        try {
+            const snapshot = await get(scheduleRef());
+            if (!snapshot.exists()) {
+                await loadScheduleList();
+                listReloaded = true;
+                await showCustomAlert(`Không có lịch ${typeLabel} nào để xóa.`);
+                return;
+            }
+
+            const updates = {};
+            let count = 0;
+            snapshot.forEach(yearSnapshot => {
+                yearSnapshot.forEach(monthSnapshot => {
+                    monthSnapshot.forEach(daySnapshot => {
+                        daySnapshot.forEach(scheduleSnapshot => {
+                            const schedule = scheduleSnapshot.val();
+                            if (schedule && typeof schedule === 'object' && schedule.type === requestType) {
+                                updates[
+                                    `storeMaintenanceSchedules/${requestUserId}/${yearSnapshot.key}/${monthSnapshot.key}/${daySnapshot.key}/${scheduleSnapshot.key}`
+                                ] = null;
+                                count += 1;
+                            }
+                        });
+                    });
+                });
+            });
+
+            if (count === 0) {
+                await loadScheduleList();
+                listReloaded = true;
+                await showCustomAlert(`Không có lịch ${typeLabel} nào để xóa.`);
+                return;
+            }
+
+            if (!await showCustomConfirm(
+                `Xác nhận xóa toàn bộ ${count} lịch ${typeLabel}? Thao tác này không thể hoàn tác và không ảnh hưởng đến loại lịch còn lại.`
+            )) return;
+
+            if (!isAdmin() || requestUserId !== getCurrentUserId()) {
+                await showCustomAlert('Tài khoản đã thay đổi. Vui lòng tải lại danh sách và thử lại.');
+                return;
+            }
+
+            await update(ref(db), updates);
+            if (editingScheduleData?.type === requestType) setScheduleFormMode();
+            await loadScheduleList();
+            listReloaded = true;
+            await showCustomAlert(`Đã xóa toàn bộ ${count} lịch ${typeLabel}.`);
+        } catch (error) {
+            console.error('Lỗi xóa toàn bộ lịch cửa hàng/bảo trì:', error);
+            await showCustomAlert(`Không thể xóa lịch: ${error?.message || String(error)}`);
+        } finally {
+            hideLoading();
+            if (activeScheduleType === requestType && !listReloaded) {
+                deleteAllSchedulesBtn.disabled = wasDisabled;
+            }
+        }
     };
     importScheduleBtn.onclick = () => scheduleImportFile.click();
     exportScheduleBtn.onclick = async () => {
