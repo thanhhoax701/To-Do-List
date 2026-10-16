@@ -25,6 +25,7 @@ const deleteWeekBtn = document.getElementById("deleteWeekBtn");
 const deleteMonthBtn = document.getElementById("deleteMonthBtn");
 const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
 const selectAllCheckbox = document.getElementById("selectAllCheckbox");
+const selectAllControl = selectAllCheckbox.closest(".task-select-all");
 
 // Dropdown chọn tuần và tháng
 const weekSelect = document.getElementById("weekSelect");
@@ -1951,6 +1952,8 @@ function loadTasks(ds) {
         taskTable.innerHTML = `<tr><td colspan="100" style="text-align: center; padding: 20px; background: #dceeff; border: 2px solid #6f42c1;"><strong style="font-size: 18px; color: #2e59d9;">🎉 Hôm nay là ngày Nghỉ Lễ (NL)</strong></td></tr>`;
         if (addBtn) addBtn.style.display = 'none';
         if (expBtn) expBtn.style.display = 'none';
+        if (selectAllControl) selectAllControl.style.display = 'none';
+        selectAllCheckbox.checked = false;
         if (deleteDropdown) deleteDropdown.style.display = 'none';
         syncMobileDeleteActionVisibility();
         if (searchFilterSection) searchFilterSection.style.display = 'none';
@@ -1960,12 +1963,15 @@ function loadTasks(ds) {
         taskTable.innerHTML = `<tr><td colspan="100" style="text-align: center; padding: 20px; background: #fff3cd; border: 2px solid #ffc107;"><strong style="font-size: 18px; color: #856404;">🏷️ Hôm nay là ngày Nghỉ Bù (NB)</strong></td></tr>`;
         if (addBtn) addBtn.style.display = 'none';
         if (expBtn) expBtn.style.display = 'none';
+        if (selectAllControl) selectAllControl.style.display = 'none';
+        selectAllCheckbox.checked = false;
         if (deleteDropdown) deleteDropdown.style.display = 'none';
         syncMobileDeleteActionVisibility();
         if (searchFilterSection) searchFilterSection.style.display = 'none';
         return;
     } else {
         taskTableContainer.style.display = '';
+        if (selectAllControl) selectAllControl.style.display = '';
         const isReadOnlyRole = !isAdmin();
         syncMenuToggleVisibility();
         if (searchFilterSection) searchFilterSection.style.display = '';
