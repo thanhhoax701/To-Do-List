@@ -4934,16 +4934,16 @@ async function importEmployeesWorkbook(file) {
     showLoading();
     uploadEmployeesBtn.disabled = true;
     try {
-        const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+        const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: false });
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         if (!worksheet) throw new Error('File Excel không có trang tính.');
         const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: true });
-        if (rows.length < 2) throw new Error('File không có dòng dữ liệu nhân viên.');
+        if (!rows.length) throw new Error('File không có dòng dữ liệu nhân viên.');
 
         const aliases = {
             code: ['ma', 'manv', 'manhanvien', 'employeeid', 'employeecode', 'code', 'maso'],
             name: ['hovaten', 'tennhanvien', 'hoten', 'name', 'fullname', 'employeename'],
-            location: ['noilamviec', 'workplace', 'location'],
+            location: ['noilamviec', 'workplace', 'location', 'vanphong'],
             attendanceId: ['idchamcong', 'machamcong', 'attendanceid', 'attendancecode'],
             position: ['chucdanh', 'chucvu', 'position', 'title'],
             positionDetail: ['chucdanhchitiet', 'chucvuchitiet', 'positiondetail', 'detailedposition'],
@@ -4959,18 +4959,46 @@ async function importEmployeesWorkbook(file) {
             field,
             headers.findIndex(header => names.includes(header))
         ]));
-        if (columnIndexes.code < 0 || columnIndexes.name < 0) {
+        const firstRowName = String(rows[0][0] ?? '').trim();
+        const firstRowAttendanceId = String(rows[0][2] ?? '').trim();
+        const isHeaderlessEmployeeExport = columnIndexes.code < 0 &&
+            columnIndexes.name < 0 &&
+            /^[\p{L}][\p{L}\s.'-]+$/u.test(firstRowName) &&
+            /^\d[\d.,\s]*$/.test(firstRowAttendanceId);
+        const importColumns = isHeaderlessEmployeeExport
+            ? {
+                code: -1,
+                name: 0,
+                location: 1,
+                attendanceId: 2,
+                department: 3,
+                position: 4,
+                positionDetail: 5,
+                phone: 6,
+                birthDate: 7,
+                gender: -1,
+                email: -1,
+                status: -1
+            }
+            : columnIndexes;
+        if (!isHeaderlessEmployeeExport && (columnIndexes.code < 0 || columnIndexes.name < 0)) {
             throw new Error('Không nhận diện được cột Mã nhân viên và Họ và tên trong dòng tiêu đề.');
         }
 
         const importedByCode = new Map();
         let skipped = 0;
-        rows.slice(1).forEach(row => {
+        const dataRows = isHeaderlessEmployeeExport ? rows : rows.slice(1);
+        if (!dataRows.length) throw new Error('File không có dòng dữ liệu nhân viên.');
+        dataRows.forEach(row => {
             const getCell = field => {
-                const index = columnIndexes[field];
+                const index = importColumns[field];
                 return index >= 0 ? row[index] : '';
             };
-            const code = String(getCell('code') ?? '').trim();
+            const attendanceId = String(getCell('attendanceId') ?? '').trim();
+            const code = String(getCell('code') ?? '').trim() ||
+                (isHeaderlessEmployeeExport
+                    ? `HDE-${attendanceId.replace(/[^\d]/g, '')}`
+                    : '');
             const name = String(getCell('name') ?? '').trim();
             if (!code || !name) {
                 if (row.some(value => String(value ?? '').trim())) skipped += 1;
@@ -4981,7 +5009,7 @@ async function importEmployeesWorkbook(file) {
                 code,
                 name,
                 location: String(getCell('location') ?? '').trim() || 'Chưa phân loại',
-                attendanceId: String(getCell('attendanceId') ?? '').trim(),
+                attendanceId: attendanceId.replace(/[.,\s]/g, ''),
                 position: String(getCell('position') ?? '').trim(),
                 positionDetail: String(getCell('positionDetail') ?? '').trim(),
                 phone: String(getCell('phone') ?? '').trim(),
@@ -5016,6 +5044,7 @@ async function importEmployeesWorkbook(file) {
                 updated += 1;
                 const existing = snapshot.child(existingKey).val() || {};
                 employee.createdAt = existing.createdAt || now;
+                if (importColumns.status < 0) employee.status = existing.status || employee.status;
             } else {
                 added += 1;
                 employee.createdAt = now;
