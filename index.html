@@ -324,12 +324,36 @@
                             <p id="nbItScheduleCount" aria-live="polite">Đang tải lịch...</p>
                         </div>
                         <div class="nb-it-year-controls">
-                            <button type="button" id="nbItPreviousYear" aria-label="Năm trước">‹</button>
-                            <label for="nbItYear">Năm</label>
-                            <input id="nbItYear" type="number" min="2000" max="2100" inputmode="numeric">
-                            <button type="button" id="nbItNextYear" aria-label="Năm sau">›</button>
-                            <button type="button" id="nbItRefreshBtn">↻ Tải lại</button>
-                            <button type="button" id="nbItAddBtn" class="nb-it-add-btn">＋ Thêm lịch</button>
+                            <div class="nb-it-date-controls">
+                                <button type="button" id="nbItPreviousYear" aria-label="Năm trước">‹</button>
+                                <label for="nbItYear">Năm</label>
+                                <input id="nbItYear" type="number" min="2000" max="2100" inputmode="numeric">
+                                <button type="button" id="nbItNextYear" aria-label="Năm sau">›</button>
+                            </div>
+                            <label class="nb-it-month-control" for="nbItMonthFilter">
+                                <span>Tháng</span>
+                                <select id="nbItMonthFilter" aria-label="Lọc lịch theo tháng">
+                                    <option value="all">Cả năm</option>
+                                    <option value="1">Tháng 1</option>
+                                    <option value="2">Tháng 2</option>
+                                    <option value="3">Tháng 3</option>
+                                    <option value="4">Tháng 4</option>
+                                    <option value="5">Tháng 5</option>
+                                    <option value="6">Tháng 6</option>
+                                    <option value="7">Tháng 7</option>
+                                    <option value="8">Tháng 8</option>
+                                    <option value="9">Tháng 9</option>
+                                    <option value="10">Tháng 10</option>
+                                    <option value="11">Tháng 11</option>
+                                    <option value="12">Tháng 12</option>
+                                </select>
+                            </label>
+                            <div class="nb-it-header-actions">
+                                <button type="button" id="nbItRefreshBtn">↻ Tải lại</button>
+                                <button type="button" id="nbItImportBtn" title="Nhập lịch từ file Excel theo mẫu tháng">📥 Nhập Excel</button>
+                                <input id="nbItImportFile" type="file" accept=".xlsx,.xls" hidden>
+                                <button type="button" id="nbItAddBtn" class="nb-it-add-btn">＋ Thêm lịch</button>
+                            </div>
                         </div>
                     </header>
                     <form id="nbItEntryForm" class="nb-it-entry-form" hidden>
@@ -344,6 +368,8 @@
                                 <option value="NB">NB - Nghỉ bù</option>
                                 <option value="TC">TC - Tăng ca</option>
                                 <option value="HD">HD - Công tác</option>
+                                <option value="NL">NL - Nghỉ lễ</option>
+                                <option value="NP">NP - Nghỉ phép</option>
                             </select>
                         </div>
                         <div class="nb-it-field">
@@ -368,9 +394,11 @@
                         <span><i class="nb-it-legend-swatch nb-it-legend-nb"></i>NB - Nghỉ bù</span>
                         <span><i class="nb-it-legend-swatch nb-it-legend-tc"></i>TC - Tăng ca</span>
                         <span><i class="nb-it-legend-swatch nb-it-legend-hd"></i>HD - Công tác</span>
+                        <span><i class="nb-it-legend-swatch nb-it-legend-nl"></i>NL - Nghỉ lễ</span>
+                        <span><i class="nb-it-legend-swatch nb-it-legend-np"></i>NP - Nghỉ phép</span>
                     </div>
                     <div class="nb-it-entry-tools">
-                        <p class="nb-it-entry-hint">Nhập nhanh ngày nghỉ bù: chọn ô trống, gõ NB rồi nhấn Enter.</p>
+                        <p class="nb-it-entry-hint">Nhập nhanh nghỉ bù: chọn ô trống, gõ NB rồi nhấn Enter. Nhập Excel: chọn năm trước; chỉ lấy ô NB, NL, NP, TC hoặc HD.</p>
                         <div class="nb-it-bulk-tools">
                             <span id="nbItSelectionCount" aria-live="polite">Chưa chọn ngày</span>
                             <button type="button" id="nbItSelectionModeBtn" aria-pressed="false">Chọn nhiều ngày NB</button>

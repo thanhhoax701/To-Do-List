@@ -69,6 +69,7 @@ const scheduleEditorModal = document.getElementById('scheduleEditorModal');
 const nbItCalendar = document.getElementById('nbItCalendar');
 const nbItScheduleCount = document.getElementById('nbItScheduleCount');
 const nbItYearInput = document.getElementById('nbItYear');
+const nbItMonthFilter = document.getElementById('nbItMonthFilter');
 const nbItEntryForm = document.getElementById('nbItEntryForm');
 const nbItEntryIdInput = document.getElementById('nbItEntryId');
 const nbItEmployeeInput = document.getElementById('nbItEmployee');
@@ -81,6 +82,8 @@ const nbItAddBtn = document.getElementById('nbItAddBtn');
 const nbItCancelBtn = document.getElementById('nbItCancelBtn');
 const nbItDeleteBtn = document.getElementById('nbItDeleteBtn');
 const nbItRefreshBtn = document.getElementById('nbItRefreshBtn');
+const nbItImportBtn = document.getElementById('nbItImportBtn');
+const nbItImportFileInput = document.getElementById('nbItImportFile');
 const nbItPreviousYearBtn = document.getElementById('nbItPreviousYear');
 const nbItNextYearBtn = document.getElementById('nbItNextYear');
 const nbItSelectionModeBtn = document.getElementById('nbItSelectionModeBtn');
@@ -2992,10 +2995,14 @@ const nbItSelectedCells = new Map();
 
 function nbItEmployeeOrder(employee) {
     const name = normalizeEmployeeText(employee.name || '');
-    const preferredNames = ['hai', 'thanh', 'hung', 'hoa khanh'];
-    const index = preferredNames.findIndex(preferred =>
-        name.split(/\s+/).includes(preferred) || name.includes(preferred)
-    );
+    const preferredNames = [
+        'nguyen tien hai',
+        'phan van thanh',
+        'ho viet hung',
+        'tran thanh hoa',
+        'pham minh khanh'
+    ];
+    const index = preferredNames.indexOf(name);
     return index < 0 ? preferredNames.length : index;
 }
 
@@ -3073,7 +3080,17 @@ function renderNbItCalendar() {
     const yearEntries = nbItEntries.filter(entry =>
         entry.startDate <= yearEnd && (entry.endDate || entry.startDate) >= yearStart
     );
-    nbItScheduleCount.textContent = `${nbItEmployees.length} nhân viên IT · ${yearEntries.length} lịch trong năm ${year}`;
+    const selectedMonth = nbItMonthFilter.value === 'all' ? null : Number(nbItMonthFilter.value) - 1;
+    if (selectedMonth === null) {
+        nbItScheduleCount.textContent = `${nbItEmployees.length} nhân viên IT · ${yearEntries.length} lịch trong năm ${year}`;
+    } else {
+        const monthStart = `${year}-${String(selectedMonth + 1).padStart(2, '0')}-01`;
+        const monthEnd = `${year}-${String(selectedMonth + 1).padStart(2, '0')}-${String(new Date(year, selectedMonth + 1, 0).getDate()).padStart(2, '0')}`;
+        const monthEntries = yearEntries.filter(entry =>
+            entry.startDate <= monthEnd && (entry.endDate || entry.startDate) >= monthStart
+        );
+        nbItScheduleCount.textContent = `${nbItEmployees.length} nhân viên IT · ${monthEntries.length} lịch trong tháng ${selectedMonth + 1}/${year}`;
+    }
     const weekDays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
     const hdColors = ['#c6d9f0', '#d9c7df', '#f4e2c7', '#d5e6d1', '#ffe49a', '#d4e6eb'];
     const getHdColor = entry => {
@@ -3082,7 +3099,9 @@ function renderNbItCalendar() {
         return hdColors[hash % hdColors.length];
     };
 
-    for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+    const firstMonth = selectedMonth === null ? 0 : selectedMonth;
+    const lastMonth = selectedMonth === null ? 11 : selectedMonth;
+    for (let monthIndex = firstMonth; monthIndex <= lastMonth; monthIndex += 1) {
         const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
         const month = document.createElement('section');
         month.className = 'nb-it-month';
@@ -3164,7 +3183,7 @@ function renderNbItCalendar() {
                     cell.classList.add('nb-it-event-cell');
                     entries.forEach(entry => {
                         const chip = document.createElement('button');
-                        const kind = ['NB', 'TC', 'HD'].includes(entry.kind) ? entry.kind : 'HD';
+                        const kind = ['NB', 'NL', 'NP', 'TC', 'HD'].includes(entry.kind) ? entry.kind : 'HD';
                         const label = String(entry.label || kind).trim() || kind;
                         chip.type = 'button';
                         chip.className = 'nb-it-entry-chip';
@@ -3194,6 +3213,205 @@ function renderNbItCalendar() {
         month.appendChild(table);
         nbItCalendar.appendChild(month);
     }
+}
+
+function nbItExcelCellText(worksheet, rowIndex, columnIndex) {
+    const cell = worksheet[XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex })];
+    if (!cell) return '';
+    if (typeof cell.v === 'string' || typeof cell.v === 'number') return String(cell.v).trim();
+    return String(cell.w || XLSX.utils.format_cell(cell) || '').trim();
+}
+
+function parseNbItExcelWorkbook(workbook, year, employees) {
+    const employeesByCode = new Map();
+    employees.forEach(employee => {
+        const code = String(employee.code || '').replace(/\s+/g, '').toUpperCase();
+        if (!code) return;
+        const matches = employeesByCode.get(code) || [];
+        matches.push(employee);
+        employeesByCode.set(code, matches);
+    });
+
+    const entries = new Map();
+    let unknownEmployeeRows = 0;
+    let duplicateFileCells = 0;
+    let monthSections = 0;
+    workbook.SheetNames.forEach(sheetName => {
+        const worksheet = workbook.Sheets[sheetName];
+        if (!worksheet || !worksheet['!ref']) return;
+        const range = XLSX.utils.decode_range(worksheet['!ref']);
+        const sections = [];
+        for (let rowIndex = range.s.r; rowIndex <= range.e.r; rowIndex += 1) {
+            for (let columnIndex = range.s.c; columnIndex <= Math.min(range.s.c + 1, range.e.c); columnIndex += 1) {
+                const match = nbItExcelCellText(worksheet, rowIndex, columnIndex).match(/^THÁNG\s+(\d{1,2})$/i);
+                if (match && Number(match[1]) >= 1 && Number(match[1]) <= 12) {
+                    sections.push({ rowIndex, month: Number(match[1]) });
+                    break;
+                }
+            }
+        }
+
+        sections.forEach((section, sectionIndex) => {
+            monthSections += 1;
+            const nextSectionRow = sections[sectionIndex + 1]?.rowIndex ?? range.e.r + 1;
+            const dayHeaderRow = section.rowIndex + 1;
+            const employeeStartRow = section.rowIndex + 4;
+            const daysByColumn = new Map();
+            for (let columnIndex = range.s.c + 2; columnIndex <= range.e.c; columnIndex += 1) {
+                const dayValue = Number(nbItExcelCellText(worksheet, dayHeaderRow, columnIndex));
+                if (Number.isInteger(dayValue) && dayValue >= 1 && dayValue <= 31) {
+                    const date = `${year}-${String(section.month).padStart(2, '0')}-${String(dayValue).padStart(2, '0')}`;
+                    if (isValidYmd(date)) daysByColumn.set(columnIndex, date);
+                }
+            }
+
+            for (let rowIndex = employeeStartRow; rowIndex < nextSectionRow; rowIndex += 1) {
+                const employeeCode = nbItExcelCellText(worksheet, rowIndex, range.s.c).replace(/\s+/g, '').toUpperCase();
+                const employeeName = nbItExcelCellText(worksheet, rowIndex, range.s.c + 1);
+                if (!employeeCode || !employeeName) continue;
+                const employeeMatches = employeesByCode.get(employeeCode) || [];
+                if (employeeMatches.length !== 1) {
+                    unknownEmployeeRows += 1;
+                    continue;
+                }
+                const employee = employeeMatches[0];
+
+                daysByColumn.forEach((date, columnIndex) => {
+                    const marker = nbItExcelCellText(worksheet, rowIndex, columnIndex);
+                    const match = marker.match(/^(NB|NL|NP|TC|HD)(?:\s*[-:]?\s*(.*))?$/i);
+                    if (!match) return;
+                    const kind = match[1].toUpperCase();
+                    const key = `${employee.key}|${date}`;
+                    if (entries.has(key)) {
+                        duplicateFileCells += 1;
+                        return;
+                    }
+                    entries.set(key, {
+                        employeeKey: employee.key,
+                        employeeCode: String(employee.code || ''),
+                        employeeName: String(employee.name || employeeName),
+                        kind,
+                        label: marker.slice(0, 30) || kind,
+                        startDate: date,
+                        endDate: date
+                    });
+                });
+            }
+        });
+    });
+
+    return { entries: [...entries.values()], unknownEmployeeRows, duplicateFileCells, monthSections };
+}
+
+function nbItScheduleEntriesFromSnapshot(snapshot) {
+    const entries = [];
+    if (!snapshot.exists()) return entries;
+    snapshot.forEach(child => {
+        const entry = child.val();
+        const endDate = entry?.endDate || entry?.startDate;
+        if (!entry || typeof entry !== 'object' ||
+            !isValidYmd(entry.startDate) || !isValidYmd(endDate) ||
+            endDate < entry.startDate || !['NB', 'NL', 'NP', 'TC', 'HD'].includes(entry.kind)) return;
+        entries.push({ ...entry, endDate });
+    });
+    return entries;
+}
+
+async function importNbItExcelFile(file) {
+    if (!isAdmin()) throw new Error('Bạn không có quyền nhập lịch NB - IT.');
+    if (!file || !/\.(xlsx|xls)$/i.test(file.name)) throw new Error('Vui lòng chọn file Excel .xlsx hoặc .xls.');
+    if (file.size > 10 * 1024 * 1024) throw new Error('File Excel không được vượt quá 10 MB.');
+    if (typeof XLSX === 'undefined') throw new Error('Không tải được thư viện đọc Excel. Vui lòng tải lại trang.');
+
+    const year = Number(nbItYearInput.value);
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+        throw new Error('Vui lòng chọn năm từ 2000 đến 2100 trước khi nhập.');
+    }
+    const userId = getCurrentUserId();
+    if (!userId) throw new Error('Không xác định được tài khoản đang đăng nhập.');
+
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    const [employeesSnapshot, schedulesSnapshot] = await Promise.all([
+        get(employeesRef()),
+        get(nbItScheduleRef())
+    ]);
+    if (userId !== getCurrentUserId() || !isAdmin()) throw new Error('Tài khoản đã thay đổi. Vui lòng thử lại.');
+
+    const employees = [];
+    if (employeesSnapshot.exists()) {
+        employeesSnapshot.forEach(child => {
+            const employee = child.val();
+            if (employee && typeof employee === 'object' && isItEmployee(employee)) {
+                employees.push({ ...employee, key: child.key });
+            }
+        });
+    }
+    const parsed = parseNbItExcelWorkbook(workbook, year, employees);
+    if (!parsed.monthSections) {
+        throw new Error('Không tìm thấy khu vực tiêu đề THÁNG trong file. Hãy dùng đúng mẫu lịch NB - IT.');
+    }
+    if (!parsed.entries.length) {
+        throw new Error(`Không tìm thấy ô NB, NL, NP, TC hoặc HD hợp lệ trong mẫu.${parsed.unknownEmployeeRows ? ` Không khớp ${parsed.unknownEmployeeRows} dòng mã nhân viên.` : ''}`);
+    }
+
+    const alreadyScheduled = nbItScheduleEntriesFromSnapshot(schedulesSnapshot);
+    const newEntries = parsed.entries.filter(candidate => !alreadyScheduled.some(existing =>
+        existing.employeeKey === candidate.employeeKey &&
+        existing.startDate <= candidate.startDate &&
+        existing.endDate >= candidate.startDate
+    ));
+    const skippedExisting = parsed.entries.length - newEntries.length;
+    if (!newEntries.length) {
+        await showCustomAlert(`Không có lịch mới để nhập. Đã bỏ qua ${skippedExisting} ô đã có lịch` +
+            `${parsed.duplicateFileCells ? ` và ${parsed.duplicateFileCells} ô trùng trong file` : ''}` +
+            `${parsed.unknownEmployeeRows ? `; không khớp ${parsed.unknownEmployeeRows} dòng mã nhân viên` : ''}.`);
+        return;
+    }
+
+    const confirmed = await showCustomConfirm(
+        `Tìm thấy ${parsed.entries.length} ô lịch hợp lệ thuộc ${parsed.monthSections} tháng, áp dụng cho năm ${year}.<br>` +
+        `Sẽ thêm ${newEntries.length} lịch mới; bỏ qua ${skippedExisting} ô đã có lịch.` +
+        `${parsed.duplicateFileCells ? `<br>Bỏ qua ${parsed.duplicateFileCells} ô trùng trong file.` : ''}` +
+        `${parsed.unknownEmployeeRows ? `<br>Không khớp ${parsed.unknownEmployeeRows} dòng mã nhân viên.` : ''}<br>` +
+        'Tiếp tục nhập?'
+    );
+    if (!confirmed) return;
+
+    const latestSnapshot = await get(nbItScheduleRef());
+    if (userId !== getCurrentUserId() || !isAdmin()) throw new Error('Tài khoản đã thay đổi. Vui lòng thử lại.');
+    const latestEntries = nbItScheduleEntriesFromSnapshot(latestSnapshot);
+    const updates = {};
+    let addedCount = 0;
+    let skippedConcurrent = 0;
+    for (const candidate of newEntries) {
+        const exists = latestEntries.some(existing =>
+            existing.employeeKey === candidate.employeeKey &&
+            existing.startDate <= candidate.startDate &&
+            existing.endDate >= candidate.startDate
+        );
+        if (exists) {
+            skippedConcurrent += 1;
+            continue;
+        }
+        const entryRef = push(nbItScheduleRef());
+        if (!entryRef.key) throw new Error('Không thể tạo mã cho một lịch trong file.');
+        updates[`nbItSchedules/${userId}/${entryRef.key}`] = {
+            ...candidate,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        };
+        addedCount += 1;
+    }
+    if (!addedCount) {
+        await showCustomAlert('Các ngày trong file vừa được thêm bởi người khác. Không có lịch mới nào được ghi.');
+        return;
+    }
+    if (userId !== getCurrentUserId()) throw new Error('Tài khoản đã thay đổi. Vui lòng thử lại.');
+    await update(ref(db), updates);
+    await loadNbItSchedule();
+    const skippedTotal = skippedExisting + skippedConcurrent;
+    await showCustomAlert(`Đã nhập ${addedCount} lịch NB - IT.${skippedTotal ? ` Đã bỏ qua ${skippedTotal} ô đã có lịch.` : ''}` +
+        `${parsed.duplicateFileCells ? ` Bỏ qua ${parsed.duplicateFileCells} ô trùng trong file.` : ''}`);
 }
 
 async function loadNbItSchedule() {
@@ -3235,7 +3453,7 @@ async function loadNbItSchedule() {
                 if (!entry || typeof entry !== 'object' || !isValidYmd(entry.startDate) ||
                     !isValidYmd(entry.endDate || entry.startDate) ||
                     (entry.endDate || entry.startDate) < entry.startDate ||
-                    !['NB', 'TC', 'HD'].includes(entry.kind)) return;
+                    !['NB', 'NL', 'NP', 'TC', 'HD'].includes(entry.kind)) return;
                 nbItEntries.push({ ...entry, id: child.key, endDate: entry.endDate || entry.startDate });
             });
         }
@@ -7423,7 +7641,28 @@ nbItCancelBtn.addEventListener('click', () => {
     resetNbItEntryForm();
 });
 nbItRefreshBtn.addEventListener('click', loadNbItSchedule);
+nbItImportBtn.addEventListener('click', () => {
+    if (!isAdmin()) return;
+    nbItImportFileInput.click();
+});
+nbItImportFileInput.addEventListener('change', async () => {
+    const file = nbItImportFileInput.files?.[0];
+    if (!file) return;
+    nbItImportBtn.disabled = true;
+    nbItImportBtn.textContent = 'Đang nhập...';
+    try {
+        await importNbItExcelFile(file);
+    } catch (error) {
+        console.error('Lỗi nhập Excel LỊCH NB - IT:', error);
+        await showCustomAlert(`Không thể nhập file Excel: ${error?.message || String(error)}`);
+    } finally {
+        nbItImportFileInput.value = '';
+        nbItImportBtn.disabled = false;
+        nbItImportBtn.textContent = '📥 Nhập Excel';
+    }
+});
 nbItYearInput.addEventListener('change', renderNbItCalendar);
+nbItMonthFilter.addEventListener('change', renderNbItCalendar);
 nbItPreviousYearBtn.addEventListener('click', () => {
     nbItYearInput.value = String(Math.max(2000, Number(nbItYearInput.value) - 1));
     renderNbItCalendar();
@@ -7478,7 +7717,7 @@ nbItEntryForm.addEventListener('submit', async event => {
     const startDate = nbItStartDateInput.value;
     const endDate = nbItEndDateInput.value;
     const kind = nbItKindInput.value;
-    if (!userId || !employee || !['NB', 'TC', 'HD'].includes(kind) ||
+    if (!userId || !employee || !['NB', 'NL', 'NP', 'TC', 'HD'].includes(kind) ||
         !isValidYmd(startDate) || !isValidYmd(endDate) || endDate < startDate) {
         await showCustomAlert('Vui lòng chọn nhân viên, loại lịch và khoảng ngày hợp lệ.');
         return;
