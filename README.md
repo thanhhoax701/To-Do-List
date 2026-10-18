@@ -16,7 +16,7 @@
 ## Tính năng chính
 
 - Đăng nhập bằng mã PIN và quản lý công việc theo lịch.
-- Tài khoản Phòng Ban phải nhập email khớp hồ sơ và được Admin duyệt yêu cầu truy cập trước khi vào ứng dụng.
+- Tài khoản Phòng Ban phải nhập PIN, xác minh email bằng liên kết Firebase Authentication và được Admin duyệt yêu cầu truy cập trước khi vào ứng dụng.
 - Lưu và cập nhật dữ liệu ứng dụng trên Firebase Realtime Database.
 - Hỗ trợ lưu trữ tệp qua Firebase Storage.
 - Trang quản trị để quản lý người dùng, công việc và xem nhật ký chỉnh sửa/đăng nhập.
@@ -40,9 +40,11 @@
 ## Chạy ứng dụng
 
 1. Cấu hình thông tin Firebase của dự án trong `firebase.js`.
-2. Với các tài khoản Phòng Ban đã có, Admin cần cập nhật email trong mục **Quản lý người dùng**.
-3. Mở thư mục dự án bằng một máy chủ web tĩnh hoặc triển khai lên dịch vụ hosting hỗ trợ HTTPS. Không mở trực tiếp bằng `file://`, vì ứng dụng dùng JavaScript ES modules và tải Firebase SDK từ CDN.
-4. Truy cập `index.html` để dùng ứng dụng chính; trang quản trị nằm tại `admin/index.html`.
+2. Trong Firebase Console, vào **Authentication → Sign-in method**, bật **Email/Password** và **Email link (passwordless sign-in)**. Các email hiện có trong Firebase Authentication có thể dùng với luồng email-link.
+3. Trong **Authentication → Settings → Authorized domains**, thêm domain nơi triển khai ứng dụng (ví dụ `localhost` khi chạy local).
+4. Với tài khoản Phòng Ban, Admin cần cập nhật email trong mục **Quản lý người dùng**. Email này phải trùng email được xác minh qua Firebase.
+5. Mở ứng dụng từ máy chủ web hoặc HTTPS; không mở trực tiếp bằng `file://` vì ứng dụng sử dụng ES modules.
+6. Truy cập `index.html` để dùng ứng dụng chính; trang quản trị nằm tại `admin/index.html`.
 
 Ứng dụng không có lệnh `npm run` hoặc bước build được cấu hình trong repository. Cần có kết nối Internet để tải Firebase SDK và các thư viện Excel từ CDN.
 
@@ -50,4 +52,4 @@
 
 Cấu hình Firebase ở phía trình duyệt không phải thông tin bí mật; việc mã hóa Base64 trong `firebase.js` chỉ làm mờ nội dung, không bảo vệ khóa hay dữ liệu. Hãy cấu hình Firebase Security Rules để giới hạn quyền đọc/ghi đúng theo yêu cầu. Không xem mã PIN hoặc kiểm soát giao diện phía trình duyệt là cơ chế phân quyền an toàn thay cho bảo vệ ở Firebase.
 
-Luồng email hiện chỉ đối chiếu email người dùng nhập với email trong hồ sơ Firebase; **không gửi mã OTP hoặc xác minh quyền sở hữu hộp thư**. Yêu cầu duyệt được lưu trong Realtime Database và hiển thị theo thời gian thực ở mục **Yêu cầu truy cập** của trang Admin; không có email thông báo gửi ra ngoài. Để dùng xác thực email thực sự và bảo vệ trạng thái duyệt khỏi việc sửa từ trình duyệt, cần tích hợp Firebase Authentication hoặc backend/Cloud Functions cùng Firebase Security Rules phù hợp.
+Tài khoản Phòng Ban cần PIN và link đăng nhập email do Firebase Authentication gửi; bấm link sẽ xác minh quyền sở hữu email. Nếu chưa được duyệt, yêu cầu sẽ hiển thị theo thời gian thực ở mục **Yêu cầu truy cập** của trang Admin. Quy tắc phân quyền phía trình duyệt không thay thế Firebase Security Rules; cần cấu hình rules/backend phù hợp để bảo vệ dữ liệu khỏi truy cập trực tiếp.

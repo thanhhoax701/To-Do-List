@@ -1397,6 +1397,22 @@ td select {
     border-color: #4dd0e1;
 }
 
+.email-link-complete-btn {
+    width: 100%;
+    min-height: 38px;
+    margin: 4px 0 8px;
+    border: 1px solid rgba(77, 208, 225, .55);
+    border-radius: 8px;
+    background: rgba(77, 208, 225, .14);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.email-link-complete-btn[hidden] {
+    display: none;
+}
+
 .login-message {
     min-height: 18px;
     margin: 0 0 8px;

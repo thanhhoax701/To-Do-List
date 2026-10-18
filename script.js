@@ -1,6 +1,7 @@
 // ========== NHẬP FIREBASE ==========
 // Nhập Firebase Realtime Database và các hàm cần thiết để thao tác với database
-import { db, storage } from "./firebase.js";
+import { auth, db, storage } from "./firebase.js";
+import { isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { ref, push, onValue, remove, update, get, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { ref as firebaseStorageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { recordSuccessfulLogin } from "./login-log.js";
@@ -7107,6 +7108,7 @@ if (deleteSelectedMobileBtn && deleteSelect) {
 const loginOverlay = document.getElementById('loginOverlay');
 const pinDotsEl = document.getElementById('pinDots');
 const loginEmailInput = document.getElementById('loginEmail');
+const completeEmailLinkBtn = document.getElementById('completeEmailLinkBtn');
 const loginMessageEl = document.getElementById('loginMessage');
 const kpButtons = document.querySelectorAll('.kp');
 const kpClear = document.getElementById('kp-clear');
@@ -7145,6 +7147,146 @@ function enterApplication(user) {
     loginOverlay.classList.add('hidden');
     startApp();
 }
+
+function hasVerifiedEmailSession(email) {
+    try {
+        const verified = JSON.parse(sessionStorage.getItem('verifiedEmailSignIn') || 'null');
+        return Boolean(
+            verified &&
+            verified.email === email &&
+            Date.now() - Number(verified.verifiedAt) < 10 * 60 * 1000 &&
+            auth.currentUser?.emailVerified &&
+            String(auth.currentUser.email || '').trim().toLowerCase() === email
+        );
+    } catch (error) {
+        console.error('Không thể kiểm tra trạng thái xác minh email:', error);
+        return false;
+    }
+}
+
+async function requestDepartmentEmailLink(user, email) {
+    const pendingLogin = { userId: user.key, email, requestedAt: Date.now() };
+    const actionCodeSettings = {
+        url: `${window.location.origin}${window.location.pathname}`,
+        handleCodeInApp: true
+    };
+    localStorage.setItem('emailForSignIn', email);
+    localStorage.setItem('pendingDepartmentEmailLogin', JSON.stringify(pendingLogin));
+    try {
+        await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+    } catch (error) {
+        localStorage.removeItem('emailForSignIn');
+        localStorage.removeItem('pendingDepartmentEmailLogin');
+        throw error;
+    }
+}
+
+async function createAccessRequestAfterEmailVerification(user, email) {
+    const requestRef = ref(db, `accessRequests/${user.key}`);
+    const requestSnap = await get(requestRef);
+    const accessRequest = requestSnap.exists() ? requestSnap.val() : null;
+    if (accessRequest?.status === 'approved' &&
+        String(accessRequest.email || '').trim().toLowerCase() === email) {
+        try {
+            await recordSuccessfulLogin(user, 'Ứng dụng');
+        } catch (logError) {
+            console.error('Không thể lưu nhật ký đăng nhập ứng dụng:', logError);
+        }
+        enterApplication(user);
+        return;
+    }
+    if (accessRequest?.status !== 'pending' ||
+        String(accessRequest.email || '').trim().toLowerCase() !== email) {
+        await set(requestRef, {
+            userId: user.key,
+            userName: String(user.name || 'Tài khoản Phòng Ban'),
+            email,
+            role: 'department',
+            status: 'pending',
+            requestedAt: Date.now()
+        });
+    }
+    showLoginMessage('Email đã xác minh. Yêu cầu truy cập đang chờ Admin duyệt.');
+}
+
+async function completeEmailLinkSignIn(email) {
+    if (!email) {
+        showLoginMessage('Vui lòng nhập email đã nhận liên kết xác minh.');
+        loginEmailInput.focus();
+        return;
+    }
+
+    completeEmailLinkBtn.disabled = true;
+    showLoginMessage('Đang xác minh liên kết email...');
+    try {
+        const credential = await signInWithEmailLink(auth, email, window.location.href);
+        const verifiedEmail = String(credential.user.email || '').trim().toLowerCase();
+        if (!credential.user.emailVerified || verifiedEmail !== email) {
+            throw new Error('Email đăng nhập không khớp hoặc chưa được Firebase xác minh.');
+        }
+
+        sessionStorage.setItem('verifiedEmailSignIn', JSON.stringify({
+            email: verifiedEmail,
+            verifiedAt: Date.now()
+        }));
+        history.replaceState({}, document.title, window.location.pathname);
+        completeEmailLinkBtn.hidden = true;
+        loginEmailInput.value = verifiedEmail;
+
+        let pendingLogin = null;
+        try {
+            pendingLogin = JSON.parse(localStorage.getItem('pendingDepartmentEmailLogin') || 'null');
+        } catch (error) {
+            console.error('Không thể đọc yêu cầu đăng nhập đang chờ:', error);
+        }
+        localStorage.removeItem('emailForSignIn');
+        localStorage.removeItem('pendingDepartmentEmailLogin');
+
+        if (pendingLogin?.userId && pendingLogin.email === verifiedEmail &&
+            Date.now() - Number(pendingLogin.requestedAt) < 30 * 60 * 1000) {
+            const usersSnap = await get(ref(db, 'users'));
+            const users = (usersSnap.exists() ? normalizeLoginUsers(usersSnap.val()) : {}) || {};
+            const user = users[pendingLogin.userId];
+            if (user?.role === 'department' &&
+                String(user.email || '').trim().toLowerCase() === verifiedEmail) {
+                await createAccessRequestAfterEmailVerification(
+                    { key: pendingLogin.userId, ...user },
+                    verifiedEmail
+                );
+                return true;
+            }
+        }
+        showLoginMessage('Email đã được Firebase xác minh. Nhập PIN để tiếp tục đăng nhập.');
+    } catch (error) {
+        console.error('Không thể xác minh liên kết đăng nhập email:', error);
+        showLoginMessage(error?.code === 'auth/operation-not-allowed'
+            ? 'Firebase chưa bật Email link (passwordless sign-in) trong Authentication > Sign-in method.'
+            : error?.code === 'auth/unauthorized-continue-uri' || error?.code === 'auth/invalid-continue-uri'
+                ? 'Tên miền ứng dụng chưa được phép trong Firebase Authentication.'
+                : 'Liên kết không hợp lệ hoặc đã hết hạn. Hãy nhập PIN để gửi liên kết mới.');
+        completeEmailLinkBtn.hidden = true;
+        localStorage.removeItem('emailForSignIn');
+        localStorage.removeItem('pendingDepartmentEmailLogin');
+        history.replaceState({}, document.title, window.location.pathname);
+        return false;
+    } finally {
+        completeEmailLinkBtn.disabled = false;
+    }
+    return true;
+}
+
+async function handleEmailLinkOnPageLoad() {
+    if (!isSignInWithEmailLink(auth, window.location.href)) return;
+    const savedEmail = localStorage.getItem('emailForSignIn') || '';
+    if (!savedEmail) {
+        completeEmailLinkBtn.hidden = false;
+        showLoginMessage('Nhập email đã nhận liên kết rồi chọn “Hoàn tất xác minh email”.');
+        return false;
+    }
+    return await completeEmailLinkSignIn(savedEmail.trim().toLowerCase());
+}
+
+const emailLinkHandlingPromise = handleEmailLinkOnPageLoad();
 
 async function attemptLogin(pin) {
     if (loginInProgress) return;
@@ -7193,27 +7335,15 @@ async function attemptLogin(pin) {
                 return;
             }
 
-            const requestSnap = await get(ref(db, `accessRequests/${matched.key}`));
-            const accessRequest = requestSnap.exists() ? requestSnap.val() : null;
-            if (accessRequest?.status === 'approved' &&
-                String(accessRequest.email || '').trim().toLowerCase() === email) {
-                // Admin has approved this account and its registered email.
-            } else if (accessRequest?.status === 'pending' &&
-                String(accessRequest.email || '').trim().toLowerCase() === email) {
-                loginMessage = 'Yêu cầu đã được gửi. Vui lòng chờ Admin duyệt trước khi đăng nhập.';
-                return;
-            } else {
-                await set(ref(db, `accessRequests/${matched.key}`), {
-                    userId: matched.key,
-                    userName: String(matched.name || 'Tài khoản Phòng Ban'),
-                    email,
-                    role: 'department',
-                    status: 'pending',
-                    requestedAt: Date.now()
-                });
-                loginMessage = 'Đã gửi yêu cầu truy cập đến Admin. Bạn có thể đăng nhập sau khi được duyệt.';
+            if (!hasVerifiedEmailSession(email)) {
+                await requestDepartmentEmailLink(matched, email);
+                loginMessage = 'Đã gửi liên kết xác minh đến email. Mở email và bấm liên kết để tiếp tục.';
                 return;
             }
+
+            await createAccessRequestAfterEmailVerification(matched, email);
+            sessionStorage.removeItem('verifiedEmailSignIn');
+            return;
         }
 
         try {
@@ -7224,7 +7354,17 @@ async function attemptLogin(pin) {
         enterApplication(matched);
     } catch (err) {
         console.error(err);
-        loginMessage = 'Không thể xác minh đăng nhập với máy chủ. Vui lòng thử lại.';
+        if (err?.code === 'auth/operation-not-allowed') {
+            loginMessage = 'Firebase chưa bật Email link (passwordless sign-in). Hãy bật trong Authentication > Sign-in method.';
+        } else if (err?.code === 'auth/unauthorized-continue-uri' || err?.code === 'auth/invalid-continue-uri') {
+            loginMessage = 'Tên miền ứng dụng chưa được phép trong Firebase Authentication.';
+        } else if (err?.code === 'auth/invalid-email') {
+            loginMessage = 'Email không hợp lệ.';
+        } else if (err?.code === 'auth/too-many-requests') {
+            loginMessage = 'Đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau.';
+        } else {
+            loginMessage = 'Không thể xác minh đăng nhập với máy chủ. Vui lòng thử lại.';
+        }
     } finally {
         hideLoading();
         loginInProgress = false;
@@ -7287,6 +7427,9 @@ document.addEventListener('keydown', (e) => {
 
 if (kpClear) kpClear.onclick = () => { enteredPin = ''; updatePinDots(); };
 if (kpBack) kpBack.onclick = () => { enteredPin = enteredPin.slice(0, -1); updatePinDots(); };
+completeEmailLinkBtn.addEventListener('click', () => {
+    completeEmailLinkSignIn(String(loginEmailInput.value || '').trim().toLowerCase());
+});
 
 // Cập nhập hiển thị tên user đăng nhập
 function updateUserDisplay() {
@@ -7406,6 +7549,8 @@ function applyRolePermissions() {
 // Đăng xuất: Xóa session và quảy lại trang đăng nhập
 function logout() {
     sessionStorage.removeItem('user');
+    sessionStorage.removeItem('verifiedEmailSignIn');
+    signOut(auth).catch(error => console.error('Không thể đăng xuất Firebase Authentication:', error));
     enteredPin = '';
     updatePinDots();
     if (sideMenuPanel) sideMenuPanel.classList.remove('show');
@@ -8478,6 +8623,9 @@ document.addEventListener('click', (e) => {
 });
 
 async function restoreSavedSession() {
+    const emailLinkCompleted = await emailLinkHandlingPromise;
+    if (emailLinkCompleted || isSignInWithEmailLink(auth, window.location.href)) return;
+
     const savedUser = sessionStorage.getItem('user');
     if (!savedUser) return;
 

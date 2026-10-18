@@ -145,7 +145,7 @@
                             <div class="admin-user-form">
                                 <!-- Input tên user -->
                                 <input id="newName" placeholder="Tên người dùng" aria-label="Tên người dùng">
-                                <input id="newEmail" type="email" autocomplete="email" placeholder="Email (bắt buộc với Phòng Ban)" aria-label="Email tài khoản">
+                                <input id="newEmail" type="email" autocomplete="email" placeholder="Email" aria-label="Email tài khoản">
                                 <!-- Input PIN 4 chữ số -->
                                 <input
                                     id="newPin"
@@ -250,6 +250,12 @@
                     <div><dt>Email</dt><dd id="adminProfileEmail"></dd></div>
                     <div><dt>Mã tài khoản</dt><dd id="adminProfileId"></dd></div>
                 </dl>
+                <form id="adminProfileEmailForm" class="admin-profile-email-form">
+                    <label for="adminProfileEmailInput">Thêm hoặc cập nhật email</label>
+                    <input id="adminProfileEmailInput" type="email" autocomplete="email" placeholder="name@example.com">
+                    <button id="adminProfileEmailSave" type="submit">Lưu email</button>
+                    <p id="adminProfileEmailStatus" aria-live="polite"></p>
+                </form>
             </section>
         </div>
         <!-- ========== SCRIPT ========== -->

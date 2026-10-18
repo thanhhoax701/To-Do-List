@@ -1,6 +1,7 @@
 // ========== IMPORT VÀ KHỞI TẠO FIREBASE ==========
 // Nhập Firebase SDK cần thiết cho ứng dụng Quản lý Công việc
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
@@ -10,6 +11,8 @@ const firebaseConfig = JSON.parse(atob(encodedFirebaseConfig));
 
 // Khởi tạo Firebase App với cấu hình trên
 const app = initializeApp(firebaseConfig);
+
+export const auth = getAuth(app);
 
 // Export Realtime Database instance để sử dụng trong các file khác
 // Sử dụng: import { db } from "./firebase.js"

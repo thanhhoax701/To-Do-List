@@ -583,6 +583,57 @@ select {
     font-weight: 650;
 }
 
+.admin-profile-email-form {
+    display: grid;
+    gap: 9px;
+    margin-top: 20px;
+}
+
+.admin-profile-email-form label {
+    color: #59667b;
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.admin-profile-email-form input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid #dfe5ee;
+    border-radius: 9px;
+    outline: none;
+    color: #26364f;
+    font: inherit;
+}
+
+.admin-profile-email-form input:focus {
+    border-color: #e2777b;
+    box-shadow: 0 0 0 3px rgba(223, 23, 31, .1);
+}
+
+.admin-profile-email-form button {
+    min-height: 40px;
+    border: 0;
+    border-radius: 9px;
+    background: #df171f;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.admin-profile-email-form button:disabled {
+    opacity: .65;
+    cursor: wait;
+}
+
+.admin-profile-email-form p {
+    min-height: 18px;
+    margin: 0;
+    color: #59667b;
+    font-size: 12px;
+}
+
 .admin-brand-mark {
     display: grid;
     width: 38px;

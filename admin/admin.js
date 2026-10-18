@@ -14,6 +14,10 @@ const adminLoginMsg = document.getElementById('adminLoginMsg'); // Hiển thị 
 const adminProfileTrigger = document.getElementById('adminProfileTrigger');
 const adminProfileDialog = document.getElementById('adminProfileDialog');
 const adminProfileClose = document.getElementById('adminProfileClose');
+const adminProfileEmailForm = document.getElementById('adminProfileEmailForm');
+const adminProfileEmailInput = document.getElementById('adminProfileEmailInput');
+const adminProfileEmailSave = document.getElementById('adminProfileEmailSave');
+const adminProfileEmailStatus = document.getElementById('adminProfileEmailStatus');
 
 // ========== DOM ELEMENTS - DANH SÁCH VÀ FORM NGƯỜI DÙNG ==========
 // Các element cho quản lý danh sách người dùng
@@ -341,9 +345,39 @@ function openAdminProfile() {
         roleDisplay[activeAdminUser.role]?.label || 'Không xác định';
     document.getElementById('adminProfileEmail').textContent = activeAdminUser.email || 'Chưa cập nhật';
     document.getElementById('adminProfileId').textContent = activeAdminUser.key || 'Không xác định';
+    adminProfileEmailInput.value = activeAdminUser.email || '';
+    adminProfileEmailStatus.textContent = '';
     adminProfileDialog.hidden = false;
     adminProfileClose.focus();
 }
+
+adminProfileEmailForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const email = adminProfileEmailInput.value.trim().toLowerCase();
+    if (!activeAdminUser?.key) {
+        adminProfileEmailStatus.textContent = 'Không xác định được tài khoản Admin đang đăng nhập.';
+        return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        adminProfileEmailStatus.textContent = 'Vui lòng nhập email hợp lệ.';
+        adminProfileEmailInput.focus();
+        return;
+    }
+
+    adminProfileEmailSave.disabled = true;
+    adminProfileEmailStatus.textContent = 'Đang lưu email lên Firebase...';
+    try {
+        await update(ref(db, `users/${activeAdminUser.key}`), { email });
+        activeAdminUser.email = email;
+        document.getElementById('adminProfileEmail').textContent = email;
+        adminProfileEmailStatus.textContent = 'Đã lưu email vào hồ sơ Firebase.';
+    } catch (error) {
+        console.error('Không thể lưu email Admin:', error);
+        adminProfileEmailStatus.textContent = `Không thể lưu email: ${error.message || 'Lỗi không xác định'}`;
+    } finally {
+        adminProfileEmailSave.disabled = false;
+    }
+});
 
 adminProfileTrigger.addEventListener('click', openAdminProfile);
 adminProfileClose.addEventListener('click', closeAdminProfile);
