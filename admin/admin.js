@@ -11,6 +11,9 @@ const adminPanel = document.getElementById('adminPanel'); // Panel quản trị 
 const adminPinInput = document.getElementById('adminPin'); // Input nhập PIN
 const adminLoginBtn = document.getElementById('adminLoginBtn'); // Nút đăng nhập
 const adminLoginMsg = document.getElementById('adminLoginMsg'); // Hiển thị lỗi/thông báo
+const adminProfileTrigger = document.getElementById('adminProfileTrigger');
+const adminProfileDialog = document.getElementById('adminProfileDialog');
+const adminProfileClose = document.getElementById('adminProfileClose');
 
 // ========== DOM ELEMENTS - DANH SÁCH VÀ FORM NGƯỜI DÙNG ==========
 // Các element cho quản lý danh sách người dùng
@@ -19,6 +22,7 @@ const addUserBtn = document.getElementById('addUserBtn'); // Nút thêm hoặc c
 const cancelEditBtn = document.getElementById('cancelEditBtn'); // Nút hủy chỉnh sửa
 const editingUserIdField = document.getElementById('editingUserId'); // Lưu ID user đang chỉnh sửa
 const newName = document.getElementById('newName'); // Input tên user
+const newEmail = document.getElementById('newEmail');
 const newPin = document.getElementById('newPin'); // Input PIN user
 const newRole = document.getElementById('newRole'); // Dropdown role user
 
@@ -41,8 +45,14 @@ const loginLogSearch = document.getElementById('loginLogSearch');
 const loginLogStatus = document.getElementById('loginLogStatus');
 const loginLogTableBody = document.getElementById('loginLogTableBody');
 const refreshLoginLogsBtn = document.getElementById('refreshLoginLogs');
+const accessRequestList = document.getElementById('accessRequestList');
+const accessRequestStatus = document.getElementById('accessRequestStatus');
+const refreshAccessRequestsBtn = document.getElementById('refreshAccessRequests');
+const accessRequestCount = document.getElementById('accessRequestCount');
 let currentUsersObj = null;
 let currentLoginLogs = [];
+let currentAccessRequests = {};
+let accessRequestsBound = false;
 
 // ---------- hàm tiện ích hiển thị/loading cho trang quản trị ----------
 
@@ -59,7 +69,7 @@ function switchPanel(panelId) {
     const activeItem = document.querySelector(`#adminNav li[data-panel="${panelId}"]`);
     if (activeItem) activeItem.classList.add('active');
     if (adminCurrentSection && activeItem) {
-        adminCurrentSection.textContent = activeItem.querySelector('span:last-child')?.textContent || activeItem.textContent.trim();
+        adminCurrentSection.textContent = activeItem.querySelector('.admin-nav-title')?.textContent || activeItem.textContent.trim();
     }
 
     // load data for some panels
@@ -68,6 +78,12 @@ function switchPanel(panelId) {
     }
     if (panelId === 'panel-loginLog') {
         loadLoginLogs();
+    }
+    if (panelId === 'panel-accessRequests') {
+        loadAccessRequests();
+    }
+    if (panelId === 'panel-dashboard') {
+        loadAccessRequests();
     }
 }
 
@@ -89,7 +105,8 @@ document.querySelectorAll('[data-admin-action]').forEach(button => {
         const action = button.dataset.adminAction;
         const panelId = action === 'users' ? 'panel-users'
             : action === 'tasks' ? 'panel-tasks'
-                : action === 'loginLog' ? 'panel-loginLog' : 'panel-dashboard';
+                : action === 'loginLog' ? 'panel-loginLog'
+                    : action === 'accessRequests' ? 'panel-accessRequests' : 'panel-dashboard';
         switchPanel(panelId);
         if (action === 'users') newName.focus();
     });
@@ -105,6 +122,120 @@ if (loginLogSearch) {
 
 if (refreshLoginLogsBtn) {
     refreshLoginLogsBtn.addEventListener('click', loadLoginLogs);
+}
+
+if (refreshAccessRequestsBtn) {
+    refreshAccessRequestsBtn.addEventListener('click', loadAccessRequests);
+}
+
+async function loadAccessRequests() {
+    if (!accessRequestList || !accessRequestStatus) return;
+    refreshAccessRequestsBtn.disabled = true;
+    accessRequestStatus.textContent = 'Đang tải yêu cầu...';
+
+    try {
+        const snapshot = await get(ref(db, 'accessRequests'));
+        currentAccessRequests = snapshot.exists() ? snapshot.val() : {};
+        renderAccessRequests();
+    } catch (error) {
+        console.error('Không thể tải yêu cầu truy cập:', error);
+        currentAccessRequests = {};
+        accessRequestList.replaceChildren();
+        accessRequestStatus.textContent = 'Không thể tải yêu cầu. Vui lòng kiểm tra quyền Firebase hoặc thử tải lại.';
+    } finally {
+        refreshAccessRequestsBtn.disabled = false;
+    }
+}
+
+function renderAccessRequests() {
+    accessRequestList.replaceChildren();
+    const pendingRequests = Object.entries(currentAccessRequests || {})
+        .filter(([, request]) => request && request.status === 'pending')
+        .sort(([, a], [, b]) => Number(a.requestedAt || 0) - Number(b.requestedAt || 0));
+    if (accessRequestCount) {
+        accessRequestCount.textContent = String(pendingRequests.length);
+        accessRequestCount.hidden = pendingRequests.length === 0;
+    }
+
+    if (!pendingRequests.length) {
+        accessRequestStatus.textContent = 'Không có yêu cầu truy cập đang chờ duyệt.';
+        const empty = document.createElement('div');
+        empty.className = 'admin-empty-state';
+        empty.textContent = 'Các yêu cầu mới của tài khoản Phòng Ban sẽ xuất hiện tại đây.';
+        accessRequestList.appendChild(empty);
+        return;
+    }
+
+    accessRequestStatus.textContent = `${pendingRequests.length} yêu cầu đang chờ duyệt.`;
+    pendingRequests.forEach(([userId, request]) => {
+        const item = document.createElement('article');
+        item.className = 'access-request-item';
+
+        const details = document.createElement('div');
+        const name = document.createElement('strong');
+        name.textContent = request.userName || 'Tài khoản Phòng Ban';
+        const email = document.createElement('span');
+        email.textContent = request.email || 'Không có email';
+        const requestedAt = document.createElement('span');
+        const timestamp = Number(request.requestedAt);
+        requestedAt.textContent = Number.isFinite(timestamp) && timestamp > 0
+            ? `Gửi lúc ${new Date(timestamp).toLocaleString('vi-VN')}`
+            : 'Thời gian gửi không xác định';
+        details.append(name, email, requestedAt);
+
+        const actions = document.createElement('div');
+        actions.className = 'access-request-actions';
+        const approveButton = document.createElement('button');
+        approveButton.type = 'button';
+        approveButton.className = 'access-request-approve';
+        approveButton.textContent = 'Duyệt';
+        approveButton.addEventListener('click', () => reviewAccessRequest(userId));
+        actions.appendChild(approveButton);
+        item.append(details, actions);
+        accessRequestList.appendChild(item);
+    });
+}
+
+function bindAccessRequests() {
+    if (accessRequestsBound) return;
+    accessRequestsBound = true;
+    onValue(ref(db, 'accessRequests'), snapshot => {
+        currentAccessRequests = snapshot.exists() ? snapshot.val() : {};
+        renderAccessRequests();
+    }, error => {
+        console.error('Không thể theo dõi yêu cầu truy cập:', error);
+        currentAccessRequests = {};
+        accessRequestList.replaceChildren();
+        accessRequestStatus.textContent = 'Không thể tải yêu cầu. Vui lòng kiểm tra quyền Firebase.';
+        if (accessRequestCount) accessRequestCount.hidden = true;
+    });
+}
+
+async function reviewAccessRequest(userId) {
+    if (!['admin', 'superadmin'].includes(activeAdminUser?.role)) {
+        await showCustomAlert('Bạn không có quyền duyệt yêu cầu truy cập.');
+        return;
+    }
+
+    const user = currentUsersObj?.[userId];
+    const request = currentAccessRequests?.[userId];
+    if (!user || user.role !== 'department' ||
+        String(user.email || '').trim().toLowerCase() !== String(request?.email || '').trim().toLowerCase()) {
+        await showCustomAlert('Tài khoản hoặc email đã thay đổi. Vui lòng tải lại danh sách trước khi duyệt.');
+        return;
+    }
+
+    try {
+        await update(ref(db, `accessRequests/${userId}`), {
+            status: 'approved',
+            reviewedAt: Date.now(),
+            reviewedBy: activeAdminUser.name || activeAdminUser.key || 'Admin'
+        });
+        await loadAccessRequests();
+    } catch (error) {
+        console.error('Không thể cập nhật yêu cầu truy cập:', error);
+        await showCustomAlert(`Không thể cập nhật yêu cầu: ${error.message || 'Lỗi không xác định'}`);
+    }
 }
 
 async function loadLoginLogs() {
@@ -198,6 +329,31 @@ const roleDisplay = {
     member: { icon: '👤', label: 'Thành viên đăng ký' } // Quyền thường
 };
 
+function closeAdminProfile() {
+    adminProfileDialog.hidden = true;
+    adminProfileTrigger.focus();
+}
+
+function openAdminProfile() {
+    if (!activeAdminUser) return;
+    document.getElementById('adminProfileName').textContent = activeAdminUser.name || 'Chưa cập nhật';
+    document.getElementById('adminProfileRole').textContent =
+        roleDisplay[activeAdminUser.role]?.label || 'Không xác định';
+    document.getElementById('adminProfileEmail').textContent = activeAdminUser.email || 'Chưa cập nhật';
+    document.getElementById('adminProfileId').textContent = activeAdminUser.key || 'Không xác định';
+    adminProfileDialog.hidden = false;
+    adminProfileClose.focus();
+}
+
+adminProfileTrigger.addEventListener('click', openAdminProfile);
+adminProfileClose.addEventListener('click', closeAdminProfile);
+adminProfileDialog.addEventListener('click', event => {
+    if (event.target === adminProfileDialog) closeAdminProfile();
+});
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !adminProfileDialog.hidden) closeAdminProfile();
+});
+
 // ========== HÀM ĐĂNG NHẬP ==========
 // Kiểm tra PIN của Admin hoặc Super Admin trước khi mở giao diện quản trị
 
@@ -246,6 +402,7 @@ async function performAdminLogin() {
         adminLoginDiv.style.display = 'none';
         adminPanel.style.display = 'block';
         bindUsers(); // Tải danh sách users
+        bindAccessRequests();
         switchPanel('panel-dashboard'); // hiển thị dashboard sau khi đăng nhập
     } catch (e) {
         adminLoginMsg.innerText = 'Lỗi khi kiểm tra PIN';
@@ -268,6 +425,8 @@ adminPinInput.addEventListener('keydown', (e) => {
 // Xóa sạch dữ liệu form (dùng khi cancele hoặc sau khi thêm/cập nhật)
 function clearForm() {
     newName.value = '';
+    newEmail.value = '';
+    newEmail.required = false;
     newPin.value = '';
     newRole.value = 'member';
     editingUserId = null;
@@ -291,7 +450,12 @@ function updateRoleOptions(selectedRole = 'member') {
         option.disabled = option.hidden;
     });
     newRole.value = allowedRoles.includes(selectedRole) ? selectedRole : 'member';
+    newEmail.required = newRole.value === 'department';
 }
+
+newRole.addEventListener('change', () => {
+    newEmail.required = newRole.value === 'department';
+});
 
 // Đặt lại UI form về trạng thái "Thêm mới" (không phải chỉnh sửa)
 function resetFormUI() {
@@ -310,6 +474,7 @@ function editUser(userId, userData) {
     editingUserId = userId; // Lưu ID user đang chỉnh sửa
     editingUserIdField.value = userId;
     newName.value = userData.name || '';
+    newEmail.value = userData.email || '';
     newPin.value = userData.pin || '';
     updateRoleOptions(userData.role || 'member');
 
@@ -363,7 +528,7 @@ function renderUsers(usersObj) {
     const grouped = { superadmin: [], admin: [], department: [], member: [] };
     const query = userSearchInput?.value.trim().toLocaleLowerCase('vi') || '';
     Object.entries(currentUsersObj).forEach(([k, u]) => {
-        if (query && !`${u.name || ''} ${u.pin || ''}`.toLocaleLowerCase('vi').includes(query)) return;
+        if (query && !`${u.name || ''} ${u.pin || ''} ${u.email || ''}`.toLocaleLowerCase('vi').includes(query)) return;
         const role = u.role || 'member';
         if (!grouped[role]) grouped[role] = [];
 
@@ -397,6 +562,12 @@ function renderUsers(usersObj) {
                     </div>
                 `;
                 userListDiv.appendChild(el);
+                if (u.email) {
+                    const email = document.createElement('div');
+                    email.style.color = '#666';
+                    email.textContent = u.email;
+                    el.querySelector('.meta').appendChild(email);
+                }
 
                 el.querySelector('.btn-edit').onclick = (e) => {
                     e.preventDefault();
@@ -751,10 +922,19 @@ function buildTasksTable(obj) {
 
 addUserBtn.onclick = async () => {
     const name = newName.value.trim();
+    const email = newEmail.value.trim().toLowerCase();
     const pin = newPin.value.trim();
     const role = newRole.value;
 
     if (!name) { await showCustomAlert('Vui lòng nhập tên người dùng'); return; }
+    if (role === 'department' && !email) {
+        await showCustomAlert('Vui lòng nhập email cho tài khoản Phòng Ban');
+        return;
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        await showCustomAlert('Email không đúng định dạng');
+        return;
+    }
     if (!pin || pin.length !== 4) { await showCustomAlert('PIN phải đủ 4 chữ số'); return; }
     if (!isSuperAdmin() && !['member', 'department'].includes(role)) {
         await showCustomAlert('Admin chỉ được tạo hoặc phân quyền Thành viên và Phòng Ban.');
@@ -767,7 +947,7 @@ addUserBtn.onclick = async () => {
 
     showLoadingAdmin();
     try {
-        const userData = { name, pin, role };
+        const userData = { name, email: email || null, pin, role };
 
         if (editingUserId) {
             // Update existing user

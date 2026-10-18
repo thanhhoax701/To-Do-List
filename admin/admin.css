@@ -492,6 +492,97 @@ select {
     text-decoration: none;
 }
 
+.admin-brand-button {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.admin-brand-button:hover .admin-brand-mark,
+.admin-brand-button:focus-visible .admin-brand-mark {
+    transform: translateY(-1px);
+    box-shadow: 0 9px 20px rgba(201, 21, 28, .3);
+}
+
+.admin-brand-button:focus-visible {
+    border-radius: 10px;
+    outline: 3px solid rgba(201, 21, 28, .2);
+}
+
+.admin-profile-backdrop[hidden] {
+    display: none;
+}
+
+.admin-profile-backdrop {
+    position: fixed;
+    z-index: 20000;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(19, 29, 46, .55);
+}
+
+.admin-profile-dialog {
+    position: relative;
+    width: min(100%, 440px);
+    padding: 28px;
+    border: 1px solid #e9edf4;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 24px 70px rgba(20, 34, 57, .24);
+}
+
+.admin-profile-dialog h2 {
+    margin: 7px 0 20px;
+    color: #1e2c45;
+    font-size: 24px;
+}
+
+.admin-profile-close {
+    position: absolute;
+    top: 13px;
+    right: 15px;
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 50%;
+    background: #f2f4f7;
+    color: #536176;
+    font-size: 23px;
+    cursor: pointer;
+}
+
+.admin-profile-details {
+    display: grid;
+    gap: 0;
+    margin: 0;
+}
+
+.admin-profile-details > div {
+    display: grid;
+    grid-template-columns: minmax(110px, .8fr) minmax(0, 1.2fr);
+    gap: 12px;
+    padding: 13px 0;
+    border-top: 1px solid #edf0f5;
+}
+
+.admin-profile-details dt {
+    color: #7b8798;
+    font-size: 13px;
+}
+
+.admin-profile-details dd {
+    overflow-wrap: anywhere;
+    margin: 0;
+    color: #26364f;
+    font-size: 14px;
+    font-weight: 650;
+}
+
 .admin-brand-mark {
     display: grid;
     width: 38px;
@@ -1060,7 +1151,7 @@ select {
 
 .admin-user-form {
     display: grid;
-    grid-template-columns: minmax(180px, 1fr) minmax(120px, 155px) minmax(190px, 235px) auto auto;
+    grid-template-columns: minmax(160px, 1fr) minmax(190px, 1fr) minmax(110px, 130px) minmax(170px, 205px) auto auto;
     gap: 9px;
     align-items: center;
     padding: 15px;
@@ -1081,6 +1172,72 @@ select {
     background: #fff;
     color: #344054;
     font-size: 12px;
+}
+
+.access-request-list {
+    display: grid;
+    gap: 10px;
+}
+
+.access-request-count {
+    display: inline-flex;
+    min-width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    border-radius: 10px;
+    background: #df171f;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.access-request-count[hidden] {
+    display: none;
+}
+
+.access-request-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border: 1px solid #e9edf4;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.access-request-item strong,
+.access-request-item span {
+    display: block;
+}
+
+.access-request-item span {
+    margin-top: 4px;
+    color: #68758a;
+    font-size: 12px;
+}
+
+.access-request-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: 8px;
+}
+
+.access-request-actions button {
+    min-height: 36px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.access-request-approve {
+    background: #2c9d70;
 }
 
 .admin-user-form input:focus,
@@ -1286,7 +1443,7 @@ select {
     }
 
     .admin-user-form {
-        grid-template-columns: minmax(180px, 1fr) minmax(115px, 145px) minmax(180px, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
@@ -1491,6 +1648,7 @@ select {
     }
 
     .admin-user-form #newName,
+    .admin-user-form #newEmail,
     .admin-user-form #newRole {
         grid-column: 1 / -1;
     }
@@ -1498,6 +1656,15 @@ select {
     .admin-user-form #addUserBtn,
     .admin-user-form #cancelEditBtn {
         width: 100%;
+    }
+
+    .access-request-item {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .access-request-actions button {
+        flex: 1;
     }
 
     .admin-list-toolbar {

@@ -7106,37 +7106,62 @@ if (deleteSelectedMobileBtn && deleteSelect) {
 /* ========== LOGIN / PIN (4 chữ số) ========== */
 const loginOverlay = document.getElementById('loginOverlay');
 const pinDotsEl = document.getElementById('pinDots');
+const loginEmailInput = document.getElementById('loginEmail');
+const loginMessageEl = document.getElementById('loginMessage');
 const kpButtons = document.querySelectorAll('.kp');
 const kpClear = document.getElementById('kp-clear');
 const kpBack = document.getElementById('kp-back');
 
 let enteredPin = '';
+let loginInProgress = false;
 
 function updatePinDots() {
     const dots = pinDotsEl.querySelectorAll('.dot');
     dots.forEach((d, i) => d.classList.toggle('filled', i < enteredPin.length));
 }
 
+function showLoginMessage(message) {
+    if (loginMessageEl) loginMessageEl.textContent = message;
+}
+
+function normalizeLoginUsers(usersObj) {
+    if (usersObj && typeof usersObj === 'object') {
+        const keys = Object.keys(usersObj);
+        if (keys.length === 1) {
+            const inner = usersObj[keys[0]];
+            if (inner && typeof inner === 'object' &&
+                Object.values(inner).every(user => user && user.pin !== undefined)) {
+                return inner;
+            }
+        }
+    }
+    return usersObj;
+}
+
+function enterApplication(user) {
+    sessionStorage.setItem('user', JSON.stringify(user));
+    updateUserDisplay();
+    document.getElementById('mainContent').style.display = 'block';
+    loginOverlay.classList.add('hidden');
+    startApp();
+}
+
 async function attemptLogin(pin) {
+    if (loginInProgress) return;
+    loginInProgress = true;
+    showLoginMessage('');
+    enteredPin = '';
+    updatePinDots();
+    let loginMessage = '';
     try {
         showLoading();
         const usersSnap = await get(ref(db, 'users'));
-        hideLoading();
-        if (!usersSnap.exists()) return onLoginFail();
-
-        // normalize structure in case data was imported under a push-id
-        let usersObj = usersSnap.val();
-        if (usersObj && typeof usersObj === 'object') {
-            const keys = Object.keys(usersObj);
-            if (keys.length === 1) {
-                const inner = usersObj[keys[0]];
-                if (inner && typeof inner === 'object') {
-                    const allHavePin = Object.values(inner).every(u => u && u.pin !== undefined);
-                    if (allHavePin) usersObj = inner;
-                }
-            }
+        if (!usersSnap.exists()) {
+            loginMessage = 'Không tìm thấy tài khoản. Vui lòng kiểm tra PIN.';
+            return;
         }
 
+        const usersObj = normalizeLoginUsers(usersSnap.val());
         let matched = null;
         for (const k in usersObj) {
             if (!usersObj.hasOwnProperty(k)) continue;
@@ -7147,24 +7172,66 @@ async function attemptLogin(pin) {
             }
         }
 
-        if (matched) {
-            try {
-                await recordSuccessfulLogin(matched, 'Ứng dụng');
-            } catch (logError) {
-                console.error('Không thể lưu nhật ký đăng nhập ứng dụng:', logError);
-            }
-            sessionStorage.setItem('user', JSON.stringify(matched));
-            updateUserDisplay();
-            document.getElementById('mainContent').style.display = 'block';
-            loginOverlay.classList.add('hidden');
-            startApp();
-        } else {
-            onLoginFail();
+        if (!matched) {
+            loginMessage = 'PIN không đúng.';
+            return;
         }
+
+        if (matched.role === 'department') {
+            const email = String(loginEmailInput?.value || '').trim().toLowerCase();
+            const savedEmail = String(matched.email || '').trim().toLowerCase();
+            if (!savedEmail) {
+                loginMessage = 'Tài khoản Phòng Ban chưa có email. Vui lòng liên hệ Admin cập nhật hồ sơ.';
+                return;
+            }
+            if (!email) {
+                loginMessage = 'Vui lòng nhập email đã đăng ký với tài khoản.';
+                return;
+            }
+            if (email !== savedEmail) {
+                loginMessage = 'Email không khớp với email đã đăng ký.';
+                return;
+            }
+
+            const requestSnap = await get(ref(db, `accessRequests/${matched.key}`));
+            const accessRequest = requestSnap.exists() ? requestSnap.val() : null;
+            if (accessRequest?.status === 'approved' &&
+                String(accessRequest.email || '').trim().toLowerCase() === email) {
+                // Admin has approved this account and its registered email.
+            } else if (accessRequest?.status === 'pending' &&
+                String(accessRequest.email || '').trim().toLowerCase() === email) {
+                loginMessage = 'Yêu cầu đã được gửi. Vui lòng chờ Admin duyệt trước khi đăng nhập.';
+                return;
+            } else {
+                await set(ref(db, `accessRequests/${matched.key}`), {
+                    userId: matched.key,
+                    userName: String(matched.name || 'Tài khoản Phòng Ban'),
+                    email,
+                    role: 'department',
+                    status: 'pending',
+                    requestedAt: Date.now()
+                });
+                loginMessage = 'Đã gửi yêu cầu truy cập đến Admin. Bạn có thể đăng nhập sau khi được duyệt.';
+                return;
+            }
+        }
+
+        try {
+            await recordSuccessfulLogin(matched, 'Ứng dụng');
+        } catch (logError) {
+            console.error('Không thể lưu nhật ký đăng nhập ứng dụng:', logError);
+        }
+        enterApplication(matched);
     } catch (err) {
-        hideLoading();
         console.error(err);
-        onLoginFail();
+        loginMessage = 'Không thể xác minh đăng nhập với máy chủ. Vui lòng thử lại.';
+    } finally {
+        hideLoading();
+        loginInProgress = false;
+        if (loginMessage) {
+            onLoginFail();
+            showLoginMessage(loginMessage);
+        }
     }
 }
 
@@ -7191,6 +7258,13 @@ kpButtons.forEach(b => {
 document.addEventListener('keydown', (e) => {
     const key = e.key;
     if (!loginOverlay.classList.contains('hidden')) {
+        if (e.target === loginEmailInput) {
+            if (key === 'Enter' && enteredPin.length === 4) {
+                e.preventDefault();
+                attemptLogin(enteredPin);
+            }
+            return;
+        }
         // Only when login overlay is visible
         if (key >= '0' && key <= '9') {
             if (enteredPin.length >= 4) return;
@@ -8403,19 +8477,45 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// If there's a session, auto-login
-const savedUser = sessionStorage.getItem('user');
-if (savedUser) {
+async function restoreSavedSession() {
+    const savedUser = sessionStorage.getItem('user');
+    if (!savedUser) return;
+
     try {
-        const u = JSON.parse(savedUser);
-        if (u && u.pin) {
-            updateUserDisplay();
-            document.getElementById('mainContent').style.display = 'block';
-            loginOverlay.classList.add('hidden');
-            startApp();
+        let user = JSON.parse(savedUser);
+        if (!user || !user.pin) return;
+
+        if (user.role === 'department') {
+            if (!user.key) {
+                sessionStorage.removeItem('user');
+                return;
+            }
+            const usersSnap = await get(ref(db, 'users'));
+            const users = (usersSnap.exists() ? normalizeLoginUsers(usersSnap.val()) : {}) || {};
+            const currentUser = users[user.key];
+            const requestSnap = await get(ref(db, `accessRequests/${user.key}`));
+            const request = requestSnap.exists() ? requestSnap.val() : null;
+            const currentEmail = String(currentUser?.email || '').trim().toLowerCase();
+            if (!currentUser || currentUser.role !== 'department' || !currentEmail ||
+                String(currentUser.pin) !== String(user.pin) ||
+                request?.status !== 'approved' ||
+                String(request.email || '').trim().toLowerCase() !== currentEmail) {
+                sessionStorage.removeItem('user');
+                showLoginMessage('Tài khoản cần được Admin duyệt lại trước khi tiếp tục.');
+                return;
+            }
+            user = { key: user.key, ...currentUser };
         }
-    } catch (e) { }
+
+        enterApplication(user);
+    } catch (error) {
+        console.error('Không thể khôi phục phiên đăng nhập:', error);
+        sessionStorage.removeItem('user');
+        showLoginMessage('Không thể xác minh phiên đăng nhập. Vui lòng đăng nhập lại.');
+    }
 }
+
+restoreSavedSession();
 
 // Keyboard shortcut to close modals
 document.addEventListener('keydown', (e) => {

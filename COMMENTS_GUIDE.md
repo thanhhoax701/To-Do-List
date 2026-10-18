@@ -8,7 +8,7 @@ Tài liệu này tổng hợp các chức năng hiện có của ứng dụng, g
 
 1. Mở `index.html`.
 2. Nhập PIN 4 chữ số trên bàn phím hiển thị.
-3. Nếu được cấp quyền quản trị, mở **Quản trị** ở cuối khung đăng nhập để vào trang quản trị.
+3. Nếu được cấp quyền quản trị, mở **Quản trị** ở cuối khung đăng nhập để vào trang quản trị (`admin/index.html`).
 4. Chọn **Đăng xuất** trên thanh trên cùng để kết thúc phiên.
 
 Các chức năng quản lý lịch, danh mục nhân viên và nhập dữ liệu có thể yêu cầu quyền quản trị. Nếu nút không thực hiện thao tác, hãy liên hệ quản trị viên để kiểm tra quyền tài khoản.
@@ -165,7 +165,7 @@ Danh sách nhân viên được dùng làm nguồn gợi ý người yêu cầu/
 
 ## 9. Trang quản trị
 
-Mở **Quản trị** ở màn hình đăng nhập hoặc trang `admin/admin.html`, sau đó đăng nhập bằng PIN có quyền quản trị.
+Mở **Quản trị** ở màn hình đăng nhập hoặc trang `admin/index.html`, sau đó đăng nhập bằng PIN có quyền quản trị.
 
 | Khu vực | Chức năng |
 | --- | --- |

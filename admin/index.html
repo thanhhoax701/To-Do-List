@@ -35,14 +35,15 @@
             <div class="admin-container">
                 <!-- navigation sidebar -->
                 <nav class="admin-sidebar" aria-label="Điều hướng quản trị">
-                    <a class="admin-brand" href="../index.html">
+                    <button id="adminProfileTrigger" class="admin-brand admin-brand-button" type="button" aria-haspopup="dialog" aria-controls="adminProfileDialog">
                         <span class="admin-brand-mark">✓</span>
                         <span><strong>TTH</strong><small>ADMINISTRATOR</small></span>
-                    </a>
+                    </button>
                     <p class="admin-nav-label">KHÔNG GIAN QUẢN TRỊ</p>
                     <ul id="adminNav">
                         <li data-panel="panel-dashboard" class="active" role="button" tabindex="0"><span class="admin-nav-icon">▦</span><span>Tổng quan</span></li>
                         <li data-panel="panel-users" role="button" tabindex="0"><span class="admin-nav-icon">♙</span><span>Người dùng</span></li>
+                        <li data-panel="panel-accessRequests" role="button" tabindex="0"><span class="admin-nav-icon">✉</span><span class="admin-nav-title">Yêu cầu truy cập</span><span id="accessRequestCount" class="access-request-count" hidden></span></li>
                         <li data-panel="panel-tasks" role="button" tabindex="0"><span class="admin-nav-icon">☷</span><span>Công việc</span></li>
                         <li data-panel="panel-editLog" role="button" tabindex="0"><span class="admin-nav-icon">↺</span><span>Nhật ký chỉnh sửa</span></li>
                         <li data-panel="panel-loginLog" role="button" tabindex="0"><span class="admin-nav-icon">⌑</span><span>Nhật ký đăng nhập</span></li>
@@ -125,6 +126,9 @@
                                 <button type="button" class="dashboard-shortcut" data-admin-action="loginLog">
                                     <span class="shortcut-icon shortcut-logs">↺</span><span><strong>Nhật ký hệ thống</strong><small>Xem trạng thái các nhật ký</small></span><b>→</b>
                                 </button>
+                                <button type="button" class="dashboard-shortcut" data-admin-action="accessRequests">
+                                    <span class="shortcut-icon shortcut-logs">✉</span><span><strong>Yêu cầu truy cập</strong><small>Duyệt tài khoản Phòng Ban</small></span><b>→</b>
+                                </button>
                             </article>
                         </section>
                         <p class="dashboard-footnote"><span class="admin-sidebar-status"></span> Số liệu tài khoản được cập nhật trực tiếp từ hệ thống.</p>
@@ -141,6 +145,7 @@
                             <div class="admin-user-form">
                                 <!-- Input tên user -->
                                 <input id="newName" placeholder="Tên người dùng" aria-label="Tên người dùng">
+                                <input id="newEmail" type="email" autocomplete="email" placeholder="Email (bắt buộc với Phòng Ban)" aria-label="Email tài khoản">
                                 <!-- Input PIN 4 chữ số -->
                                 <input
                                     id="newPin"
@@ -164,9 +169,19 @@
                             <!-- Danh sách người dùng - render bởi JavaScript -->
                             <div class="admin-list-toolbar">
                                 <div><h2>Danh sách tài khoản</h2><p>Được nhóm theo quyền truy cập</p></div>
-                                <label class="admin-search"><span>⌕</span><input id="userSearchInput" type="search" placeholder="Tìm theo tên hoặc PIN" aria-label="Tìm người dùng"></label>
+                                <label class="admin-search"><span>⌕</span><input id="userSearchInput" type="search" placeholder="Tìm theo tên, email hoặc PIN" aria-label="Tìm người dùng"></label>
                             </div>
                             <div class="user-list" id="userList"></div>
+                        </div>
+                    </div>
+                    <div id="panel-accessRequests" class="panel-content" style="display:none">
+                        <div class="admin-box">
+                            <div class="admin-panel-heading">
+                                <div><span class="dashboard-eyebrow">XÁC NHẬN TRUY CẬP</span><h1>Yêu cầu truy cập</h1><p>Duyệt hoặc từ chối yêu cầu đăng nhập của tài khoản Phòng Ban.</p></div>
+                                <button id="refreshAccessRequests" class="login-log-refresh" type="button">↻ Tải lại</button>
+                            </div>
+                            <p id="accessRequestStatus" class="login-log-status" aria-live="polite">Chưa tải yêu cầu.</p>
+                            <div id="accessRequestList" class="access-request-list"></div>
                         </div>
                     </div>
                     <!-- panel: tasks -->
@@ -223,6 +238,19 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div id="adminProfileDialog" class="admin-profile-backdrop" role="presentation" hidden>
+            <section class="admin-profile-dialog" role="dialog" aria-modal="true" aria-labelledby="adminProfileTitle">
+                <button id="adminProfileClose" class="admin-profile-close" type="button" aria-label="Đóng">&times;</button>
+                <span class="dashboard-eyebrow">HỒ SƠ TÀI KHOẢN</span>
+                <h2 id="adminProfileTitle">Thông tin Admin</h2>
+                <dl class="admin-profile-details">
+                    <div><dt>Họ và tên</dt><dd id="adminProfileName"></dd></div>
+                    <div><dt>Vai trò</dt><dd id="adminProfileRole"></dd></div>
+                    <div><dt>Email</dt><dd id="adminProfileEmail"></dd></div>
+                    <div><dt>Mã tài khoản</dt><dd id="adminProfileId"></dd></div>
+                </dl>
+            </section>
         </div>
         <!-- ========== SCRIPT ========== -->
         <!-- Firebase Realtime Database -->
