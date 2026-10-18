@@ -7116,6 +7116,8 @@ const kpBack = document.getElementById('kp-back');
 
 let enteredPin = '';
 let loginInProgress = false;
+let accessApprovalUnsubscribe = null;
+let approvalRedirectInProgress = false;
 
 function updatePinDots() {
     const dots = pinDotsEl.querySelectorAll('.dot');
@@ -7206,6 +7208,56 @@ async function createPendingAccessRequest(user, email) {
     });
 }
 
+function watchForAccessApproval(user, email) {
+    if (accessApprovalUnsubscribe) accessApprovalUnsubscribe();
+    approvalRedirectInProgress = false;
+
+    accessApprovalUnsubscribe = onValue(ref(db, `accessRequests/${user.key}`), snapshot => {
+        if (approvalRedirectInProgress || !snapshot.exists()) return;
+        const request = snapshot.val();
+        const authUser = auth.currentUser;
+        if (request?.status !== 'approved' ||
+            String(request.email || '').trim().toLowerCase() !== email ||
+            request.emailVerified === false ||
+            !authUser?.emailVerified ||
+            String(authUser.email || '').trim().toLowerCase() !== email) {
+            return;
+        }
+
+        approvalRedirectInProgress = true;
+        if (accessApprovalUnsubscribe) {
+            accessApprovalUnsubscribe();
+            accessApprovalUnsubscribe = null;
+        }
+        get(ref(db, 'users')).then(usersSnap => {
+            const users = (usersSnap.exists() ? normalizeLoginUsers(usersSnap.val()) : {}) || {};
+            const currentUser = users[user.key];
+            if (!currentUser || currentUser.role !== 'department' ||
+                String(currentUser.pin) !== String(user.pin) ||
+                String(currentUser.email || '').trim().toLowerCase() !== email) {
+                approvalRedirectInProgress = false;
+                showLoginMessage('Thông tin tài khoản đã thay đổi. Vui lòng đăng nhập lại.');
+                return;
+            }
+            const approvedUser = { key: user.key, ...currentUser };
+            return recordSuccessfulLogin(approvedUser, 'Ứng dụng')
+                .catch(logError => console.error('Không thể lưu nhật ký đăng nhập ứng dụng:', logError))
+                .then(() => {
+                    sessionStorage.removeItem('verifiedEmailSignIn');
+                    enterApplication(approvedUser);
+                });
+        }).catch(error => {
+            approvalRedirectInProgress = false;
+            console.error('Không thể xác minh quyền truy cập đã duyệt:', error);
+            showLoginMessage('Không thể kiểm tra quyền truy cập vừa được duyệt. Vui lòng thử lại.');
+        });
+    }, error => {
+        accessApprovalUnsubscribe = null;
+        console.error('Không thể theo dõi trạng thái duyệt truy cập:', error);
+        showLoginMessage('Không thể theo dõi yêu cầu duyệt. Vui lòng thử đăng nhập lại.');
+    });
+}
+
 async function createAccessRequestAfterEmailVerification(user, email) {
     const requestRef = ref(db, `accessRequests/${user.key}`);
     const requestSnap = await get(requestRef);
@@ -7238,7 +7290,8 @@ async function createAccessRequestAfterEmailVerification(user, email) {
             emailVerifiedAt: Date.now()
         });
     }
-    showLoginMessage('Email đã xác minh. Yêu cầu truy cập đang chờ Admin duyệt.');
+    watchForAccessApproval(user, email);
+    showLoginMessage('Đang chờ Quản trị viên xác minh yêu cầu truy cập. Trang chính sẽ mở tự động sau khi Admin duyệt.');
 }
 
 async function completeEmailLinkSignIn(email) {
