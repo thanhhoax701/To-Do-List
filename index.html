@@ -79,8 +79,8 @@
             <!-- Tiêu đề ngày đang chọn -->
             <h2 id="selectedDateTitle">Chọn ngày để xem công việc</h2>
             <!-- Search và Filter Section -->
-            <div id="searchFilterSection" style="margin-bottom: 12px; padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
-                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <div id="searchFilterSection">
+                <div class="task-toolbar-row">
                     <div class="task-search-input-wrap">
                         <input
                             type="text"
@@ -113,17 +113,16 @@
                         class="btn-add"
                         style="height: 36px; padding: 0 16px;"
                     >🔍 Tìm kiếm</button>
+                    <div id="taskActions">
+                        <button id="openAddModal" class="btn-add">➕ Thêm công việc</button>
+                        <label class="task-select-all"><input type="checkbox" id="selectAllCheckbox"> Chọn tất cả</label>
+                        <select id="deleteSelect">
+                            <option value="">Xóa...</option>
+                            <option value="selected">Xóa đã chọn</option>
+                        </select>
+                        <button type="button" id="deleteSelectedMobileBtn" class="delete-selected-mobile-btn" aria-label="Xóa công việc đã chọn" hidden>🗑️ Xóa đã chọn</button>
+                    </div>
                 </div>
-            </div>
-            <!-- Nút thêm công việc -->
-            <div id="taskActions" style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
-                <button id="openAddModal" class="btn-add" style="height:40px; font-size:17px; padding:0 22px; display:flex; align-items:center;">➕ Thêm công việc</button>
-                <label class="task-select-all"><input type="checkbox" id="selectAllCheckbox"> Chọn tất cả</label>
-                <select id="deleteSelect" style="height:40px; font-size:16px; padding:0 16px; border-radius:6px; border:1px solid #bbb; background:#fff;">
-                    <option value="">Xóa...</option>
-                    <option value="selected">Xóa đã chọn</option>
-                </select>
-                <button type="button" id="deleteSelectedMobileBtn" class="delete-selected-mobile-btn" aria-label="Xóa công việc đã chọn" hidden>🗑️ Xóa đã chọn</button>
             </div>
             <!-- Sidebar Menu -->
             <div id="sideMenuPanel" class="side-menu-panel">
