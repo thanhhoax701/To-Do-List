@@ -1,7 +1,7 @@
 // ========== IMPORT FIREBASE ==========
 // Nhập Firebase Database và các hàm thao tác dữ liệu
 import { db } from '../firebase.js';
-import { ref, push, get, remove, onValue, update, set, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { ref, push, get, remove, onValue, update, set, runTransaction, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 import { recordSuccessfulLogin } from '../login-log.js';
 
 // ========== DOM ELEMENTS - PHẦN ĐĂNG NHẬP ==========
@@ -53,10 +53,13 @@ const accessRequestList = document.getElementById('accessRequestList');
 const accessRequestStatus = document.getElementById('accessRequestStatus');
 const refreshAccessRequestsBtn = document.getElementById('refreshAccessRequests');
 const accessRequestCount = document.getElementById('accessRequestCount');
+const accessRequestSearch = document.getElementById('accessRequestSearch');
+const accessRequestFilters = document.querySelectorAll('[data-access-filter]');
 let currentUsersObj = null;
 let currentLoginLogs = [];
 let currentAccessRequests = {};
 let accessRequestsBound = false;
+let activeAccessRequestFilter = 'pending';
 
 // ---------- hàm tiện ích hiển thị/loading cho trang quản trị ----------
 
@@ -132,6 +135,22 @@ if (refreshAccessRequestsBtn) {
     refreshAccessRequestsBtn.addEventListener('click', loadAccessRequests);
 }
 
+if (accessRequestSearch) {
+    accessRequestSearch.addEventListener('input', renderAccessRequests);
+}
+
+accessRequestFilters.forEach(button => {
+    button.addEventListener('click', () => {
+        activeAccessRequestFilter = button.dataset.accessFilter || 'pending';
+        accessRequestFilters.forEach(filterButton => {
+            const isActive = filterButton === button;
+            filterButton.classList.toggle('active', isActive);
+            filterButton.setAttribute('aria-pressed', String(isActive));
+        });
+        renderAccessRequests();
+    });
+});
+
 async function loadAccessRequests() {
     if (!accessRequestList || !accessRequestStatus) return;
     refreshAccessRequestsBtn.disabled = true;
@@ -153,57 +172,124 @@ async function loadAccessRequests() {
 
 function renderAccessRequests() {
     accessRequestList.replaceChildren();
-    const pendingRequests = Object.entries(currentAccessRequests || {})
-        .filter(([, request]) => request && request.status === 'pending')
-        .sort(([, a], [, b]) => Number(a.requestedAt || 0) - Number(b.requestedAt || 0));
+    const requests = Object.entries(currentAccessRequests || {})
+        .filter(([, request]) => request && typeof request === 'object')
+        .sort(([, a], [, b]) => Number(b.requestedAt || 0) - Number(a.requestedAt || 0));
+    const counts = requests.reduce((result, [, request]) => {
+        if (request.status === 'pending') result.pending += 1;
+        if (request.status === 'approved') result.approved += 1;
+        if (request.status === 'blocked') result.blocked += 1;
+        return result;
+    }, { pending: 0, approved: 0, blocked: 0 });
+    document.getElementById('accessPendingTotal').textContent = String(counts.pending);
+    document.getElementById('accessApprovedTotal').textContent = String(counts.approved);
+    document.getElementById('accessBlockedTotal').textContent = String(counts.blocked);
     if (accessRequestCount) {
-        accessRequestCount.textContent = String(pendingRequests.length);
-        accessRequestCount.hidden = pendingRequests.length === 0;
+        accessRequestCount.textContent = String(counts.pending);
+        accessRequestCount.hidden = counts.pending === 0;
     }
 
-    if (!pendingRequests.length) {
-        accessRequestStatus.textContent = 'Không có yêu cầu truy cập đang chờ duyệt.';
+    const searchTerm = String(accessRequestSearch?.value || '').trim().toLowerCase();
+    const filteredRequests = requests.filter(([userId, request]) => {
+        const matchesFilter = activeAccessRequestFilter === 'all' ||
+            request.status === activeAccessRequestFilter;
+        const user = currentUsersObj?.[userId];
+        const name = String(user?.name || request.userName || '').toLowerCase();
+        const email = String(user?.email || request.email || '').toLowerCase();
+        return matchesFilter && (!searchTerm || name.includes(searchTerm) || email.includes(searchTerm));
+    });
+
+    if (!filteredRequests.length) {
+        const emptyMessages = {
+            pending: 'Không có yêu cầu đang chờ duyệt.',
+            approved: 'Chưa có tài khoản nào được cấp quyền.',
+            blocked: 'Không có tài khoản nào đang bị chặn.',
+            all: 'Chưa có yêu cầu truy cập nào.'
+        };
+        accessRequestStatus.textContent = searchTerm
+            ? 'Không tìm thấy yêu cầu phù hợp.'
+            : emptyMessages[activeAccessRequestFilter] || emptyMessages.all;
         const empty = document.createElement('div');
-        empty.className = 'admin-empty-state';
-        empty.textContent = 'Các yêu cầu mới của tài khoản Phòng Ban sẽ xuất hiện tại đây.';
+        empty.className = 'admin-empty-state access-request-empty';
+        empty.textContent = searchTerm
+            ? 'Thử tìm bằng tên hoặc email khác.'
+            : emptyMessages[activeAccessRequestFilter] || emptyMessages.all;
         accessRequestList.appendChild(empty);
         return;
     }
 
-    accessRequestStatus.textContent = `${pendingRequests.length} yêu cầu đang chờ duyệt.`;
-    pendingRequests.forEach(([userId, request]) => {
+    accessRequestStatus.textContent = `Hiển thị ${filteredRequests.length} / ${requests.length} tài khoản.`;
+    filteredRequests.forEach(([userId, request]) => {
+        const user = currentUsersObj?.[userId];
         const item = document.createElement('article');
-        item.className = 'access-request-item';
+        item.className = `access-request-item access-request-${request.status || 'unknown'}`;
 
         const details = document.createElement('div');
+        details.className = 'access-request-details';
+        const identity = document.createElement('div');
+        identity.className = 'access-request-identity';
         const name = document.createElement('strong');
-        name.textContent = request.userName || 'Tài khoản Phòng Ban';
+        name.textContent = user?.name || request.userName || 'Tài khoản Phòng Ban';
         const email = document.createElement('span');
-        email.textContent = request.email || 'Không có email';
+        email.className = 'access-request-email';
+        email.textContent = user?.email || request.email || 'Không có email';
+        const badge = document.createElement('span');
+        badge.className = `access-request-badge access-request-badge-${request.status || 'unknown'}`;
+        badge.textContent = request.status === 'pending' ? 'Đang chờ duyệt'
+            : request.status === 'approved' ? 'Đã cho phép'
+                : request.status === 'blocked' ? 'Đã chặn' : 'Trạng thái không xác định';
+        identity.append(name, badge);
         const requestedAt = document.createElement('span');
         const timestamp = Number(request.requestedAt);
         requestedAt.textContent = Number.isFinite(timestamp) && timestamp > 0
-            ? `Gửi lúc ${new Date(timestamp).toLocaleString('vi-VN')}`
+            ? `Yêu cầu lúc ${new Date(timestamp).toLocaleString('vi-VN')}`
             : 'Thời gian gửi không xác định';
+        requestedAt.className = 'access-request-meta';
         const verificationStatus = document.createElement('span');
-        const emailVerified = request.emailVerified !== false;
+        const emailVerified = request.emailVerified === true;
+        verificationStatus.className = `access-request-verification ${emailVerified ? 'is-verified' : 'is-unverified'}`;
         verificationStatus.textContent = emailVerified
             ? 'Email đã được Firebase xác minh'
-            : 'Email chưa xác minh — người dùng vẫn cần mở link trước khi đăng nhập';
-        details.append(name, email, requestedAt, verificationStatus);
+            : 'Email chưa xác minh · người dùng cần mở liên kết xác minh';
+        details.append(identity, email, requestedAt, verificationStatus);
+
+        if (request.status === 'approved' || request.status === 'blocked') {
+            const reviewInfo = document.createElement('span');
+            reviewInfo.className = 'access-request-meta';
+            const reviewedAt = Number(request.reviewedAt);
+            reviewInfo.textContent = `Cập nhật${reviewedAt > 0 ? ` lúc ${new Date(reviewedAt).toLocaleString('vi-VN')}` : ''}${request.reviewedBy ? ` · ${request.reviewedBy}` : ''}`;
+            details.appendChild(reviewInfo);
+        }
 
         const actions = document.createElement('div');
         actions.className = 'access-request-actions';
-        const approveButton = document.createElement('button');
-        approveButton.type = 'button';
-        approveButton.className = 'access-request-approve';
-        approveButton.textContent = 'Duyệt cho phép truy cập';
-        approveButton.disabled = false;
-        approveButton.addEventListener('click', () => reviewAccessRequest(userId));
-        actions.appendChild(approveButton);
+        if (user?.role !== 'department') {
+            const warning = document.createElement('span');
+            warning.className = 'access-request-warning';
+            warning.textContent = 'Tài khoản đã bị xóa hoặc thay đổi quyền';
+            actions.appendChild(warning);
+        } else if (request.status === 'pending') {
+            actions.append(
+                createAccessActionButton('Duyệt truy cập', 'access-request-approve', () => reviewAccessRequest(userId, 'approved')),
+                createAccessActionButton('Chặn', 'access-request-block', () => reviewAccessRequest(userId, 'blocked'))
+            );
+        } else if (request.status === 'approved') {
+            actions.append(createAccessActionButton('Chặn truy cập', 'access-request-block', () => reviewAccessRequest(userId, 'blocked')));
+        } else if (request.status === 'blocked') {
+            actions.append(createAccessActionButton('Gỡ chặn · yêu cầu duyệt lại', 'access-request-unblock', () => reviewAccessRequest(userId, 'pending')));
+        }
         item.append(details, actions);
         accessRequestList.appendChild(item);
     });
+}
+
+function createAccessActionButton(label, className, handler) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.textContent = label;
+    button.addEventListener('click', handler);
+    return button;
 }
 
 function bindAccessRequests() {
@@ -221,29 +307,62 @@ function bindAccessRequests() {
     });
 }
 
-async function reviewAccessRequest(userId) {
+async function reviewAccessRequest(userId, nextStatus) {
     if (!['admin', 'superadmin'].includes(activeAdminUser?.role)) {
-        await showCustomAlert('Bạn không có quyền duyệt yêu cầu truy cập.');
+        window.alert('Bạn không có quyền thay đổi quyền truy cập.');
         return;
     }
 
     const user = currentUsersObj?.[userId];
     const request = currentAccessRequests?.[userId];
-    if (!user || user.role !== 'department' ||
-        String(user.email || '').trim().toLowerCase() !== String(request?.email || '').trim().toLowerCase()) {
-        await showCustomAlert('Tài khoản hoặc email đã thay đổi. Vui lòng tải lại danh sách trước khi duyệt.');
+    const email = String(user?.email || '').trim().toLowerCase();
+    if (!user || user.role !== 'department' || !email ||
+        email !== String(request?.email || '').trim().toLowerCase()) {
+        window.alert('Tài khoản hoặc email đã thay đổi. Hãy tải lại danh sách trước khi tiếp tục.');
+        await loadAccessRequests();
         return;
     }
+    const actions = {
+        approved: { expected: 'pending', label: 'duyệt yêu cầu này', success: 'Đã cấp quyền truy cập.' },
+        blocked: { expected: ['pending', 'approved'], label: 'chặn tài khoản này', success: 'Đã chặn tài khoản.' },
+        pending: { expected: 'blocked', label: 'gỡ chặn và yêu cầu duyệt lại tài khoản này', success: 'Đã gỡ chặn. Tài khoản cần được Admin duyệt lại.' }
+    };
+    const action = actions[nextStatus];
+    if (!action) return;
+    const expected = Array.isArray(action.expected) ? action.expected : [action.expected];
+    if (!expected.includes(request.status)) {
+        window.alert('Trạng thái yêu cầu đã thay đổi. Danh sách sẽ được tải lại.');
+        await loadAccessRequests();
+        return;
+    }
+    if (!window.confirm(`Bạn có chắc muốn ${action.label} của ${user.name || 'tài khoản này'}?`)) return;
+
+    const actionButtons = Array.from(accessRequestList.querySelectorAll('button'));
+    actionButtons.forEach(button => { button.disabled = true; });
+    const reviewedAt = Date.now();
     try {
-        await update(ref(db, `accessRequests/${userId}`), {
-            status: 'approved',
-            reviewedAt: Date.now(),
-            reviewedBy: activeAdminUser.name || activeAdminUser.key || 'Admin'
-        });
+        const result = await runTransaction(ref(db, `accessRequests/${userId}`), current => {
+            if (!current || !expected.includes(current.status) ||
+                String(current.email || '').trim().toLowerCase() !== email) return;
+            return {
+                ...current,
+                status: nextStatus,
+                reviewedAt,
+                reviewedBy: activeAdminUser.name || activeAdminUser.key || 'Admin'
+            };
+        }, { applyLocally: false });
+        if (!result.committed) {
+            window.alert('Yêu cầu đã thay đổi hoặc không còn hợp lệ. Hãy kiểm tra lại trạng thái mới nhất.');
+            await loadAccessRequests();
+            return;
+        }
+        accessRequestStatus.textContent = action.success;
         await loadAccessRequests();
     } catch (error) {
-        console.error('Không thể cập nhật yêu cầu truy cập:', error);
-        await showCustomAlert(`Không thể cập nhật yêu cầu: ${error.message || 'Lỗi không xác định'}`);
+        console.error('Không thể cập nhật quyền truy cập:', error);
+        window.alert(`Không thể cập nhật quyền truy cập: ${error.message || 'Lỗi không xác định'}`);
+    } finally {
+        actionButtons.forEach(button => { button.disabled = false; });
     }
 }
 
@@ -562,6 +681,7 @@ function renderUsers(usersObj) {
     userListDiv.innerHTML = ''; // Xóa danh sách cũ
     currentUsersObj = usersObj || {};
     updateDashboard(currentUsersObj);
+    renderAccessRequests();
 
     // Sắp xếp users theo role (superadmin → admin → member)
     const grouped = { superadmin: [], admin: [], department: [], member: [] };

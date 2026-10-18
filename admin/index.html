@@ -177,8 +177,22 @@
                     <div id="panel-accessRequests" class="panel-content" style="display:none">
                         <div class="admin-box">
                             <div class="admin-panel-heading">
-                                <div><span class="dashboard-eyebrow">XÁC NHẬN TRUY CẬP</span><h1>Yêu cầu truy cập</h1><p>Admin bấm duyệt để cho phép tài khoản Phòng Ban truy cập. Người dùng vẫn cần xác minh email.</p></div>
+                                <div><span class="dashboard-eyebrow">KIỂM SOÁT TÀI KHOẢN</span><h1>Yêu cầu truy cập</h1><p>Xem xét yêu cầu, cấp quyền hoặc chặn tài khoản Phòng Ban. Email vẫn cần được Firebase xác minh.</p></div>
                                 <button id="refreshAccessRequests" class="login-log-refresh" type="button">↻ Tải lại</button>
+                            </div>
+                            <section class="access-request-summary" aria-label="Thống kê yêu cầu truy cập">
+                                <article><span>Đang chờ duyệt</span><strong id="accessPendingTotal">0</strong></article>
+                                <article><span>Đã cho phép</span><strong id="accessApprovedTotal">0</strong></article>
+                                <article><span>Đã chặn</span><strong id="accessBlockedTotal">0</strong></article>
+                            </section>
+                            <div class="access-request-toolbar">
+                                <div class="access-request-filters" role="group" aria-label="Lọc trạng thái yêu cầu">
+                                    <button type="button" class="active" data-access-filter="pending" aria-pressed="true">Đang chờ</button>
+                                    <button type="button" data-access-filter="approved" aria-pressed="false">Đã duyệt</button>
+                                    <button type="button" data-access-filter="blocked" aria-pressed="false">Đã chặn</button>
+                                    <button type="button" data-access-filter="all" aria-pressed="false">Tất cả</button>
+                                </div>
+                                <label class="admin-search access-request-search"><span>⌕</span><input id="accessRequestSearch" type="search" placeholder="Tìm tên hoặc email" aria-label="Tìm yêu cầu truy cập"></label>
                             </div>
                             <p id="accessRequestStatus" class="login-log-status" aria-live="polite">Chưa tải yêu cầu.</p>
                             <div id="accessRequestList" class="access-request-list"></div>

@@ -2,7 +2,7 @@
 // Nhập Firebase Realtime Database và các hàm cần thiết để thao tác với database
 import { auth, db, storage } from "./firebase.js";
 import { isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { ref, push, onValue, remove, update, get, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { ref, push, onValue, remove, update, get, set, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { ref as firebaseStorageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { recordSuccessfulLogin } from "./login-log.js";
 
@@ -7147,6 +7147,9 @@ function dismissLoginToast() {
 function describeLoginError(error) {
     const code = String(error?.code || '');
     const detail = String(error?.message || '');
+    if (code === 'ACCESS_BLOCKED') {
+        return 'Tài khoản này đang bị Admin chặn truy cập. Vui lòng liên hệ Quản trị viên.';
+    }
     if (code === 'PERMISSION_DENIED' || /permission_denied/i.test(detail)) {
         return 'Firebase Realtime Database từ chối quyền truy cập. Kiểm tra Rules của users và accessRequests.';
     }
@@ -7194,6 +7197,9 @@ function enterApplication(user) {
     updateUserDisplay();
     document.getElementById('mainContent').style.display = 'block';
     loginOverlay.classList.add('hidden');
+    if (user.role === 'department') {
+        watchForAccessApproval(user, String(user.email || '').trim().toLowerCase());
+    }
     startApp();
 }
 
@@ -7232,27 +7238,35 @@ async function requestDepartmentEmailLink(user, email) {
 
 async function createPendingAccessRequest(user, email) {
     const requestRef = ref(db, `accessRequests/${user.key}`);
-    const snapshot = await get(requestRef);
-    const existing = snapshot.exists() ? snapshot.val() : null;
-    if (existing?.status === 'approved' &&
-        String(existing.email || '').trim().toLowerCase() === email) {
-        return;
-    }
-    if (existing?.status === 'pending' &&
-        String(existing.email || '').trim().toLowerCase() === email) {
-        return;
-    }
-
-    await set(requestRef, {
-        userId: user.key,
-        userName: String(user.name || 'Tài khoản Phòng Ban'),
-        email,
-        role: 'department',
-        status: 'pending',
-        emailVerified: false,
-        verificationRequestedAt: Date.now(),
-        requestedAt: Date.now()
+    let blocked = false;
+    const result = await runTransaction(requestRef, existing => {
+        if (existing?.status === 'blocked') {
+            blocked = true;
+            return;
+        }
+        if (['approved', 'pending'].includes(existing?.status) &&
+            String(existing.email || '').trim().toLowerCase() === email) {
+            return existing;
+        }
+        const requestedAt = Date.now();
+        return {
+            ...(existing || {}),
+            userId: user.key,
+            userName: String(user.name || 'Tài khoản Phòng Ban'),
+            email,
+            role: 'department',
+            status: 'pending',
+            emailVerified: false,
+            verificationRequestedAt: requestedAt,
+            requestedAt
+        };
     });
+    if (blocked) {
+        const error = new Error('Tài khoản đang bị chặn.');
+        error.code = 'ACCESS_BLOCKED';
+        throw error;
+    }
+    if (!result.committed) throw new Error('Không thể tạo yêu cầu truy cập. Vui lòng thử lại.');
 }
 
 function watchForAccessApproval(user, email) {
@@ -7260,12 +7274,44 @@ function watchForAccessApproval(user, email) {
     approvalRedirectInProgress = false;
 
     accessApprovalUnsubscribe = onValue(ref(db, `accessRequests/${user.key}`), snapshot => {
-        if (approvalRedirectInProgress || !snapshot.exists()) return;
+        let activeSession = null;
+        try {
+            activeSession = JSON.parse(sessionStorage.getItem('user') || 'null');
+        } catch (error) {
+            console.error('Không thể đọc phiên đăng nhập hiện tại:', error);
+        }
+        const isActiveSession = activeSession?.key === user.key;
+        if (!snapshot.exists()) {
+            if (isActiveSession) {
+                logout();
+                showLoginMessage('Không tìm thấy quyền truy cập của tài khoản. Vui lòng liên hệ Quản trị viên.');
+            }
+            return;
+        }
         const request = snapshot.val();
         const authUser = auth.currentUser;
+        const requestEmail = String(request.email || '').trim().toLowerCase();
+        if (request.status === 'blocked' || (isActiveSession &&
+            (request.status !== 'approved' || request.emailVerified !== true ||
+                requestEmail !== email || !authUser?.emailVerified ||
+                String(authUser.email || '').trim().toLowerCase() !== email))) {
+            const wasActiveSession = isActiveSession;
+            if (accessApprovalUnsubscribe) {
+                accessApprovalUnsubscribe();
+                accessApprovalUnsubscribe = null;
+            }
+            sessionStorage.removeItem('verifiedEmailSignIn');
+            logout();
+            showLoginMessage(wasActiveSession
+                ? 'Quyền truy cập tài khoản đã bị Admin chặn hoặc thu hồi. Vui lòng liên hệ Quản trị viên.'
+                : 'Tài khoản này đang bị Admin chặn truy cập. Vui lòng liên hệ Quản trị viên.');
+            return;
+        }
+        if (isActiveSession) return;
+        if (approvalRedirectInProgress) return;
         if (request?.status !== 'approved' ||
-            String(request.email || '').trim().toLowerCase() !== email ||
-            request.emailVerified === false ||
+            requestEmail !== email ||
+            request.emailVerified !== true ||
             !authUser?.emailVerified ||
             String(authUser.email || '').trim().toLowerCase() !== email) {
             return;
@@ -7307,10 +7353,39 @@ function watchForAccessApproval(user, email) {
 
 async function createAccessRequestAfterEmailVerification(user, email) {
     const requestRef = ref(db, `accessRequests/${user.key}`);
-    const requestSnap = await get(requestRef);
-    const accessRequest = requestSnap.exists() ? requestSnap.val() : null;
+    let blocked = false;
+    const verifiedAt = Date.now();
+    const result = await runTransaction(requestRef, current => {
+        if (current?.status === 'blocked') {
+            blocked = true;
+            return;
+        }
+        const sameEmail = String(current?.email || '').trim().toLowerCase() === email;
+        const request = sameEmail ? current : {
+            userId: user.key,
+            userName: String(user.name || 'Tài khoản Phòng Ban'),
+            email,
+            role: 'department',
+            requestedAt: verifiedAt
+        };
+        return {
+            ...request,
+            emailVerified: true,
+            emailVerifiedAt: verifiedAt,
+            ...(request.status === 'approved' ? {} : { status: 'pending' })
+        };
+    });
+    if (blocked) {
+        const error = new Error('Tài khoản đang bị chặn.');
+        error.code = 'ACCESS_BLOCKED';
+        throw error;
+    }
+    if (!result.committed) throw new Error('Không thể cập nhật yêu cầu truy cập. Vui lòng thử lại.');
+
+    const accessRequest = result.snapshot.val();
     if (accessRequest?.status === 'approved' &&
-        String(accessRequest.email || '').trim().toLowerCase() === email) {
+        String(accessRequest.email || '').trim().toLowerCase() === email &&
+        accessRequest.emailVerified === true) {
         try {
             await recordSuccessfulLogin(user, 'Ứng dụng');
         } catch (logError) {
@@ -7318,24 +7393,6 @@ async function createAccessRequestAfterEmailVerification(user, email) {
         }
         enterApplication(user);
         return;
-    }
-    if (accessRequest?.status !== 'pending' ||
-        String(accessRequest.email || '').trim().toLowerCase() !== email) {
-        await set(requestRef, {
-            userId: user.key,
-            userName: String(user.name || 'Tài khoản Phòng Ban'),
-            email,
-            role: 'department',
-            status: 'pending',
-            emailVerified: true,
-            emailVerifiedAt: Date.now(),
-            requestedAt: Date.now()
-        });
-    } else if (accessRequest.emailVerified !== true) {
-        await update(requestRef, {
-            emailVerified: true,
-            emailVerifiedAt: Date.now()
-        });
     }
     watchForAccessApproval(user, email);
     showLoginMessage('Đang chờ Quản trị viên xác minh yêu cầu truy cập. Trang chính sẽ mở tự động sau khi Admin duyệt.');
@@ -7391,6 +7448,10 @@ async function completeEmailLinkSignIn(email) {
         showLoginMessage('Email đã được Firebase xác minh. Nhập PIN để tiếp tục đăng nhập.');
     } catch (error) {
         console.error('Không thể xác minh liên kết đăng nhập email:', error);
+        if (error?.code === 'ACCESS_BLOCKED') {
+            sessionStorage.removeItem('verifiedEmailSignIn');
+            signOut(auth).catch(signOutError => console.error('Không thể kết thúc phiên Firebase bị chặn:', signOutError));
+        }
         showLoginMessage(describeLoginError(error));
         completeEmailLinkBtn.hidden = true;
         localStorage.removeItem('emailForSignIn');
@@ -7668,6 +7729,11 @@ function applyRolePermissions() {
 
 // Đăng xuất: Xóa session và quảy lại trang đăng nhập
 function logout() {
+    if (accessApprovalUnsubscribe) {
+        accessApprovalUnsubscribe();
+        accessApprovalUnsubscribe = null;
+    }
+    approvalRedirectInProgress = false;
     sessionStorage.removeItem('user');
     sessionStorage.removeItem('verifiedEmailSignIn');
     signOut(auth).catch(error => console.error('Không thể đăng xuất Firebase Authentication:', error));
@@ -8758,6 +8824,7 @@ async function restoreSavedSession() {
                 sessionStorage.removeItem('user');
                 return;
             }
+            await auth.authStateReady();
             const usersSnap = await get(ref(db, 'users'));
             const users = (usersSnap.exists() ? normalizeLoginUsers(usersSnap.val()) : {}) || {};
             const currentUser = users[user.key];
@@ -8767,9 +8834,15 @@ async function restoreSavedSession() {
             if (!currentUser || currentUser.role !== 'department' || !currentEmail ||
                 String(currentUser.pin) !== String(user.pin) ||
                 request?.status !== 'approved' ||
-                String(request.email || '').trim().toLowerCase() !== currentEmail) {
+                request.emailVerified !== true ||
+                String(request.email || '').trim().toLowerCase() !== currentEmail ||
+                !auth.currentUser?.emailVerified ||
+                String(auth.currentUser.email || '').trim().toLowerCase() !== currentEmail) {
                 sessionStorage.removeItem('user');
-                showLoginMessage('Tài khoản cần được Admin duyệt lại trước khi tiếp tục.');
+                signOut(auth).catch(error => console.error('Không thể kết thúc phiên Firebase chưa được phép:', error));
+                showLoginMessage(request?.status === 'blocked'
+                    ? 'Tài khoản này đang bị Admin chặn truy cập. Vui lòng liên hệ Quản trị viên.'
+                    : 'Tài khoản cần được Admin duyệt và xác minh email trước khi tiếp tục.');
                 return;
             }
             user = { key: user.key, ...currentUser };
