@@ -86,6 +86,8 @@ const nbItRefreshBtn = document.getElementById('nbItRefreshBtn');
 const nbItImportBtn = document.getElementById('nbItImportBtn');
 const nbItImportFileInput = document.getElementById('nbItImportFile');
 const nbItExportBtn = document.getElementById('nbItExportBtn');
+const nbItAddDesktopBtn = document.getElementById('nbItAddDesktopBtn');
+const nbItDeleteAllBtn = document.getElementById('nbItDeleteAllBtn');
 const nbItPreviousYearBtn = document.getElementById('nbItPreviousYear');
 const nbItNextYearBtn = document.getElementById('nbItNextYear');
 const nbItSelectionModeBtn = document.getElementById('nbItSelectionModeBtn');
@@ -3051,6 +3053,57 @@ function toggleNbItCellSelection(cell) {
     updateNbItSelectionControls();
 }
 
+function getNbItMergedHdGroups(employees, entries, year, monthIndex) {
+    const monthStart = `${year}-${String(monthIndex + 1).padStart(2, '0')}-01`;
+    const monthEnd = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(new Date(year, monthIndex + 1, 0).getDate()).padStart(2, '0')}`;
+    const employeeIndexByKey = new Map(employees.map((employee, index) => [employee.key, index]));
+    const entriesBySchedule = new Map();
+
+    entries.forEach(entry => {
+        if (entry.kind !== 'HD' || entry.startDate > monthEnd || (entry.endDate || entry.startDate) < monthStart) return;
+        const label = String(entry.label || 'HD').trim();
+        const endDate = entry.endDate || entry.startDate;
+        const scheduleKey = `${label.toLocaleUpperCase()}|${entry.startDate}|${endDate}`;
+        const employeeIndex = employeeIndexByKey.get(entry.employeeKey);
+        if (employeeIndex === undefined) return;
+        const employeesForSchedule = entriesBySchedule.get(scheduleKey) || new Map();
+        employeesForSchedule.set(employeeIndex, entry);
+        entriesBySchedule.set(scheduleKey, employeesForSchedule);
+    });
+
+    const mergedGroups = [];
+    entriesBySchedule.forEach(employeesForSchedule => {
+        const employeeIndexes = [...employeesForSchedule.keys()].sort((first, second) => first - second);
+        let runStart = 0;
+        while (runStart < employeeIndexes.length) {
+            let runEnd = runStart;
+            while (runEnd + 1 < employeeIndexes.length &&
+                employeeIndexes[runEnd + 1] === employeeIndexes[runEnd] + 1) {
+                runEnd += 1;
+            }
+            if (runEnd > runStart) {
+                const firstEmployeeIndex = employeeIndexes[runStart];
+                const lastEmployeeIndex = employeeIndexes[runEnd];
+                const entry = employeesForSchedule.get(firstEmployeeIndex);
+                const clippedStart = entry.startDate < monthStart ? monthStart : entry.startDate;
+                const clippedEnd = (entry.endDate || entry.startDate) > monthEnd
+                    ? monthEnd
+                    : entry.endDate || entry.startDate;
+                mergedGroups.push({
+                    firstEmployeeIndex,
+                    lastEmployeeIndex,
+                    firstDay: Number(clippedStart.slice(8, 10)),
+                    lastDay: Number(clippedEnd.slice(8, 10)),
+                    entry,
+                    employees: employeeIndexes.slice(runStart, runEnd + 1).map(index => employees[index])
+                });
+            }
+            runStart = runEnd + 1;
+        }
+    });
+    return mergedGroups;
+}
+
 function isItEmployee(employee) {
     const details = normalizeEmployeeText([
         employee.department,
@@ -3110,7 +3163,7 @@ function renderNbItCalendar() {
     const hdColors = ['#c6d9f0', '#d9c7df', '#f4e2c7', '#d5e6d1', '#ffe49a', '#d4e6eb'];
     const getHdColor = entry => {
         let hash = 0;
-        for (const character of String(entry.id || entry.label || 'HD')) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+        for (const character of String(entry.label || 'HD').trim().toLocaleUpperCase()) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
         return hdColors[hash % hdColors.length];
     };
 
@@ -3167,7 +3220,20 @@ function renderNbItCalendar() {
         table.appendChild(thead);
 
         const tbody = document.createElement('tbody');
-        nbItEmployees.forEach(employee => {
+        const mergedGroups = getNbItMergedHdGroups(nbItEmployees, yearEntries, year, monthIndex);
+        const mergedGroupStarts = new Map();
+        const mergedGroupCoveredCells = new Set();
+        mergedGroups.forEach(group => {
+            mergedGroupStarts.set(`${group.firstEmployeeIndex}|${group.firstDay}`, group);
+            for (let employeeIndex = group.firstEmployeeIndex; employeeIndex <= group.lastEmployeeIndex; employeeIndex += 1) {
+                for (let day = group.firstDay; day <= group.lastDay; day += 1) {
+                    if (employeeIndex !== group.firstEmployeeIndex || day !== group.firstDay) {
+                        mergedGroupCoveredCells.add(`${employeeIndex}|${day}`);
+                    }
+                }
+            }
+        });
+        nbItEmployees.forEach((employee, employeeIndex) => {
             const row = document.createElement('tr');
             const codeCell = document.createElement('td');
             codeCell.className = 'nb-it-code-column';
@@ -3183,6 +3249,32 @@ function renderNbItCalendar() {
                     row.appendChild(cell);
                     continue;
                 }
+                const mergeKey = `${employeeIndex}|${day}`;
+                const mergedGroup = mergedGroupStarts.get(mergeKey);
+                if (mergedGroup) {
+                    const firstDate = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    cell.classList.add('nb-it-event-cell', 'nb-it-merged-hd-cell');
+                    cell.rowSpan = mergedGroup.lastEmployeeIndex - mergedGroup.firstEmployeeIndex + 1;
+                    cell.colSpan = mergedGroup.lastDay - mergedGroup.firstDay + 1;
+                    cell.dataset.employeeKey = employee.key;
+                    cell.dataset.date = firstDate;
+                    cell.tabIndex = 0;
+                    const names = mergedGroup.employees.map(item => item.name || item.code).join(', ');
+                    cell.setAttribute('aria-label', `${mergedGroup.entry.label || 'HD'}, ${names}, ${firstDate} đến ${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(mergedGroup.lastDay).padStart(2, '0')}`);
+                    const chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.className = 'nb-it-entry-chip';
+                    chip.dataset.entryId = mergedGroup.entry.id;
+                    chip.dataset.kind = 'HD';
+                    chip.title = `${mergedGroup.entry.label || 'HD'} · ${names} · ${mergedGroup.entry.startDate}${mergedGroup.entry.endDate !== mergedGroup.entry.startDate ? ` đến ${mergedGroup.entry.endDate}` : ''}`;
+                    chip.setAttribute('aria-label', `Sửa ${chip.title}`);
+                    chip.style.setProperty('--nb-it-hd-color', getHdColor(mergedGroup.entry));
+                    chip.textContent = mergedGroup.entry.label || 'HD';
+                    cell.appendChild(chip);
+                    row.appendChild(cell);
+                    continue;
+                }
+                if (mergedGroupCoveredCells.has(mergeKey)) continue;
                 const date = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 cell.dataset.employeeKey = employee.key;
                 cell.dataset.date = date;
@@ -3414,9 +3506,33 @@ function parseNbItExcelWorkbook(workbook, year, employees) {
     let unknownEmployeeRows = 0;
     let duplicateFileCells = 0;
     let monthSections = 0;
+    const importedYears = new Set();
+    const addEntry = (employee, employeeName, marker, kind, startDate, endDate) => {
+        const overlapsExisting = [...entries.values()].some(entry =>
+            entry.employeeKey === employee.key &&
+            entry.startDate <= endDate &&
+            (entry.endDate || entry.startDate) >= startDate
+        );
+        if (overlapsExisting) {
+            duplicateFileCells += 1;
+            return;
+        }
+        entries.set(`${employee.key}|${startDate}`, {
+            employeeKey: employee.key,
+            employeeCode: String(employee.code || ''),
+            employeeName: String(employee.name || employeeName),
+            kind,
+            label: marker.slice(0, 30) || kind,
+            startDate,
+            endDate
+        });
+    };
     workbook.SheetNames.forEach(sheetName => {
         const worksheet = workbook.Sheets[sheetName];
         if (!worksheet || !worksheet['!ref']) return;
+        const sheetYearMatch = String(sheetName).match(/(?:^|[^0-9])(20\d{2})(?:$|[^0-9])/);
+        const sheetYear = sheetYearMatch ? Number(sheetYearMatch[1]) : year;
+        if (sheetYear < 2000 || sheetYear > 2100) return;
         const range = XLSX.utils.decode_range(worksheet['!ref']);
         const sections = [];
         for (let rowIndex = range.s.r; rowIndex <= range.e.r; rowIndex += 1) {
@@ -3431,6 +3547,7 @@ function parseNbItExcelWorkbook(workbook, year, employees) {
 
         sections.forEach((section, sectionIndex) => {
             monthSections += 1;
+            importedYears.add(sheetYear);
             const nextSectionRow = sections[sectionIndex + 1]?.rowIndex ?? range.e.r + 1;
             const dayHeaderRow = section.rowIndex + 1;
             const employeeStartRow = section.rowIndex + 4;
@@ -3438,7 +3555,7 @@ function parseNbItExcelWorkbook(workbook, year, employees) {
             for (let columnIndex = range.s.c + 2; columnIndex <= range.e.c; columnIndex += 1) {
                 const dayValue = Number(nbItExcelCellText(worksheet, dayHeaderRow, columnIndex));
                 if (Number.isInteger(dayValue) && dayValue >= 1 && dayValue <= 31) {
-                    const date = `${year}-${String(section.month).padStart(2, '0')}-${String(dayValue).padStart(2, '0')}`;
+                    const date = `${sheetYear}-${String(section.month).padStart(2, '0')}-${String(dayValue).padStart(2, '0')}`;
                     if (isValidYmd(date)) daysByColumn.set(columnIndex, date);
                 }
             }
@@ -3454,31 +3571,52 @@ function parseNbItExcelWorkbook(workbook, year, employees) {
                 }
                 const employee = employeeMatches[0];
 
-                daysByColumn.forEach((date, columnIndex) => {
-                    const marker = nbItExcelCellText(worksheet, rowIndex, columnIndex);
-                    const match = marker.match(/^(NB|NL|NP|TC|HD)(?:\s*[-:]?\s*(.*))?$/i);
-                    if (!match) return;
-                    const kind = match[1].toUpperCase();
-                    const key = `${employee.key}|${date}`;
-                    if (entries.has(key)) {
-                        duplicateFileCells += 1;
-                        return;
-                    }
-                    entries.set(key, {
-                        employeeKey: employee.key,
-                        employeeCode: String(employee.code || ''),
-                        employeeName: String(employee.name || employeeName),
-                        kind,
-                        label: marker.slice(0, 30) || kind,
-                        startDate: date,
-                        endDate: date
+                const mergedDayColumns = new Set();
+                (worksheet['!merges'] || [])
+                    .filter(merge =>
+                        merge.s.r >= employeeStartRow &&
+                        merge.e.r < nextSectionRow &&
+                        merge.s.r <= rowIndex &&
+                        merge.e.r >= rowIndex &&
+                        merge.s.c >= range.s.c + 2 &&
+                        (merge.e.c > merge.s.c || merge.e.r > merge.s.r) &&
+                        daysByColumn.has(merge.s.c)
+                    )
+                    .forEach(merge => {
+                        const dates = [...daysByColumn.entries()]
+                            .filter(([columnIndex]) => columnIndex >= merge.s.c && columnIndex <= merge.e.c)
+                            .map(([, date]) => date);
+                        for (let columnIndex = merge.s.c; columnIndex <= merge.e.c; columnIndex += 1) {
+                            mergedDayColumns.add(columnIndex);
+                        }
+                        if (!dates.length) return;
+
+                        const marker = nbItExcelCellText(worksheet, merge.s.r, merge.s.c);
+                        const match = marker.match(/^(NB|NL|NP|TC|H[ĐD])(?:\s*[-:]?\s*(.*))?$/i);
+                        if (!match) return;
+                        const kind = /^H[ĐD]$/i.test(match[1]) ? 'HD' : match[1].toUpperCase();
+                        addEntry(employee, employeeName, marker, kind, dates[0], dates[dates.length - 1]);
                     });
+
+                daysByColumn.forEach((date, columnIndex) => {
+                    if (mergedDayColumns.has(columnIndex)) return;
+                    const marker = nbItExcelCellText(worksheet, rowIndex, columnIndex);
+                    const match = marker.match(/^(NB|NL|NP|TC|H[ĐD])(?:\s*[-:]?\s*(.*))?$/i);
+                    if (!match) return;
+                    const kind = /^H[ĐD]$/i.test(match[1]) ? 'HD' : match[1].toUpperCase();
+                    addEntry(employee, employeeName, marker, kind, date, date);
                 });
             }
         });
     });
 
-    return { entries: [...entries.values()], unknownEmployeeRows, duplicateFileCells, monthSections };
+    return {
+        entries: [...entries.values()],
+        unknownEmployeeRows,
+        duplicateFileCells,
+        monthSections,
+        years: [...importedYears].sort((first, second) => first - second)
+    };
 }
 
 function nbItScheduleEntriesFromSnapshot(snapshot) {
@@ -3535,7 +3673,7 @@ async function importNbItExcelFile(file) {
     const alreadyScheduled = nbItScheduleEntriesFromSnapshot(schedulesSnapshot);
     const newEntries = parsed.entries.filter(candidate => !alreadyScheduled.some(existing =>
         existing.employeeKey === candidate.employeeKey &&
-        existing.startDate <= candidate.startDate &&
+        existing.startDate <= candidate.endDate &&
         existing.endDate >= candidate.startDate
     ));
     const skippedExisting = parsed.entries.length - newEntries.length;
@@ -3547,7 +3685,7 @@ async function importNbItExcelFile(file) {
     }
 
     const confirmed = await showCustomConfirm(
-        `Tìm thấy ${parsed.entries.length} ô lịch hợp lệ thuộc ${parsed.monthSections} tháng, áp dụng cho năm ${year}.<br>` +
+        `Tìm thấy ${parsed.entries.length} lịch hợp lệ thuộc ${parsed.monthSections} tháng, áp dụng cho năm ${parsed.years.join(', ')}.<br>` +
         `Sẽ thêm ${newEntries.length} lịch mới; bỏ qua ${skippedExisting} ô đã có lịch.` +
         `${parsed.duplicateFileCells ? `<br>Bỏ qua ${parsed.duplicateFileCells} ô trùng trong file.` : ''}` +
         `${parsed.unknownEmployeeRows ? `<br>Không khớp ${parsed.unknownEmployeeRows} dòng mã nhân viên.` : ''}<br>` +
@@ -3564,7 +3702,7 @@ async function importNbItExcelFile(file) {
     for (const candidate of newEntries) {
         const exists = latestEntries.some(existing =>
             existing.employeeKey === candidate.employeeKey &&
-            existing.startDate <= candidate.startDate &&
+            existing.startDate <= candidate.endDate &&
             existing.endDate >= candidate.startDate
         );
         if (exists) {
@@ -7835,6 +7973,46 @@ document.querySelectorAll('.menu-category-btn[data-menu-modal]').forEach(button 
 
 nbItYearInput.value = String(new Date().getFullYear());
 nbItAddBtn.addEventListener('click', () => openNbItEntryForm());
+nbItAddDesktopBtn.addEventListener('click', () => openNbItEntryForm());
+nbItDeleteAllBtn.addEventListener('click', async () => {
+    if (!isAdmin()) return;
+    const userId = getCurrentUserId();
+    nbItDeleteAllBtn.disabled = true;
+    try {
+        if (!userId) throw new Error('Không xác định được tài khoản đang đăng nhập.');
+        const schedulesSnapshot = await get(nbItScheduleRef());
+        if (userId !== getCurrentUserId() || !isAdmin()) {
+            throw new Error('Tài khoản đã thay đổi. Vui lòng thử lại.');
+        }
+        let scheduleCount = 0;
+        schedulesSnapshot.forEach(() => {
+            scheduleCount += 1;
+        });
+        if (!scheduleCount) {
+            await showCustomAlert('Hiện không có lịch NB - IT để xóa.');
+            return;
+        }
+        const confirmed = await showCustomConfirm(
+            `Bạn sắp xóa toàn bộ ${scheduleCount} lịch NB - IT của tài khoản này, ở tất cả các năm. Thao tác này không thể hoàn tác.<br>Bạn có chắc chắn muốn tiếp tục?`
+        );
+        if (!confirmed) return;
+        if (userId !== getCurrentUserId() || !isAdmin()) {
+            throw new Error('Tài khoản đã thay đổi. Vui lòng thử lại.');
+        }
+        await remove(nbItScheduleRef());
+        nbItEntryForm.hidden = true;
+        resetNbItEntryForm();
+        nbItSelectedCells.clear();
+        nbItBulkSelectionMode = false;
+        await loadNbItSchedule();
+        await showCustomAlert(`Đã xóa toàn bộ ${scheduleCount} lịch NB - IT.`);
+    } catch (error) {
+        console.error('Lỗi xóa toàn bộ lịch NB - IT:', error);
+        await showCustomAlert(`Không thể xóa toàn bộ lịch NB - IT: ${error?.message || String(error)}`);
+    } finally {
+        nbItDeleteAllBtn.disabled = false;
+    }
+});
 nbItSelectionModeBtn.addEventListener('click', () => {
     nbItBulkSelectionMode = !nbItBulkSelectionMode;
     updateNbItSelectionControls();

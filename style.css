@@ -1517,6 +1517,10 @@ td select {
         flex: 0 0 auto;
     }
 
+    #nbItAddBtn {
+        display: none;
+    }
+
     .nb-it-year-controls button,
     .nb-it-form-actions button {
         min-height: 38px;
@@ -1586,6 +1590,44 @@ td select {
     .nb-it-year-controls .nb-it-add-btn:hover,
     .nb-it-form-actions button[type="submit"]:hover {
         background: #11683a;
+    }
+
+    .nb-it-delete-all-btn {
+        min-height: 48px;
+        padding: 0 18px;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        background: #fff1f2;
+        color: #b42318;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .nb-it-entry-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .nb-it-entry-actions > .nb-it-add-btn {
+        display: inline-flex;
+        align-items: center;
+        min-height: 48px;
+        padding: 0 18px;
+        border: 1px solid #177245;
+        border-radius: 8px;
+        background: #168148;
+        color: #fff;
+        box-shadow: none;
+    }
+
+    .nb-it-entry-actions > .nb-it-add-btn:hover {
+        background: #11683a;
+    }
+
+    .nb-it-delete-all-btn:hover {
+        background: #ffe4e6;
     }
 
     .nb-it-form-actions .nb-it-delete-btn {
@@ -2167,6 +2209,10 @@ td select {
             line-height: 1.15;
             text-align: center;
             white-space: normal;
+        }
+
+        .nb-it-header-actions #nbItAddBtn {
+            display: block;
         }
 
         .nb-it-entry-form {
@@ -4844,6 +4890,19 @@ td select {
         align-items: flex-start;
         flex-direction: column;
         gap: 8px;
+    }
+
+    .nb-it-delete-all-btn {
+        width: 100%;
+        min-height: 38px;
+    }
+
+    .nb-it-entry-actions {
+        width: 100%;
+    }
+
+    .nb-it-entry-actions > .nb-it-add-btn {
+        display: none;
     }
 
     .employees-pagination nav {
