@@ -7110,6 +7110,8 @@ const pinDotsEl = document.getElementById('pinDots');
 const loginEmailInput = document.getElementById('loginEmail');
 const completeEmailLinkBtn = document.getElementById('completeEmailLinkBtn');
 const loginMessageEl = document.getElementById('loginMessage');
+const loginMessageTextEl = document.getElementById('loginMessageText');
+const loginToastCloseBtn = document.getElementById('loginToastClose');
 const kpButtons = document.querySelectorAll('.kp');
 const kpClear = document.getElementById('kp-clear');
 const kpBack = document.getElementById('kp-back');
@@ -7118,6 +7120,7 @@ let enteredPin = '';
 let loginInProgress = false;
 let accessApprovalUnsubscribe = null;
 let approvalRedirectInProgress = false;
+let loginToastTimeout = null;
 
 function updatePinDots() {
     const dots = pinDotsEl.querySelectorAll('.dot');
@@ -7125,7 +7128,51 @@ function updatePinDots() {
 }
 
 function showLoginMessage(message) {
-    if (loginMessageEl) loginMessageEl.textContent = message;
+    if (!loginMessageEl || !loginMessageTextEl) return;
+    clearTimeout(loginToastTimeout);
+    loginMessageTextEl.textContent = message;
+    loginMessageEl.hidden = !message;
+    if (message) {
+        loginToastTimeout = setTimeout(() => {
+            loginMessageEl.hidden = true;
+        }, 8000);
+    }
+}
+
+function dismissLoginToast() {
+    clearTimeout(loginToastTimeout);
+    loginMessageEl.hidden = true;
+}
+
+function describeLoginError(error) {
+    const code = String(error?.code || '');
+    const detail = String(error?.message || '');
+    if (code === 'PERMISSION_DENIED' || /permission_denied/i.test(detail)) {
+        return 'Firebase Realtime Database từ chối quyền truy cập. Kiểm tra Rules của users và accessRequests.';
+    }
+    if (code === 'auth/operation-not-allowed') {
+        return 'Firebase chưa bật Email link (passwordless sign-in) trong Authentication > Sign-in method.';
+    }
+    if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri' ||
+        code === 'auth/unauthorized-domain') {
+        return 'Tên miền ứng dụng chưa được phép trong Firebase Authentication.';
+    }
+    if (code === 'auth/invalid-email') return 'Email không hợp lệ.';
+    if (code === 'auth/too-many-requests') return 'Đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau.';
+    if (code === 'auth/expired-action-code' || code === 'auth/invalid-action-code') {
+        return 'Liên kết xác minh đã hết hạn hoặc đã được sử dụng. Hãy gửi một liên kết mới.';
+    }
+    if (code === 'auth/email-already-in-use') {
+        return 'Email đã được đăng ký theo phương thức khác trong Firebase Authentication.';
+    }
+    if (code === 'auth/network-request-failed' || code === 'NETWORK_ERROR' ||
+        /network request failed/i.test(detail)) {
+        return 'Không kết nối được Firebase. Kiểm tra mạng rồi thử lại.';
+    }
+    if (code || detail) {
+        return `Firebase trả lỗi${code ? ` (${code})` : ''}${detail ? `: ${detail}` : '.'}`;
+    }
+    return 'Không thể xác minh đăng nhập với máy chủ. Vui lòng thử lại.';
 }
 
 function normalizeLoginUsers(usersObj) {
@@ -7249,12 +7296,12 @@ function watchForAccessApproval(user, email) {
         }).catch(error => {
             approvalRedirectInProgress = false;
             console.error('Không thể xác minh quyền truy cập đã duyệt:', error);
-            showLoginMessage('Không thể kiểm tra quyền truy cập vừa được duyệt. Vui lòng thử lại.');
+            showLoginMessage(`Không thể kiểm tra quyền truy cập vừa được duyệt. ${describeLoginError(error)}`);
         });
     }, error => {
         accessApprovalUnsubscribe = null;
         console.error('Không thể theo dõi trạng thái duyệt truy cập:', error);
-        showLoginMessage('Không thể theo dõi yêu cầu duyệt. Vui lòng thử đăng nhập lại.');
+        showLoginMessage(`Không thể theo dõi yêu cầu duyệt. ${describeLoginError(error)}`);
     });
 }
 
@@ -7344,11 +7391,7 @@ async function completeEmailLinkSignIn(email) {
         showLoginMessage('Email đã được Firebase xác minh. Nhập PIN để tiếp tục đăng nhập.');
     } catch (error) {
         console.error('Không thể xác minh liên kết đăng nhập email:', error);
-        showLoginMessage(error?.code === 'auth/operation-not-allowed'
-            ? 'Firebase chưa bật Email link (passwordless sign-in) trong Authentication > Sign-in method.'
-            : error?.code === 'auth/unauthorized-continue-uri' || error?.code === 'auth/invalid-continue-uri'
-                ? 'Tên miền ứng dụng chưa được phép trong Firebase Authentication.'
-                : 'Liên kết không hợp lệ hoặc đã hết hạn. Hãy nhập PIN để gửi liên kết mới.');
+        showLoginMessage(describeLoginError(error));
         completeEmailLinkBtn.hidden = true;
         localStorage.removeItem('emailForSignIn');
         localStorage.removeItem('pendingDepartmentEmailLogin');
@@ -7440,17 +7483,7 @@ async function attemptLogin(pin) {
         enterApplication(matched);
     } catch (err) {
         console.error(err);
-        if (err?.code === 'auth/operation-not-allowed') {
-            loginMessage = 'Firebase chưa bật Email link (passwordless sign-in). Hãy bật trong Authentication > Sign-in method.';
-        } else if (err?.code === 'auth/unauthorized-continue-uri' || err?.code === 'auth/invalid-continue-uri') {
-            loginMessage = 'Tên miền ứng dụng chưa được phép trong Firebase Authentication.';
-        } else if (err?.code === 'auth/invalid-email') {
-            loginMessage = 'Email không hợp lệ.';
-        } else if (err?.code === 'auth/too-many-requests') {
-            loginMessage = 'Đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau.';
-        } else {
-            loginMessage = 'Không thể xác minh đăng nhập với máy chủ. Vui lòng thử lại.';
-        }
+        loginMessage = describeLoginError(err);
     } finally {
         hideLoading();
         loginInProgress = false;
@@ -7513,6 +7546,7 @@ document.addEventListener('keydown', (e) => {
 
 if (kpClear) kpClear.onclick = () => { enteredPin = ''; updatePinDots(); };
 if (kpBack) kpBack.onclick = () => { enteredPin = enteredPin.slice(0, -1); updatePinDots(); };
+loginToastCloseBtn.addEventListener('click', dismissLoginToast);
 completeEmailLinkBtn.addEventListener('click', () => {
     completeEmailLinkSignIn(String(loginEmailInput.value || '').trim().toLowerCase());
 });
@@ -8745,7 +8779,7 @@ async function restoreSavedSession() {
     } catch (error) {
         console.error('Không thể khôi phục phiên đăng nhập:', error);
         sessionStorage.removeItem('user');
-        showLoginMessage('Không thể xác minh phiên đăng nhập. Vui lòng đăng nhập lại.');
+        showLoginMessage(`Không thể xác minh phiên đăng nhập. ${describeLoginError(error)}`);
     }
 }
 

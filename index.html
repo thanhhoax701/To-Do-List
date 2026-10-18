@@ -15,7 +15,11 @@
                 <label class="login-email-label" for="loginEmail">Email tài khoản Phòng Ban</label>
                 <input id="loginEmail" class="login-email-input" type="email" autocomplete="email" placeholder="name@example.com">
                 <button id="completeEmailLinkBtn" class="email-link-complete-btn" type="button" hidden>Hoàn tất xác minh email</button>
-                <p id="loginMessage" class="login-message" aria-live="polite"></p>
+                <div id="loginMessage" class="login-toast" role="status" aria-live="polite" aria-atomic="true" hidden>
+                    <span class="login-toast-icon" aria-hidden="true">!</span>
+                    <span id="loginMessageText"></span>
+                    <button id="loginToastClose" class="login-toast-close" type="button" aria-label="Đóng thông báo">&times;</button>
+                </div>
                 <div id="pinDots" class="pin-dots">
                     <span class="dot"></span>
                     <span class="dot"></span>

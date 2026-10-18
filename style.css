@@ -1413,12 +1413,78 @@ td select {
     display: none;
 }
 
-.login-message {
-    min-height: 18px;
-    margin: 0 0 8px;
-    color: #ffd166;
-    font-size: 12px;
-    line-height: 1.5;
+.login-toast[hidden] {
+    display: none;
+}
+
+.login-toast {
+    position: fixed;
+    z-index: 100001;
+    top: max(16px, env(safe-area-inset-top));
+    left: 50%;
+    display: flex;
+    width: min(460px, calc(100vw - 32px));
+    min-height: 52px;
+    align-items: center;
+    gap: 10px;
+    box-sizing: border-box;
+    padding: 11px 12px;
+    transform: translateX(-50%);
+    border: 1px solid rgba(255, 209, 102, .55);
+    border-radius: 12px;
+    background: #fff8e5;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, .3);
+    color: #553d08;
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: left;
+    animation: login-toast-in .2s ease-out;
+}
+
+.login-toast-icon {
+    display: grid;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    place-items: center;
+    border-radius: 50%;
+    background: #f2b93b;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+#loginMessageText {
+    flex: 1;
+}
+
+.login-toast-close {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #765c20;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.login-toast-close:hover {
+    background: rgba(125, 93, 20, .1);
+}
+
+@keyframes login-toast-in {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
 }
 
 /* Hiển thị 4 điểm PIN */
