@@ -2023,6 +2023,25 @@ td select {
             font-size: 20px;
         }
 
+        .menu-detail-close,
+        .close {
+            width: 28px;
+            height: 28px;
+            font-size: 20px;
+        }
+
+        .menu-detail-close,
+        .close {
+            top: 8px;
+            right: 8px;
+        }
+
+        .menu-close-btn {
+            width: 28px;
+            height: 28px;
+            font-size: 20px;
+        }
+
         @supports (height: 100dvh) {
             .nb-it-schedule-content {
                 height: 96dvh;
