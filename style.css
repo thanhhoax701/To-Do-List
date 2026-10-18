@@ -2127,12 +2127,12 @@ td select {
         .nb-it-header-actions {
             grid-column: 1 / -1;
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 6px;
         }
 
         .nb-it-header-actions .nb-it-add-btn {
-            grid-column: 1 / -1;
+            grid-column: auto;
         }
 
         .nb-it-header-actions button {
@@ -2178,16 +2178,16 @@ td select {
 
         .nb-it-month-table .nb-it-code-column {
             left: 0;
-            width: 88px;
-            min-width: 88px;
-            max-width: 88px;
+            width: 76px;
+            min-width: 76px;
+            max-width: 76px;
         }
 
         .nb-it-month-table .nb-it-name-column {
-            left: 88px;
-            width: 128px;
-            min-width: 128px;
-            max-width: 128px;
+            left: 76px;
+            width: 110px;
+            min-width: 110px;
+            max-width: 110px;
         }
 
         .nb-it-calendar {
@@ -2215,16 +2215,16 @@ td select {
         }
 
         .nb-it-month-table .nb-it-code-column {
-            width: 76px;
-            min-width: 76px;
-            max-width: 76px;
+            width: 64px;
+            min-width: 64px;
+            max-width: 64px;
         }
 
         .nb-it-month-table .nb-it-name-column {
-            left: 76px;
-            width: 112px;
-            min-width: 112px;
-            max-width: 112px;
+            left: 64px;
+            width: 100px;
+            min-width: 100px;
+            max-width: 100px;
         }
 
         .nb-it-month-table thead th:not(.nb-it-code-column):not(.nb-it-name-column) {
