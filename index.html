@@ -361,8 +361,9 @@
                     <form id="nbItEntryForm" class="nb-it-entry-form" hidden>
                         <input id="nbItEntryId" type="hidden">
                         <div class="nb-it-field">
-                            <label for="nbItEmployee">Nhân viên IT</label>
-                            <select id="nbItEmployee" required></select>
+                            <span id="nbItEmployeeLabel" class="nb-it-field-label">Nhân viên IT</span>
+                            <div id="nbItEmployeePicker" class="nb-it-employee-picker" role="group" aria-labelledby="nbItEmployeeLabel"></div>
+                            <small id="nbItEmployeeHint" class="nb-it-employee-hint" hidden>Chọn một hoặc nhiều nhân viên.</small>
                         </div>
                         <div class="nb-it-field">
                             <label for="nbItKind">Loại</label>

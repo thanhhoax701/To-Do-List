@@ -73,7 +73,8 @@ const nbItYearInput = document.getElementById('nbItYear');
 const nbItMonthFilter = document.getElementById('nbItMonthFilter');
 const nbItEntryForm = document.getElementById('nbItEntryForm');
 const nbItEntryIdInput = document.getElementById('nbItEntryId');
-const nbItEmployeeInput = document.getElementById('nbItEmployee');
+const nbItEmployeePicker = document.getElementById('nbItEmployeePicker');
+const nbItEmployeeHint = document.getElementById('nbItEmployeeHint');
 const nbItKindInput = document.getElementById('nbItKind');
 const nbItLabelInput = document.getElementById('nbItLabel');
 const nbItStartDateInput = document.getElementById('nbItStartDate');
@@ -3032,6 +3033,45 @@ function updateNbItSelectionControls() {
     nbItSaveSelectionBtn.disabled = count === 0;
 }
 
+function getSelectedNbItEmployeeKeys() {
+    return [...nbItEmployeePicker.querySelectorAll('input:checked')].map(input => input.value);
+}
+
+function renderNbItEmployeePicker(selectedKeys = [], allowMultiple = nbItKindInput.value === 'HD') {
+    const selected = new Set(selectedKeys);
+    const choices = nbItEmployees.map(employee => {
+        const label = document.createElement('label');
+        label.className = 'nb-it-employee-choice';
+        const input = document.createElement('input');
+        input.type = allowMultiple ? 'checkbox' : 'radio';
+        input.name = 'nbItEmployeeSelection';
+        input.value = employee.key;
+        input.checked = selected.has(employee.key);
+        const name = document.createElement('span');
+        name.textContent = `${employee.code || '—'} · ${employee.name || 'Chưa có tên'}`;
+        label.append(input, name);
+        return label;
+    });
+    nbItEmployeePicker.replaceChildren(...choices);
+    nbItEmployeePicker.dataset.multiple = String(allowMultiple);
+    nbItEmployeePicker.setAttribute('aria-label', allowMultiple
+        ? 'Chọn một hoặc nhiều nhân viên IT'
+        : 'Chọn một nhân viên IT');
+    nbItEmployeeHint.hidden = !allowMultiple;
+}
+
+function getNbItHdGroupEntries(entry, entries = nbItEntries) {
+    if (!entry || entry.kind !== 'HD') return entry ? [entry] : [];
+    const label = String(entry.label || 'HD').trim().toLocaleUpperCase();
+    const endDate = entry.endDate || entry.startDate;
+    return entries.filter(candidate =>
+        candidate.kind === 'HD' &&
+        String(candidate.label || 'HD').trim().toLocaleUpperCase() === label &&
+        candidate.startDate === entry.startDate &&
+        (candidate.endDate || candidate.startDate) === endDate
+    );
+}
+
 function toggleNbItCellSelection(cell) {
     if (!nbItBulkSelectionMode || !(cell instanceof HTMLTableCellElement)) return;
     const entries = nbItEntries.filter(entry =>
@@ -3072,7 +3112,7 @@ function getNbItMergedHdGroups(employees, entries, year, monthIndex) {
     });
 
     const mergedGroups = [];
-    entriesBySchedule.forEach(employeesForSchedule => {
+    entriesBySchedule.forEach((employeesForSchedule, scheduleKey) => {
         const employeeIndexes = [...employeesForSchedule.keys()].sort((first, second) => first - second);
         let runStart = 0;
         while (runStart < employeeIndexes.length) {
@@ -3089,13 +3129,24 @@ function getNbItMergedHdGroups(employees, entries, year, monthIndex) {
                 const clippedEnd = (entry.endDate || entry.startDate) > monthEnd
                     ? monthEnd
                     : entry.endDate || entry.startDate;
-                mergedGroups.push({
+                const groupEmployees = employeeIndexes.slice(runStart, runEnd + 1).map(index => employees[index]);
+                const groupEmployeeKeys = new Set(groupEmployees.map(employee => employee.key));
+                const hasOverlappingSchedule = entries.some(candidate => {
+                    const candidateEndDate = candidate.endDate || candidate.startDate;
+                    const sameHdGroup = candidate.kind === 'HD' &&
+                        `${String(candidate.label || 'HD').trim().toLocaleUpperCase()}|${candidate.startDate}|${candidateEndDate}` === scheduleKey;
+                    return !sameHdGroup &&
+                        groupEmployeeKeys.has(candidate.employeeKey) &&
+                        candidate.startDate <= clippedEnd &&
+                        candidateEndDate >= clippedStart;
+                });
+                if (!hasOverlappingSchedule) mergedGroups.push({
                     firstEmployeeIndex,
                     lastEmployeeIndex,
                     firstDay: Number(clippedStart.slice(8, 10)),
                     lastDay: Number(clippedEnd.slice(8, 10)),
                     entry,
-                    employees: employeeIndexes.slice(runStart, runEnd + 1).map(index => employees[index])
+                    employees: groupEmployees
                 });
             }
             runStart = runEnd + 1;
@@ -3116,6 +3167,7 @@ function isItEmployee(employee) {
 function resetNbItEntryForm() {
     nbItEntryForm.reset();
     nbItEntryIdInput.value = '';
+    renderNbItEmployeePicker();
     const month = new Date().getMonth() + 1;
     const lastDay = new Date(Number(nbItYearInput.value), month, 0).getDate();
     const day = Math.min(new Date().getDate(), lastDay);
@@ -3628,7 +3680,7 @@ function nbItScheduleEntriesFromSnapshot(snapshot) {
         if (!entry || typeof entry !== 'object' ||
             !isValidYmd(entry.startDate) || !isValidYmd(endDate) ||
             endDate < entry.startDate || !['NB', 'NL', 'NP', 'TC', 'HD'].includes(entry.kind)) return;
-        entries.push({ ...entry, endDate });
+        entries.push({ ...entry, id: child.key, endDate });
     });
     return entries;
 }
@@ -3755,13 +3807,7 @@ async function loadNbItSchedule() {
             nbItEmployeeOrder(first) - nbItEmployeeOrder(second) ||
             employeeComparator(first, second)
         );
-        nbItEmployeeInput.replaceChildren(new Option('Chọn nhân viên IT', ''));
-        nbItEmployees.forEach(employee => {
-            nbItEmployeeInput.add(new Option(
-                `${employee.code || '—'} · ${employee.name || 'Chưa có tên'}`,
-                employee.key
-            ));
-        });
+        renderNbItEmployeePicker(getSelectedNbItEmployeeKeys());
         nbItEntries = [];
         if (entriesSnapshot.exists()) {
             entriesSnapshot.forEach(child => {
@@ -3789,15 +3835,16 @@ async function loadNbItSchedule() {
 function openNbItEntryForm(entry = null, employeeKey = '', date = '') {
     resetNbItEntryForm();
     nbItEntryForm.hidden = false;
-    nbItEmployeeInput.value = employeeKey;
+    renderNbItEmployeePicker(employeeKey ? [employeeKey] : []);
     if (date) {
         nbItStartDateInput.value = date;
         nbItEndDateInput.value = date;
     }
     if (entry) {
         nbItEntryIdInput.value = entry.id;
-        nbItEmployeeInput.value = entry.employeeKey;
         nbItKindInput.value = entry.kind;
+        const groupEntries = getNbItHdGroupEntries(entry);
+        renderNbItEmployeePicker(groupEntries.map(item => item.employeeKey), entry.kind === 'HD');
         nbItLabelInput.value = entry.label || entry.kind;
         nbItStartDateInput.value = entry.startDate;
         nbItEndDateInput.value = entry.endDate || entry.startDate;
@@ -3805,7 +3852,7 @@ function openNbItEntryForm(entry = null, employeeKey = '', date = '') {
         nbItDeleteBtn.hidden = false;
     }
     nbItEntryForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    nbItEmployeeInput.focus();
+    nbItEmployeePicker.querySelector('input')?.focus();
 }
 
 function startNbItCellEdit(cell, initialValue = '') {
@@ -8146,6 +8193,11 @@ nbItNextYearBtn.addEventListener('click', () => {
 nbItKindInput.addEventListener('change', () => {
     if (!nbItEntryIdInput.value) nbItLabelInput.value = '';
     nbItLabelInput.placeholder = nbItKindInput.value === 'HD' ? 'Ví dụ: HD1' : `Mặc định: ${nbItKindInput.value}`;
+    const selectedKeys = getSelectedNbItEmployeeKeys();
+    renderNbItEmployeePicker(
+        nbItKindInput.value === 'HD' ? selectedKeys : selectedKeys.slice(0, 1),
+        nbItKindInput.value === 'HD'
+    );
 });
 nbItCalendar.addEventListener('keydown', event => {
     const cell = event.target.closest('td[data-employee-key]');
@@ -8185,38 +8237,98 @@ nbItEntryForm.addEventListener('submit', async event => {
         return;
     }
     const userId = getCurrentUserId();
-    const employee = nbItEmployees.find(item => item.key === nbItEmployeeInput.value);
+    const selectedEmployees = [...new Set(getSelectedNbItEmployeeKeys())]
+        .map(key => nbItEmployees.find(item => item.key === key))
+        .filter(Boolean);
     const startDate = nbItStartDateInput.value;
     const endDate = nbItEndDateInput.value;
     const kind = nbItKindInput.value;
-    if (!userId || !employee || !['NB', 'NL', 'NP', 'TC', 'HD'].includes(kind) ||
+    if (!userId || !selectedEmployees.length ||
+        (kind !== 'HD' && selectedEmployees.length !== 1) ||
+        !['NB', 'NL', 'NP', 'TC', 'HD'].includes(kind) ||
         !isValidYmd(startDate) || !isValidYmd(endDate) || endDate < startDate) {
         await showCustomAlert('Vui lòng chọn nhân viên, loại lịch và khoảng ngày hợp lệ.');
         return;
     }
     const label = nbItLabelInput.value.trim() || (kind === 'HD' ? 'HD1' : kind);
     const entryId = nbItEntryIdInput.value;
-    const existingEntry = nbItEntries.find(item => item.id === entryId);
-    const entry = {
-        employeeKey: employee.key,
-        employeeCode: String(employee.code || ''),
-        employeeName: String(employee.name || ''),
-        kind,
-        label,
-        startDate,
-        endDate,
-        createdAt: existingEntry?.createdAt || Date.now(),
-        updatedAt: Date.now()
-    };
     nbItSaveBtn.disabled = true;
     try {
         if (userId !== getCurrentUserId()) throw new Error('Tài khoản đã thay đổi. Vui lòng thử lại.');
-        if (entryId) await set(nbItScheduleRef(entryId), entry);
-        else {
-            const newEntry = push(nbItScheduleRef());
-            if (!newEntry.key) throw new Error('Không thể tạo mã lịch.');
-            await set(newEntry, entry);
+        const latestSnapshot = await get(nbItScheduleRef());
+        if (userId !== getCurrentUserId() || !isAdmin()) throw new Error('Tài khoản đã thay đổi. Vui lòng thử lại.');
+        const latestEntries = nbItScheduleEntriesFromSnapshot(latestSnapshot);
+        const latestEntry = entryId ? latestEntries.find(item => item.id === entryId) : null;
+        if (entryId && !latestEntry) throw new Error('Lịch đã bị xóa hoặc thay đổi. Vui lòng tải lại lịch trước khi cập nhật.');
+        const isEditingHdGroup = Boolean(entryId && latestEntry.kind === 'HD' && kind === 'HD');
+        const entriesToReplace = entryId
+            ? (isEditingHdGroup ? getNbItHdGroupEntries(latestEntry, latestEntries) : [latestEntry])
+            : [];
+        const replacedIds = new Set(entriesToReplace.map(item => item.id));
+        const overlappingEmployees = selectedEmployees.filter(employee =>
+            latestEntries.some(existing =>
+                existing.employeeKey === employee.key &&
+                !replacedIds.has(existing.id) &&
+                existing.startDate <= endDate &&
+                (existing.endDate || existing.startDate) >= startDate
+            )
+        );
+        if (overlappingEmployees.length) {
+            await showCustomAlert(`Khoảng ngày này đã có lịch cho: ${overlappingEmployees.map(item => item.name || item.code).join(', ')}.`);
+            return;
         }
+
+        const now = Date.now();
+        const updates = {};
+        const makeEntry = (employee, existing = null) => ({
+            employeeKey: employee.key,
+            employeeCode: String(employee.code || ''),
+            employeeName: String(employee.name || ''),
+            kind,
+            label,
+            startDate,
+            endDate,
+            createdAt: existing?.createdAt || now,
+            updatedAt: now
+        });
+
+        if (isEditingHdGroup) {
+            const previousByEmployee = new Map();
+            entriesToReplace.forEach(existing => {
+                if (!previousByEmployee.has(existing.employeeKey)) {
+                    previousByEmployee.set(existing.employeeKey, existing);
+                }
+            });
+            const retainedIds = new Set();
+            selectedEmployees.forEach(employee => {
+                const existing = previousByEmployee.get(employee.key);
+                let targetId = existing?.id;
+                if (!targetId) {
+                    targetId = push(nbItScheduleRef()).key;
+                    if (!targetId) throw new Error('Không thể tạo mã lịch.');
+                }
+                retainedIds.add(targetId);
+                updates[`nbItSchedules/${userId}/${targetId}`] = makeEntry(employee, existing);
+            });
+            entriesToReplace.forEach(existing => {
+                if (!retainedIds.has(existing.id)) updates[`nbItSchedules/${userId}/${existing.id}`] = null;
+            });
+        } else if (entryId) {
+            updates[`nbItSchedules/${userId}/${entryId}`] = makeEntry(selectedEmployees[0], latestEntry);
+            selectedEmployees.slice(1).forEach(employee => {
+                const newEntryId = push(nbItScheduleRef()).key;
+                if (!newEntryId) throw new Error('Không thể tạo mã lịch.');
+                updates[`nbItSchedules/${userId}/${newEntryId}`] = makeEntry(employee);
+            });
+        } else {
+            selectedEmployees.forEach(employee => {
+                const newEntryId = push(nbItScheduleRef()).key;
+                if (!newEntryId) throw new Error('Không thể tạo mã lịch.');
+                updates[`nbItSchedules/${userId}/${newEntryId}`] = makeEntry(employee);
+            });
+        }
+        if (userId !== getCurrentUserId() || !isAdmin()) throw new Error('Tài khoản đã thay đổi. Vui lòng thử lại.');
+        await update(ref(db), updates);
         nbItEntryForm.hidden = true;
         resetNbItEntryForm();
         await loadNbItSchedule();
@@ -8231,10 +8343,20 @@ nbItDeleteBtn.addEventListener('click', async () => {
     if (!isAdmin() || !nbItEntryIdInput.value) return;
     const userId = getCurrentUserId();
     const entryId = nbItEntryIdInput.value;
-    if (!await showCustomConfirm('Bạn có chắc chắn muốn xóa lịch này?')) return;
+    const entry = nbItEntries.find(item => item.id === entryId);
+    const entriesToDelete = entry?.kind === 'HD' ? getNbItHdGroupEntries(entry) : entry ? [entry] : [];
+    if (!entriesToDelete.length) return;
+    const deleteMessage = entry?.kind === 'HD' && entriesToDelete.length > 1
+        ? `Bạn có chắc chắn muốn xóa lịch công tác này của ${entriesToDelete.length} nhân viên?`
+        : 'Bạn có chắc chắn muốn xóa lịch này?';
+    if (!await showCustomConfirm(deleteMessage)) return;
     try {
         if (!userId || userId !== getCurrentUserId()) throw new Error('Tài khoản đã thay đổi. Vui lòng thử lại.');
-        await remove(nbItScheduleRef(entryId));
+        const updates = Object.fromEntries(entriesToDelete.map(item => [
+            `nbItSchedules/${userId}/${item.id}`,
+            null
+        ]));
+        await update(ref(db), updates);
         nbItEntryForm.hidden = true;
         resetNbItEntryForm();
         await loadNbItSchedule();

@@ -1642,15 +1642,17 @@ td select {
     }
 
     .nb-it-entry-form {
+        position: relative;
         display: grid;
         flex: 0 0 auto;
-        grid-template-columns: repeat(5, minmax(120px, 1fr)) auto;
-        align-items: end;
-        gap: 8px 10px;
-        padding: 12px;
-        border: 1px solid #cbd5e1;
-        border-radius: 10px;
-        background: #f8fafc;
+        grid-template-columns: minmax(240px, 1.35fr) repeat(4, minmax(135px, 1fr));
+        align-items: start;
+        gap: 12px 14px;
+        padding: 16px;
+        border: 1px solid #d7e2ee;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #f8fafc 0%, #f3f7fb 100%);
+        box-shadow: 0 4px 14px rgba(24, 49, 79, 0.06);
     }
 
     .nb-it-entry-form[hidden] {
@@ -1661,34 +1663,168 @@ td select {
         min-width: 0;
     }
 
-    .nb-it-field label {
+    .nb-it-field label,
+    .nb-it-field-label {
         display: block;
         margin: 0;
-        color: #475569;
-        font-size: 12px;
+        color: #34465b;
+        font-size: 13px;
         font-weight: 700;
+    }
+
+    .nb-it-employee-picker {
+        display: grid;
+        max-height: 116px;
+        margin-top: 7px;
+        padding: 7px;
+        gap: 4px 6px;
+        overflow: auto;
+        border: 1px solid #d5e0ed;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.92);
+        scrollbar-color: #b8c8da transparent;
+        scrollbar-width: thin;
+    }
+
+    .nb-it-employee-picker[data-multiple="true"] {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .nb-it-employee-choice {
+        display: flex !important;
+        min-width: 0;
+        min-height: 30px;
+        align-items: center;
+        gap: 7px;
+        padding: 4px 7px !important;
+        border: 1px solid transparent;
+        border-radius: 7px;
+        color: #334155 !important;
+        font-size: 12px !important;
+        font-weight: 400 !important;
+        cursor: pointer;
+        transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+    }
+
+    .nb-it-employee-choice:hover {
+        border-color: #d6e4f5;
+        background: #f1f6fd;
+    }
+
+    .nb-it-employee-choice:has(input:checked) {
+        border-color: #bfdbfe;
+        background: #eff6ff;
+        color: #1d4ed8 !important;
+        font-weight: 600 !important;
+    }
+
+    .nb-it-employee-choice input {
+        width: 14px !important;
+        height: 14px !important;
+        flex: 0 0 auto;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+        accent-color: #2563eb;
+    }
+
+    .nb-it-employee-choice span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .nb-it-employee-hint {
+        display: block;
+        margin-top: 5px;
+        color: #718096;
+        font-size: 12px;
+    }
+
+    .nb-it-employee-hint[hidden] {
+        display: none;
     }
 
     .nb-it-field select,
     .nb-it-field input {
         width: 100%;
         min-width: 0;
-        height: 38px;
-        margin-top: 4px;
-        padding: 0 8px;
-        border: 1px solid #cbd5e1;
-        border-radius: 7px;
+        height: 42px;
+        margin-top: 7px;
+        padding: 0 11px;
+        border: 1px solid #d5e0ed;
+        border-radius: 9px;
         background: #fff;
-        color: #1e293b;
+        color: #26384d;
         font: inherit;
         box-sizing: border-box;
+        transition: border-color 140ms ease, box-shadow 140ms ease;
+    }
+
+    .nb-it-field select:focus,
+    .nb-it-field input:focus,
+    .nb-it-employee-choice:focus-within {
+        border-color: #60a5fa;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
     }
 
     .nb-it-form-actions {
         display: flex;
         grid-column: 1 / -1;
+        align-items: center;
         justify-content: flex-end;
-        gap: 8px;
+        gap: 9px;
+        padding-top: 1px;
+    }
+
+    .nb-it-form-actions button {
+        min-height: 40px;
+        padding: 0 16px;
+        border: 1px solid #d5e0ed;
+        border-radius: 9px;
+        background: #fff;
+        color: #34465b;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease;
+    }
+
+    .nb-it-form-actions button:hover {
+        transform: translateY(-1px);
+        background: #f1f5f9;
+    }
+
+    .nb-it-form-actions button[type="submit"] {
+        border-color: #15803d;
+        background: #15803d;
+        color: #fff;
+        box-shadow: 0 2px 5px rgba(21, 128, 61, 0.18);
+    }
+
+    .nb-it-form-actions button[type="submit"]:hover {
+        background: #166534;
+    }
+
+    .nb-it-form-actions .nb-it-delete-btn {
+        margin-right: auto;
+        border-color: #fecaca;
+        background: #fff5f5;
+        color: #b42318;
+    }
+
+    .nb-it-form-actions .nb-it-delete-btn:hover {
+        border-color: #fca5a5;
+        background: #fee2e2;
+    }
+
+    .nb-it-form-actions button[disabled] {
+        transform: none;
+        cursor: wait;
+        opacity: 0.65;
     }
 
     .nb-it-calendar {
@@ -2217,10 +2353,21 @@ td select {
 
         .nb-it-entry-form {
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 6px 8px;
-            max-height: 38dvh;
+            align-items: start;
+            gap: 10px;
+            max-height: 42dvh;
+            padding: 12px;
+            border-radius: 12px;
             overflow: auto;
             -webkit-overflow-scrolling: touch;
+        }
+
+        .nb-it-entry-form > .nb-it-field:first-of-type {
+            grid-column: 1 / -1;
+        }
+
+        .nb-it-employee-picker[data-multiple="true"] {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
         .nb-it-form-actions {

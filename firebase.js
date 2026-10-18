@@ -4,19 +4,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getDatabase } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-// ========== CẤU HÌNH FIREBASE ==========
-// Cấu hình Firebase cho dự án "to-do-list"
-// Bao gồm: API key, Database URL, Project ID, v.v.
-const firebaseConfig = {
-    apiKey: "AIzaSyCy7RreY3jmoDsWKzlmQGGt5cVsxvdf61w", // API key cho xác thực
-    authDomain: "to-do-list-9fdd5.firebaseapp.com", // Domain xác thực
-    databaseURL: "https://to-do-list-9fdd5-default-rtdb.firebaseio.com", // Realtime Database URL
-    projectId: "to-do-list-9fdd5", // ID dự án
-    storageBucket: "to-do-list-9fdd5.firebasestorage.app", // Bucket lưu trữ tệp
-    messagingSenderId: "654937068105", // ID tin nhắn push
-    appId: "1:654937068105:web:44436271ca564d782a6598", // ID ứng dụng
-    measurementId: "G-TCX2T9W6ZC" // ID phân tích
-};
+// Base64 chỉ làm mờ cấu hình client; không dùng như biện pháp bảo mật.
+const encodedFirebaseConfig = "eyJhcGlLZXkiOiJBSXphU3lDeTdScmVZM2ptb0RzV0t6bG1RR0d0NWNWc3h2ZGY2MXciLCJhdXRoRG9tYWluIjoidG8tZG8tbGlzdC05ZmRkNS5maXJlYmFzZWFwcC5jb20iLCJkYXRhYmFzZVVSTCI6Imh0dHBzOi8vdG8tZG8tbGlzdC05ZmRkNS1kZWZhdWx0LXJ0ZGIuZmlyZWJhc2Vpby5jb20iLCJwcm9qZWN0SWQiOiJ0by1kby1saXN0LTlmZGQ1Iiwic3RvcmFnZUJ1Y2tldCI6InRvLWRvLWxpc3QtOWZkZDUuZmlyZWJhc2VzdG9yYWdlLmFwcCIsIm1lc3NhZ2luZ1NlbmRlcklkIjoiNjU0OTM3MDY4MTA1IiwiYXBwSWQiOiIxOjY1NDkzNzA2ODEwNTp3ZWI6NDQ0MzYyNzFjYTU2NGQ3ODJhNjU5OCIsIm1lYXN1cmVtZW50SWQiOiJHLVRDWDJUOVc2WkMifQ==";
+const firebaseConfig = JSON.parse(atob(encodedFirebaseConfig));
 
 // Khởi tạo Firebase App với cấu hình trên
 const app = initializeApp(firebaseConfig);
