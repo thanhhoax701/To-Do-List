@@ -6386,52 +6386,85 @@ body {
         font-size: 17px;
     }
 
-    #searchFilterSection > div {
-        gap: 8px !important;
-    }
-
-    #searchFilterSection .task-search-input-wrap {
-        flex-basis: 100%;
-        min-width: 100%;
-    }
-
     #searchFilterSection > .task-toolbar-row {
-        flex-wrap: wrap;
-        justify-content: stretch;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        align-items: center;
+        gap: 8px;
     }
 
     .task-toolbar-row .task-search-input-wrap {
-        flex: 1 1 100%;
+        grid-column: 1 / -1;
+        flex: none;
+        width: 100%;
+        min-width: 0;
+    }
+
+    #searchFilterSection #searchPeriod,
+    #searchFilterSection #searchDate,
+    #searchFilterSection #searchMonth,
+    #searchFilterSection #searchYear,
+    #searchFilterSection #searchBtn {
+        box-sizing: border-box;
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 44px;
+        max-height: 44px;
+        height: 44px !important;
+        margin: 0;
+        flex: none;
+    }
+
+    #searchFilterSection #searchDate,
+    #searchFilterSection #searchMonth,
+    #searchFilterSection #searchYear {
+        grid-column: 1 / -1;
+    }
+
+    #searchFilterSection #searchBtn {
+        grid-column: 2;
+        min-width: 0;
+        padding: 0 10px !important;
+        white-space: nowrap;
     }
 
     #taskActions {
-        flex: 1 1 100%;
+        display: grid;
+        grid-column: 1 / -1;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        align-items: stretch;
+        flex: none;
+        gap: 8px;
         margin: 0 !important;
         padding: 0;
         border: 0;
     }
 
     #taskActions #openAddModal {
+        grid-column: 1 / -1;
+        width: 100%;
+        min-height: 44px !important;
         background: #fff5f5 !important;
-    }
-
-    #searchFilterSection select {
-        flex: 1;
-        min-width: 0;
-    }
-
-    #taskActions {
-        gap: 8px !important;
-    }
-
-    #taskActions #openAddModal {
-        flex: 1 1 100%;
         justify-content: center;
     }
 
     #taskActions .task-select-all,
     #taskActions #deleteSelect {
-        flex: 1;
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        min-height: 44px !important;
+        margin: 0;
+    }
+
+    #taskActions .task-select-all {
+        justify-content: center;
+    }
+
+    #taskActions .delete-selected-mobile-btn {
+        grid-column: 1 / -1;
+        width: 100%;
+        min-height: 44px;
     }
 
     .task-table-scroll {
