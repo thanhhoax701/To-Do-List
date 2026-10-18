@@ -185,14 +185,20 @@ function renderAccessRequests() {
         requestedAt.textContent = Number.isFinite(timestamp) && timestamp > 0
             ? `Gửi lúc ${new Date(timestamp).toLocaleString('vi-VN')}`
             : 'Thời gian gửi không xác định';
-        details.append(name, email, requestedAt);
+        const verificationStatus = document.createElement('span');
+        const emailVerified = request.emailVerified !== false;
+        verificationStatus.textContent = emailVerified
+            ? 'Email đã được xác minh'
+            : 'Đang chờ người dùng xác minh email';
+        details.append(name, email, requestedAt, verificationStatus);
 
         const actions = document.createElement('div');
         actions.className = 'access-request-actions';
         const approveButton = document.createElement('button');
         approveButton.type = 'button';
         approveButton.className = 'access-request-approve';
-        approveButton.textContent = 'Duyệt';
+        approveButton.textContent = emailVerified ? 'Duyệt' : 'Chờ xác minh';
+        approveButton.disabled = !emailVerified;
         approveButton.addEventListener('click', () => reviewAccessRequest(userId));
         actions.appendChild(approveButton);
         item.append(details, actions);
@@ -226,6 +232,10 @@ async function reviewAccessRequest(userId) {
     if (!user || user.role !== 'department' ||
         String(user.email || '').trim().toLowerCase() !== String(request?.email || '').trim().toLowerCase()) {
         await showCustomAlert('Tài khoản hoặc email đã thay đổi. Vui lòng tải lại danh sách trước khi duyệt.');
+        return;
+    }
+    if (request.emailVerified === false) {
+        await showCustomAlert('Chưa thể duyệt: người dùng cần xác minh email qua liên kết Firebase trước.');
         return;
     }
 

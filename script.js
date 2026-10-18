@@ -7181,6 +7181,31 @@ async function requestDepartmentEmailLink(user, email) {
     }
 }
 
+async function createPendingAccessRequest(user, email) {
+    const requestRef = ref(db, `accessRequests/${user.key}`);
+    const snapshot = await get(requestRef);
+    const existing = snapshot.exists() ? snapshot.val() : null;
+    if (existing?.status === 'approved' &&
+        String(existing.email || '').trim().toLowerCase() === email) {
+        return;
+    }
+    if (existing?.status === 'pending' &&
+        String(existing.email || '').trim().toLowerCase() === email) {
+        return;
+    }
+
+    await set(requestRef, {
+        userId: user.key,
+        userName: String(user.name || 'Tài khoản Phòng Ban'),
+        email,
+        role: 'department',
+        status: 'pending',
+        emailVerified: false,
+        verificationRequestedAt: Date.now(),
+        requestedAt: Date.now()
+    });
+}
+
 async function createAccessRequestAfterEmailVerification(user, email) {
     const requestRef = ref(db, `accessRequests/${user.key}`);
     const requestSnap = await get(requestRef);
@@ -7203,7 +7228,14 @@ async function createAccessRequestAfterEmailVerification(user, email) {
             email,
             role: 'department',
             status: 'pending',
+            emailVerified: true,
+            emailVerifiedAt: Date.now(),
             requestedAt: Date.now()
+        });
+    } else if (accessRequest.emailVerified !== true) {
+        await update(requestRef, {
+            emailVerified: true,
+            emailVerifiedAt: Date.now()
         });
     }
     showLoginMessage('Email đã xác minh. Yêu cầu truy cập đang chờ Admin duyệt.');
@@ -7336,6 +7368,7 @@ async function attemptLogin(pin) {
             }
 
             if (!hasVerifiedEmailSession(email)) {
+                await createPendingAccessRequest(matched, email);
                 await requestDepartmentEmailLink(matched, email);
                 loginMessage = 'Đã gửi liên kết xác minh đến email. Mở email và bấm liên kết để tiếp tục.';
                 return;

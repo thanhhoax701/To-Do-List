@@ -1287,6 +1287,11 @@ select {
     cursor: pointer;
 }
 
+.access-request-actions button:disabled {
+    background: #aab3c0;
+    cursor: not-allowed;
+}
+
 .access-request-approve {
     background: #2c9d70;
 }
