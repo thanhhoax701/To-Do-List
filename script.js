@@ -85,6 +85,7 @@ const nbItDeleteBtn = document.getElementById('nbItDeleteBtn');
 const nbItRefreshBtn = document.getElementById('nbItRefreshBtn');
 const nbItImportBtn = document.getElementById('nbItImportBtn');
 const nbItImportFileInput = document.getElementById('nbItImportFile');
+const nbItExportBtn = document.getElementById('nbItExportBtn');
 const nbItPreviousYearBtn = document.getElementById('nbItPreviousYear');
 const nbItNextYearBtn = document.getElementById('nbItNextYear');
 const nbItSelectionModeBtn = document.getElementById('nbItSelectionModeBtn');
@@ -3015,9 +3016,16 @@ function nbItEmployeeOrder(employee) {
 
 function updateNbItSelectionControls() {
     const count = nbItSelectedCells.size;
+    const fullModeLabel = nbItBulkSelectionMode ? 'Đang chọn ngày (bấm để kết thúc)' : 'Chọn nhiều ngày NB';
     nbItSelectionModeBtn.setAttribute('aria-pressed', String(nbItBulkSelectionMode));
-    nbItSelectionModeBtn.textContent = nbItBulkSelectionMode ? 'Đang chọn ngày (bấm để kết thúc)' : 'Chọn nhiều ngày NB';
-    nbItSelectionCount.textContent = count ? `Đã chọn ${count} ô` : (nbItBulkSelectionMode ? 'Chọn các ngày cần nghỉ bù' : 'Chưa chọn ngày');
+    nbItSelectionModeBtn.setAttribute('aria-label', fullModeLabel);
+    nbItSelectionModeBtn.querySelector('.nb-it-desktop-label').textContent = fullModeLabel;
+    nbItSelectionModeBtn.querySelector('.nb-it-mobile-label').textContent = nbItBulkSelectionMode ? 'Đang chọn' : 'Chọn nhiều ngày';
+    const fullCountLabel = count ? `Đã chọn ${count} ô` : (nbItBulkSelectionMode ? 'Chọn các ngày cần nghỉ bù' : 'Chưa chọn ngày');
+    const mobileCountLabel = count ? `Đã chọn ${count}` : (nbItBulkSelectionMode ? 'Chọn ngày' : 'Chưa chọn');
+    nbItSelectionCount.setAttribute('aria-label', fullCountLabel);
+    nbItSelectionCount.querySelector('.nb-it-desktop-label').textContent = fullCountLabel;
+    nbItSelectionCount.querySelector('.nb-it-mobile-label').textContent = mobileCountLabel;
     nbItClearSelectionBtn.hidden = count === 0;
     nbItSaveSelectionBtn.disabled = count === 0;
 }
@@ -3220,6 +3228,169 @@ function renderNbItCalendar() {
         month.appendChild(table);
         nbItCalendar.appendChild(month);
     }
+}
+
+async function exportNbItSchedule() {
+    if (!isAdmin()) throw new Error('Bạn không có quyền xuất lịch NB - IT.');
+    if (typeof ExcelJS === 'undefined') throw new Error('Không tải được thư viện tạo file Excel. Vui lòng tải lại trang.');
+
+    const year = Number(nbItYearInput.value);
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+        throw new Error('Vui lòng chọn năm từ 2000 đến 2100 trước khi xuất.');
+    }
+    if (nbItScheduleCount.textContent.includes('Đang tải lịch')) {
+        throw new Error('Lịch đang tải. Vui lòng đợi tải xong rồi xuất lại.');
+    }
+
+    const selectedMonth = nbItMonthFilter.value === 'all' ? null : Number(nbItMonthFilter.value) - 1;
+    const months = selectedMonth === null ? Array.from({ length: 12 }, (_, index) => index) : [selectedMonth];
+    const rangeStart = selectedMonth === null
+        ? `${year}-01-01`
+        : `${year}-${String(selectedMonth + 1).padStart(2, '0')}-01`;
+    const rangeEnd = selectedMonth === null
+        ? `${year}-12-31`
+        : `${year}-${String(selectedMonth + 1).padStart(2, '0')}-${String(new Date(year, selectedMonth + 1, 0).getDate()).padStart(2, '0')}`;
+    const entries = nbItEntries.filter(entry =>
+        entry.startDate <= rangeEnd && (entry.endDate || entry.startDate) >= rangeStart
+    );
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'LỊCH NB - IT';
+    workbook.created = new Date();
+
+    const kindColors = {
+        NB: 'FFF31318',
+        TC: 'FF20DF21',
+        HD: 'FFC6D9F0',
+        NL: 'FFFDE68A',
+        NP: 'FFC4B5FD'
+    };
+    const border = {
+        top: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        left: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        bottom: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        right: { style: 'thin', color: { argb: 'FFD1D5DB' } }
+    };
+    const detailRows = [];
+
+    months.forEach(monthIndex => {
+        const monthNumber = monthIndex + 1;
+        const daysInMonth = new Date(year, monthNumber, 0).getDate();
+        const monthStart = `${year}-${String(monthNumber).padStart(2, '0')}-01`;
+        const monthEnd = `${year}-${String(monthNumber).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+        const worksheet = workbook.addWorksheet(`Tháng ${String(monthNumber).padStart(2, '0')}`);
+        const lastColumn = daysInMonth + 2;
+
+        worksheet.mergeCells(1, 1, 1, lastColumn);
+        const title = worksheet.getCell(1, 1);
+        title.value = `THÁNG ${monthNumber}`;
+        title.font = { bold: true, size: 16, color: { argb: 'FF172B43' } };
+        title.alignment = { vertical: 'middle' };
+        title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+        worksheet.getRow(1).height = 28;
+
+        const headerRow = worksheet.addRow(['MÃ NV', 'HỌ VÀ TÊN', ...Array.from({ length: daysInMonth }, (_, day) => day + 1)]);
+        const weekdayRow = worksheet.addRow(['', '', ...Array.from({ length: daysInMonth }, (_, day) =>
+            ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][new Date(year, monthIndex, day + 1).getDay()]
+        )]);
+        const lunarRow = worksheet.addRow(['', '', ...Array.from({ length: daysInMonth }, (_, day) => {
+            const lunar = convertSolarToLunar(day + 1, monthNumber, year);
+            return lunar.day === 1
+                ? `${lunar.day}/${lunar.month}${lunar.isLeapMonth ? '*' : ''}`
+                : lunar.day;
+        })]);
+
+        [headerRow, weekdayRow, lunarRow].forEach(row => {
+            row.eachCell({ includeEmpty: true }, cell => {
+                cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                cell.border = border;
+            });
+        });
+        headerRow.height = 24;
+        weekdayRow.height = 20;
+        lunarRow.height = 20;
+        headerRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8BD04F' } };
+        headerRow.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8BD04F' } };
+        for (let column = 3; column <= lastColumn; column += 1) {
+            headerRow.getCell(column).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5AD16' } };
+            weekdayRow.getCell(column).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5AD16' } };
+            lunarRow.getCell(column).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF7E6' } };
+        }
+        worksheet.getColumn(1).width = 15;
+        worksheet.getColumn(2).width = 28;
+        for (let column = 3; column <= lastColumn; column += 1) worksheet.getColumn(column).width = 8;
+        worksheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 4, topLeftCell: 'C5' }];
+
+        nbItEmployees.forEach(employee => {
+            const row = worksheet.addRow([employee.code || '—', employee.name || '—']);
+            row.height = 28;
+            row.getCell(1).font = { italic: true };
+            row.getCell(2).alignment = { vertical: 'middle', wrapText: true };
+            row.eachCell({ includeEmpty: true }, cell => { cell.border = border; });
+
+            for (let day = 1; day <= daysInMonth; day += 1) {
+                const date = `${year}-${String(monthNumber).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayEntries = entries.filter(entry =>
+                    entry.employeeKey === employee.key &&
+                    entry.startDate <= date &&
+                    (entry.endDate || entry.startDate) >= date
+                );
+                const cell = row.getCell(day + 2);
+                cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                cell.border = border;
+                if (!dayEntries.length) continue;
+
+                const labels = dayEntries
+                    .filter(entry => entry.startDate === date || day === 1)
+                    .map(entry => String(entry.label || entry.kind).trim() || entry.kind);
+                cell.value = [...new Set(labels)].join('\n');
+                const kind = dayEntries[0].kind;
+                if (kindColors[kind]) {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: kindColors[kind] } };
+                }
+                if (labels.length > 1) row.height = Math.max(row.height, 36);
+            }
+        });
+
+        entries.filter(entry =>
+            entry.startDate <= monthEnd && (entry.endDate || entry.startDate) >= monthStart
+        ).forEach(entry => {
+            const employee = nbItEmployees.find(item => item.key === entry.employeeKey);
+            detailRows.push([
+                employee?.code || entry.employeeCode || '',
+                employee?.name || entry.employeeName || '',
+                entry.kind,
+                entry.label || entry.kind,
+                entry.startDate > monthStart ? entry.startDate : monthStart,
+                (entry.endDate || entry.startDate) < monthEnd ? entry.endDate || entry.startDate : monthEnd
+            ]);
+        });
+    });
+
+    const detailsWorksheet = workbook.addWorksheet('Chi tiết');
+    const detailHeaders = ['MÃ NV', 'HỌ VÀ TÊN', 'LOẠI', 'NỘI DUNG', 'TỪ NGÀY', 'ĐẾN NGÀY'];
+    detailHeaders.forEach((header, index) => {
+        const cell = detailsWorksheet.getCell(1, index + 1);
+        cell.value = header;
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF315B83' } };
+        cell.alignment = { vertical: 'middle' };
+        cell.border = border;
+    });
+    detailRows.forEach(values => {
+        const row = detailsWorksheet.addRow(values);
+        row.eachCell({ includeEmpty: true }, cell => {
+            cell.alignment = { vertical: 'middle', wrapText: true };
+            cell.border = border;
+        });
+    });
+    detailsWorksheet.columns = [{ width: 15 }, { width: 28 }, { width: 12 }, { width: 24 }, { width: 14 }, { width: 14 }];
+    detailsWorksheet.autoFilter = { from: 'A1', to: `F${Math.max(1, detailRows.length + 1)}` };
+    detailsWorksheet.views = [{ state: 'frozen', ySplit: 1, topLeftCell: 'A2' }];
+
+    const periodName = selectedMonth === null
+        ? 'ca-nam'
+        : `thang-${String(selectedMonth + 1).padStart(2, '0')}`;
+    await downloadTaskWorkbook(workbook, `lich-nb-it_${year}_${periodName}.xlsx`);
 }
 
 function nbItExcelCellText(worksheet, rowIndex, columnIndex) {
@@ -7768,6 +7939,20 @@ nbItImportFileInput.addEventListener('change', async () => {
         nbItImportFileInput.value = '';
         nbItImportBtn.disabled = false;
         nbItImportBtn.textContent = '📥 Nhập Excel';
+    }
+});
+nbItExportBtn.addEventListener('click', async () => {
+    if (!isAdmin()) return;
+    nbItExportBtn.disabled = true;
+    nbItExportBtn.textContent = 'Đang xuất...';
+    try {
+        await exportNbItSchedule();
+    } catch (error) {
+        console.error('Lỗi xuất Excel LỊCH NB - IT:', error);
+        await showCustomAlert(`Không thể xuất file Excel: ${error?.message || String(error)}`);
+    } finally {
+        nbItExportBtn.disabled = false;
+        nbItExportBtn.textContent = '📤 Xuất Excel';
     }
 });
 nbItYearInput.addEventListener('change', renderNbItCalendar);

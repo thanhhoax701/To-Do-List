@@ -349,10 +349,11 @@
                                     <option value="12">Tháng 12</option>
                                 </select>
                             </label>
+                            <button type="button" id="nbItRefreshBtn">↻ Tải lại</button>
                             <div class="nb-it-header-actions">
-                                <button type="button" id="nbItRefreshBtn">↻ Tải lại</button>
                                 <button type="button" id="nbItImportBtn" title="Nhập lịch từ file Excel theo mẫu tháng">📥 Nhập Excel</button>
                                 <input id="nbItImportFile" type="file" accept=".xlsx,.xls" hidden>
+                                <button type="button" id="nbItExportBtn" title="Xuất lịch năm hoặc tháng đang chọn ra file Excel">📤 Xuất Excel</button>
                                 <button type="button" id="nbItAddBtn" class="nb-it-add-btn">＋ Thêm lịch</button>
                             </div>
                         </div>
@@ -391,20 +392,21 @@
                             <button type="submit" id="nbItSaveBtn">Lưu lịch</button>
                         </div>
                     </form>
-                    <div class="nb-it-legend" aria-label="Chú giải">
-                        <span><i class="nb-it-legend-swatch nb-it-legend-nb"></i>NB - Nghỉ bù</span>
-                        <span><i class="nb-it-legend-swatch nb-it-legend-tc"></i>TC - Tăng ca</span>
-                        <span><i class="nb-it-legend-swatch nb-it-legend-hd"></i>HD - Công tác</span>
-                        <span><i class="nb-it-legend-swatch nb-it-legend-nl"></i>NL - Nghỉ lễ</span>
-                        <span><i class="nb-it-legend-swatch nb-it-legend-np"></i>NP - Nghỉ phép</span>
-                    </div>
                     <div class="nb-it-entry-tools">
-                        <p class="nb-it-entry-hint">Nhập nhanh nghỉ bù: chọn ô trống, gõ NB rồi nhấn Enter. Nhập Excel: chọn năm trước; chỉ lấy ô NB, NL, NP, TC hoặc HD.</p>
                         <div class="nb-it-bulk-tools">
-                            <span id="nbItSelectionCount" aria-live="polite">Chưa chọn ngày</span>
-                            <button type="button" id="nbItSelectionModeBtn" aria-pressed="false">Chọn nhiều ngày NB</button>
+                            <span id="nbItSelectionCount" role="status" aria-live="polite" aria-label="Chưa chọn ngày">
+                                <span class="nb-it-desktop-label">Chưa chọn ngày</span>
+                                <span class="nb-it-mobile-label">Chưa chọn</span>
+                            </span>
+                            <button type="button" id="nbItSelectionModeBtn" aria-pressed="false" aria-label="Chọn nhiều ngày NB">
+                                <span class="nb-it-desktop-label">Chọn nhiều ngày NB</span>
+                                <span class="nb-it-mobile-label">Chọn nhiều ngày</span>
+                            </button>
                             <button type="button" id="nbItClearSelectionBtn" hidden>Bỏ chọn</button>
-                            <button type="button" id="nbItSaveSelectionBtn" disabled>Thêm NB đã chọn</button>
+                            <button type="button" id="nbItSaveSelectionBtn" disabled>
+                                <span class="nb-it-desktop-label">Thêm NB đã chọn</span>
+                                <span class="nb-it-mobile-label">Thêm NB</span>
+                            </button>
                         </div>
                     </div>
                     <div id="nbItCalendar" class="nb-it-calendar" aria-live="polite"></div>

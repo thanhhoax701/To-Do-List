@@ -1661,55 +1661,6 @@ td select {
         overscroll-behavior: contain;
     }
 
-    .nb-it-legend {
-        display: flex;
-        flex: 0 0 auto;
-        flex-wrap: wrap;
-        gap: 8px 18px;
-        color: #475569;
-        font-size: 12px;
-    }
-
-    .nb-it-legend > span {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .nb-it-legend-swatch {
-        display: inline-block;
-        width: 14px;
-        height: 14px;
-        border: 1px solid rgba(15, 23, 42, 0.15);
-        border-radius: 3px;
-    }
-
-    .nb-it-legend-nb {
-        background: #f31318;
-    }
-
-    .nb-it-legend-tc {
-        background: #20df21;
-    }
-
-    .nb-it-legend-hd {
-        background: #c6d9f0;
-    }
-
-    .nb-it-legend-nl {
-        background: #fde68a;
-    }
-
-    .nb-it-legend-np {
-        background: #c4b5fd;
-    }
-
-    .nb-it-entry-hint {
-        margin: 0;
-        color: #64748b;
-        font-size: 12px;
-    }
-
     .nb-it-entry-tools {
         display: flex;
         flex: 0 0 auto;
@@ -1738,6 +1689,10 @@ td select {
         font: inherit;
         font-weight: 700;
         cursor: pointer;
+    }
+
+    .nb-it-mobile-label {
+        display: none;
     }
 
     .nb-it-bulk-tools button[hidden] {
@@ -2069,39 +2024,52 @@ td select {
             gap: 8px;
         }
 
-        .nb-it-entry-hint {
-            max-width: 100%;
-            line-height: 1.45;
-        }
-
         .nb-it-bulk-tools {
             width: 100%;
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 0.85fr);
+            align-items: center;
             gap: 6px;
         }
 
         .nb-it-bulk-tools > span {
-            grid-column: 1 / -1;
+            min-width: 0;
+            font-size: 10px;
+            line-height: 1.2;
+            padding: 4px;
+            border: 1px solid #e2e8f0;
+            border-radius: 7px;
+            background: #f8fafc;
+            text-align: center;
         }
 
         .nb-it-bulk-tools button {
             min-width: 0;
             min-height: 38px;
-            padding: 6px 8px;
-            font-size: 12px;
-            line-height: 1.25;
+            padding: 4px 6px;
+            font-size: 11px;
+            line-height: 1.15;
+            text-align: center;
             white-space: normal;
+            overflow-wrap: normal;
         }
 
-        .nb-it-bulk-tools button:last-child {
-            grid-column: 1 / -1;
+        .nb-it-bulk-tools .nb-it-desktop-label {
+            display: none;
+        }
+
+        .nb-it-bulk-tools .nb-it-mobile-label {
+            display: inline;
+        }
+
+        .nb-it-bulk-tools button:disabled {
+            opacity: 0.75;
         }
 
         .nb-it-year-controls {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 8px;
+            grid-template-columns: minmax(140px, 1.2fr) minmax(0, 1fr);
+            gap: 8px 6px;
         }
 
         .nb-it-year-controls button {
@@ -2113,11 +2081,14 @@ td select {
         .nb-it-date-controls {
             display: grid;
             grid-column: 1 / -1;
-            grid-template-columns: auto auto minmax(64px, 1fr) auto;
+            grid-template-columns: 36px max-content 96px 36px;
+            align-items: center;
             gap: 6px;
+            justify-self: start;
         }
 
         .nb-it-date-controls label {
+            grid-column: 2;
             font-size: 12px;
         }
 
@@ -2125,51 +2096,77 @@ td select {
             min-width: 36px;
         }
 
-        .nb-it-year-controls input {
-            width: 100%;
+        #nbItPreviousYear {
+            grid-column: 1;
+        }
+
+        .nb-it-date-controls #nbItYear {
+            grid-column: 3;
+            width: 96px;
             min-width: 0;
+            max-width: 96px;
             height: 36px;
         }
 
+        #nbItNextYear {
+            grid-column: 4;
+        }
+
         .nb-it-month-control {
-            grid-column: 1 / -1;
-            display: grid;
-            grid-template-columns: auto minmax(0, 1fr);
-            gap: 8px;
+            grid-column: 1;
+            grid-row: 2;
+            min-width: 0;
+            gap: 6px;
         }
 
         .modal-content .nb-it-month-control {
-            display: grid;
-            margin: 0;
+            display: flex;
         }
 
         .nb-it-year-controls select {
-            width: 100%;
+            width: 96px;
             min-width: 0;
+            max-width: 96px;
+            flex: 0 0 96px;
             height: 36px;
             padding: 0 6px;
             font-size: 12px;
         }
 
+        #nbItRefreshBtn {
+            grid-column: 2;
+            grid-row: 2;
+            width: 100%;
+        }
+
         .nb-it-header-actions {
             grid-column: 1 / -1;
+            grid-row: 3;
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 6px;
         }
 
         .nb-it-header-actions .nb-it-add-btn {
-            grid-column: auto;
+            grid-column: 3;
+        }
+
+        #nbItImportBtn {
+            grid-column: 1;
+        }
+
+        #nbItExportBtn {
+            grid-column: 2;
         }
 
         .nb-it-header-actions button {
             min-width: 0;
-            padding: 0 8px;
-            white-space: nowrap;
-        }
-
-        .nb-it-month-control select {
-            width: 100%;
+            min-height: 38px;
+            padding: 4px;
+            font-size: 10px;
+            line-height: 1.15;
+            text-align: center;
+            white-space: normal;
         }
 
         .nb-it-entry-form {
