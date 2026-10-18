@@ -6229,13 +6229,7 @@ body {
 }
 
 .login-box h2::after {
-    display: block;
-    margin-top: 9px;
-    color: rgba(225, 233, 243, .68);
-    content: "Đăng nhập an toàn để tiếp tục công việc";
-    font-size: 12px;
-    font-weight: 400;
-    letter-spacing: 0;
+    content: none;
 }
 
 .login-email-label {
@@ -6469,6 +6463,186 @@ body {
 
     .task-table-scroll {
         border-radius: 12px;
+    }
+}
+
+.login-overlay {
+    overflow-y: auto;
+    padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+    scrollbar-width: none;
+    background:
+        radial-gradient(ellipse at 88% 12%, rgba(223, 23, 31, .16), transparent 28rem),
+        linear-gradient(145deg, rgba(10, 19, 34, .94), rgba(20, 32, 50, .97));
+}
+
+.login-overlay::-webkit-scrollbar,
+.login-box::-webkit-scrollbar {
+    display: none;
+}
+
+.login-box {
+    position: relative;
+    box-sizing: border-box;
+    width: min(100%, 380px);
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    scrollbar-width: none;
+    padding: 24px 24px 18px;
+    border: 1px solid rgba(218, 228, 240, .13);
+    border-radius: 20px;
+    background: linear-gradient(155deg, #1a2b41 0%, #111e30 72%, #101a29 100%);
+    box-shadow: 0 28px 90px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .05);
+}
+
+.login-box h2 {
+    margin: 0 0 8px;
+    color: #f8fafc;
+    font-size: 24px;
+    font-weight: 750;
+    letter-spacing: -.04em;
+    text-align: center;
+}
+
+.login-box h2::after {
+    content: none;
+}
+
+.login-email-label {
+    margin: 16px 0 6px;
+    color: #cbd5e1;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+.login-email-input {
+    height: 42px;
+    margin-bottom: 6px;
+    padding: 0 15px;
+    border: 1px solid rgba(203, 213, 225, .18);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .065);
+    color: #f8fafc;
+    font-size: 15px;
+    transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+
+.login-email-input::placeholder {
+    color: #8290a2;
+}
+
+.login-email-input:focus {
+    border-color: rgba(241, 83, 88, .8);
+    background: rgba(255, 255, 255, .09);
+    box-shadow: 0 0 0 4px rgba(223, 23, 31, .14);
+}
+
+.email-link-complete-btn {
+    min-height: 44px;
+    margin: 8px 0;
+    border: 1px solid rgba(241, 83, 88, .36);
+    border-radius: 11px;
+    background: rgba(223, 23, 31, .12);
+    color: #fff;
+}
+
+.pin-dots {
+    gap: 12px;
+    margin: 14px 0 11px;
+}
+
+.pin-dots .dot {
+    width: 13px;
+    height: 13px;
+    border: 2px solid #536276;
+    background: transparent;
+    transition: background .16s ease, border-color .16s ease, transform .16s ease;
+}
+
+.pin-dots .dot.filled {
+    transform: scale(1.06);
+    border-color: #f15358;
+    background: #f15358;
+    box-shadow: 0 0 14px rgba(241, 83, 88, .4);
+}
+
+.keypad {
+    gap: 8px;
+}
+
+.kp,
+.kp.small {
+    min-height: 48px;
+    padding: 6px 0;
+    border: 1px solid rgba(203, 213, 225, .13);
+    border-radius: 15px;
+    background: rgba(255, 255, 255, .055);
+    color: #f3f6fb;
+    font-size: 21px;
+    font-weight: 650;
+    transition: background .16s ease, border-color .16s ease, transform .16s ease;
+}
+
+.kp:hover {
+    border-color: rgba(241, 83, 88, .45);
+    background: rgba(223, 23, 31, .15);
+}
+
+.kp:focus-visible,
+.login-footer a:focus-visible,
+.email-link-complete-btn:focus-visible {
+    outline: 3px solid rgba(255, 128, 132, .72);
+    outline-offset: 3px;
+}
+
+.kp.small {
+    background: rgba(255, 255, 255, .035);
+    color: #cbd5e1;
+}
+
+.login-footer {
+    margin-top: 14px;
+    padding-top: 11px;
+    border-top: 1px solid rgba(203, 213, 225, .12);
+    font-size: 14px;
+}
+
+.login-footer a {
+    color: #ffb5b7;
+    font-weight: 650;
+    text-decoration: none;
+    transition: color .16s ease;
+}
+
+.login-footer a:hover {
+    color: #fff;
+}
+
+@media (max-width: 620px) {
+    .login-overlay {
+        padding: max(14px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom));
+    }
+
+    .login-box {
+        width: min(100%, 360px);
+        max-height: calc(100dvh - 28px);
+        padding: 22px 20px 16px;
+        border-radius: 18px;
+    }
+
+    .login-email-label {
+        margin-top: 14px;
+    }
+
+    .keypad {
+        gap: 7px;
+    }
+
+    .kp,
+    .kp.small {
+        min-height: 46px;
+        border-radius: 11px;
+        font-size: 17px;
     }
 }
 
