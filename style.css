@@ -2015,6 +2015,14 @@ td select {
             padding: 12px 8px calc(8px + env(safe-area-inset-bottom));
         }
 
+        .nb-it-schedule-content > .menu-detail-close {
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            font-size: 20px;
+        }
+
         @supports (height: 100dvh) {
             .nb-it-schedule-content {
                 height: 96dvh;
@@ -2177,14 +2185,11 @@ td select {
         }
 
         .nb-it-month-table .nb-it-code-column {
-            left: 0;
-            width: 76px;
-            min-width: 76px;
-            max-width: 76px;
+            display: none;
         }
 
         .nb-it-month-table .nb-it-name-column {
-            left: 76px;
+            left: 0;
             width: 110px;
             min-width: 110px;
             max-width: 110px;
@@ -2215,13 +2220,11 @@ td select {
         }
 
         .nb-it-month-table .nb-it-code-column {
-            width: 64px;
-            min-width: 64px;
-            max-width: 64px;
+            display: none;
         }
 
         .nb-it-month-table .nb-it-name-column {
-            left: 64px;
+            left: 0;
             width: 100px;
             min-width: 100px;
             max-width: 100px;
