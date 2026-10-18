@@ -7370,7 +7370,7 @@ async function attemptLogin(pin) {
             if (!hasVerifiedEmailSession(email)) {
                 await createPendingAccessRequest(matched, email);
                 await requestDepartmentEmailLink(matched, email);
-                loginMessage = 'Đã gửi liên kết xác minh đến email. Mở email và bấm liên kết để tiếp tục.';
+                loginMessage = 'Đang chờ Quản trị viên xác minh yêu cầu truy cập. Liên kết xác minh email đã được gửi; hãy mở liên kết và chờ Admin duyệt trước khi đăng nhập.';
                 return;
             }
 
