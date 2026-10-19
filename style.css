@@ -2318,37 +2318,81 @@ td select {
         .nb-it-entry-tools {
             align-items: flex-start;
             flex-direction: column;
+            gap: 10px;
+        }
+
+        .nb-it-entry-actions {
+            display: grid;
+            width: 100%;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 8px;
+        }
+
+        .nb-it-entry-actions > button {
+            box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
+            min-height: 42px;
+            padding: 6px 8px;
+            font-size: 12px;
+            line-height: 1.2;
+            white-space: normal;
         }
 
         .nb-it-bulk-tools {
             width: 100%;
             display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 0.85fr);
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             align-items: center;
-            gap: 6px;
+            gap: 8px;
         }
 
         .nb-it-bulk-tools > span {
+            grid-column: 1 / -1;
             min-width: 0;
-            font-size: 10px;
-            line-height: 1.2;
-            padding: 4px;
+            min-height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 10px;
             border: 1px solid #e2e8f0;
-            border-radius: 7px;
+            border-radius: 9px;
             background: #f8fafc;
+            font-size: 12px;
+            line-height: 1.3;
             text-align: center;
         }
 
         .nb-it-bulk-tools button {
+            box-sizing: border-box;
+            width: 100%;
             min-width: 0;
-            min-height: 38px;
-            padding: 4px 6px;
-            font-size: 11px;
-            line-height: 1.15;
+            min-height: 42px;
+            padding: 6px 8px;
+            font-size: 12px;
+            line-height: 1.25;
             text-align: center;
             white-space: normal;
-            overflow-wrap: normal;
+        }
+
+        #nbItSelectionModeBtn {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        #nbItClearSelectionBtn:not([hidden]) {
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        #nbItSaveSelectionBtn {
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        #nbItClearSelectionBtn:not([hidden]) ~ #nbItSaveSelectionBtn {
+            grid-column: 1 / -1;
+            grid-row: 3;
         }
 
         .nb-it-bulk-tools .nb-it-desktop-label {
@@ -5154,7 +5198,25 @@ td select {
     .employees-pagination {
         align-items: flex-start;
         flex-direction: column;
+        gap: 10px;
+    }
+
+    .nb-it-entry-actions {
+        display: grid;
+        width: 100%;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
+    }
+
+    .nb-it-entry-actions > button {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        min-height: 42px;
+        padding: 6px 8px;
+        font-size: 12px;
+        line-height: 1.2;
+        white-space: normal;
     }
 
     .nb-it-delete-all-btn {
@@ -6623,6 +6685,104 @@ body {
     color: #fff;
 }
 
+.nb-it-entry-modal {
+    z-index: 10001;
+    padding: 20px;
+    backdrop-filter: blur(4px);
+}
+
+.nb-it-entry-modal-content {
+    display: block;
+    width: min(100%, 620px);
+    max-width: 620px;
+    max-height: min(88vh, 760px);
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.nb-it-entry-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0 28px 20px 0;
+}
+
+.nb-it-entry-modal-header h2 {
+    margin: 0;
+    color: #172b43;
+    font-size: 22px;
+    font-weight: 750;
+    text-align: left;
+}
+
+.nb-it-entry-modal-header p {
+    margin: 5px 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.nb-it-entry-modal .nb-it-entry-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+}
+
+.nb-it-entry-modal .nb-it-entry-form > .nb-it-field:first-of-type,
+.nb-it-entry-modal .nb-it-form-actions {
+    grid-column: 1 / -1;
+}
+
+.nb-it-entry-modal .nb-it-form-actions {
+    margin-top: 4px;
+    padding-top: 14px;
+    border-top: 1px solid #e7ebf0;
+}
+
+@media (min-width: 621px) {
+    .nb-it-entry-modal {
+        padding: 16px;
+    }
+
+    .nb-it-entry-modal-content {
+        max-height: min(calc(100vh - 32px), 760px);
+        padding: 18px 22px;
+    }
+
+    .nb-it-entry-modal-header {
+        margin-bottom: 12px;
+    }
+
+    .nb-it-entry-modal .nb-it-entry-form {
+        gap: 10px;
+    }
+
+    .nb-it-entry-modal .nb-it-field label,
+    .nb-it-entry-modal .nb-it-field-label {
+        font-size: 12px;
+    }
+
+    .nb-it-entry-modal .nb-it-field select,
+    .nb-it-entry-modal .nb-it-field input {
+        height: 38px;
+        margin-top: 5px;
+    }
+
+    .nb-it-entry-modal .nb-it-employee-picker {
+        max-height: 104px;
+        margin-top: 5px;
+    }
+
+    .nb-it-entry-modal .nb-it-form-actions {
+        padding-top: 8px;
+    }
+}
+
 @media (max-width: 620px) {
     .login-overlay {
         padding: max(14px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom));
@@ -6648,6 +6808,145 @@ body {
         min-height: 46px;
         border-radius: 11px;
         font-size: 17px;
+    }
+
+    .nb-it-entry-modal {
+        align-items: center;
+        padding: max(14px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom));
+    }
+
+    .nb-it-entry-modal-content {
+        width: 100%;
+        max-width: 520px;
+        max-height: min(84dvh, 680px);
+        padding: 20px 18px 16px;
+        border-radius: 20px;
+    }
+
+    .nb-it-entry-modal-header {
+        margin-bottom: 16px;
+    }
+
+    .nb-it-entry-modal-header h2 {
+        font-size: 19px;
+    }
+
+    .nb-it-entry-modal .nb-it-entry-form {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    .nb-it-entry-modal .nb-it-entry-form > .nb-it-field:first-of-type,
+    .nb-it-entry-modal .nb-it-form-actions {
+        grid-column: 1;
+    }
+
+    .nb-it-entry-modal .nb-it-employee-picker {
+        max-height: 140px;
+    }
+
+    .nb-it-entry-modal .nb-it-form-actions {
+        margin-top: 4px;
+        padding-top: 12px;
+    }
+}
+
+@media (max-width: 620px) {
+    .nb-it-schedule-content {
+        gap: 7px;
+    }
+
+    .nb-it-header {
+        gap: 8px;
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    .nb-it-header h2 {
+        font-size: 18px;
+    }
+
+    .nb-it-header p {
+        margin-top: 3px;
+        font-size: 11px;
+        line-height: 1.35;
+    }
+
+    .nb-it-year-controls {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 6px;
+    }
+
+    .nb-it-date-controls {
+        grid-template-columns: 32px max-content 96px 32px;
+        gap: 4px;
+    }
+
+    .nb-it-date-controls button {
+        min-width: 32px;
+        padding: 0 5px;
+    }
+
+    .nb-it-header-actions {
+        gap: 5px;
+    }
+
+    .nb-it-header-actions button {
+        min-height: 34px;
+        border-radius: 7px;
+        font-size: 10px;
+    }
+
+    .nb-it-entry-tools {
+        gap: 6px;
+    }
+
+    .nb-it-bulk-tools {
+        gap: 6px;
+    }
+
+    .nb-it-bulk-tools > span {
+        grid-column: 1;
+        grid-row: 1;
+        min-height: 38px;
+        padding: 5px 7px;
+        border-radius: 8px;
+        font-size: 11px;
+    }
+
+    #nbItSelectionModeBtn {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    #nbItClearSelectionBtn:not([hidden]) {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    #nbItSaveSelectionBtn {
+        grid-column: 2;
+        grid-row: 2;
+    }
+
+    #nbItSaveSelectionBtn:disabled {
+        display: none;
+    }
+
+    .nb-it-bulk-tools button {
+        min-height: 38px;
+        border-radius: 8px;
+        font-size: 11px;
+    }
+
+    .nb-it-entry-actions {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 6px;
+    }
+
+    .nb-it-entry-actions > button {
+        min-height: 36px;
+        border-radius: 8px;
     }
 }
 

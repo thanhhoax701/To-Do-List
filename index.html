@@ -365,6 +365,39 @@
                             </div>
                         </div>
                     </header>
+                    <div class="nb-it-entry-tools">
+                        <div class="nb-it-bulk-tools">
+                            <span id="nbItSelectionCount" role="status" aria-live="polite" aria-label="Chưa chọn ngày">
+                                <span class="nb-it-desktop-label">Chưa chọn ngày</span>
+                                <span class="nb-it-mobile-label">Chưa chọn</span>
+                            </span>
+                            <button type="button" id="nbItSelectionModeBtn" aria-pressed="false" aria-label="Chọn nhiều ngày NB">
+                                <span class="nb-it-desktop-label">Chọn nhiều ngày NB</span>
+                                <span class="nb-it-mobile-label">Chọn nhiều ngày</span>
+                            </button>
+                            <button type="button" id="nbItClearSelectionBtn" hidden>Bỏ chọn</button>
+                            <button type="button" id="nbItSaveSelectionBtn" disabled>
+                                <span class="nb-it-desktop-label">Thêm NB đã chọn</span>
+                                <span class="nb-it-mobile-label">Thêm NB</span>
+                            </button>
+                        </div>
+                        <div class="nb-it-entry-actions">
+                            <button type="button" id="nbItDeleteAllBtn" class="nb-it-delete-all-btn">🗑 Xóa toàn bộ lịch</button>
+                            <button type="button" id="nbItAddDesktopBtn" class="nb-it-add-btn nb-it-add-btn-desktop">＋ Thêm lịch</button>
+                        </div>
+                    </div>
+                    <div id="nbItCalendar" class="nb-it-calendar" aria-live="polite"></div>
+                </div>
+            </div>
+            <div id="nbItEntryModal" class="modal nb-it-entry-modal" role="dialog" aria-modal="true" aria-labelledby="nbItEntryModalTitle" aria-hidden="true">
+                <div class="modal-content nb-it-entry-modal-content">
+                    <header class="nb-it-entry-modal-header">
+                        <div>
+                            <h2 id="nbItEntryModalTitle">Thêm lịch</h2>
+                            <p>Nhập thông tin lịch NB - IT</p>
+                        </div>
+                        <button type="button" class="menu-detail-close" id="nbItEntryCloseBtn" aria-label="Đóng">&times;</button>
+                    </header>
                     <form id="nbItEntryForm" class="nb-it-entry-form" hidden>
                         <input id="nbItEntryId" type="hidden">
                         <div class="nb-it-field">
@@ -400,28 +433,6 @@
                             <button type="submit" id="nbItSaveBtn">Lưu lịch</button>
                         </div>
                     </form>
-                    <div class="nb-it-entry-tools">
-                        <div class="nb-it-bulk-tools">
-                            <span id="nbItSelectionCount" role="status" aria-live="polite" aria-label="Chưa chọn ngày">
-                                <span class="nb-it-desktop-label">Chưa chọn ngày</span>
-                                <span class="nb-it-mobile-label">Chưa chọn</span>
-                            </span>
-                            <button type="button" id="nbItSelectionModeBtn" aria-pressed="false" aria-label="Chọn nhiều ngày NB">
-                                <span class="nb-it-desktop-label">Chọn nhiều ngày NB</span>
-                                <span class="nb-it-mobile-label">Chọn nhiều ngày</span>
-                            </button>
-                            <button type="button" id="nbItClearSelectionBtn" hidden>Bỏ chọn</button>
-                            <button type="button" id="nbItSaveSelectionBtn" disabled>
-                                <span class="nb-it-desktop-label">Thêm NB đã chọn</span>
-                                <span class="nb-it-mobile-label">Thêm NB</span>
-                            </button>
-                        </div>
-                        <div class="nb-it-entry-actions">
-                            <button type="button" id="nbItDeleteAllBtn" class="nb-it-delete-all-btn">🗑 Xóa toàn bộ lịch</button>
-                            <button type="button" id="nbItAddDesktopBtn" class="nb-it-add-btn nb-it-add-btn-desktop">＋ Thêm lịch</button>
-                        </div>
-                    </div>
-                    <div id="nbItCalendar" class="nb-it-calendar" aria-live="polite"></div>
                 </div>
             </div>
             <div id="scheduleEditorModal" class="modal menu-detail-modal schedule-editor-modal" role="dialog" aria-modal="true" aria-labelledby="scheduleEditorTitle" aria-hidden="true">

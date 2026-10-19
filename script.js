@@ -72,7 +72,11 @@ const nbItCalendar = document.getElementById('nbItCalendar');
 const nbItScheduleCount = document.getElementById('nbItScheduleCount');
 const nbItYearInput = document.getElementById('nbItYear');
 const nbItMonthFilter = document.getElementById('nbItMonthFilter');
+const nbItEntryModal = document.getElementById('nbItEntryModal');
+const nbItEntryModalTitle = document.getElementById('nbItEntryModalTitle');
+const nbItEntryCloseBtn = document.getElementById('nbItEntryCloseBtn');
 const nbItEntryForm = document.getElementById('nbItEntryForm');
+let nbItEntryReturnFocus = null;
 const nbItEntryIdInput = document.getElementById('nbItEntryId');
 const nbItEmployeePicker = document.getElementById('nbItEmployeePicker');
 const nbItEmployeeHint = document.getElementById('nbItEmployeeHint');
@@ -3181,6 +3185,15 @@ function resetNbItEntryForm() {
     updateNbItSelectionControls();
 }
 
+function closeNbItEntryModal(restoreFocus = true) {
+    nbItEntryModal.classList.remove('show');
+    nbItEntryModal.setAttribute('aria-hidden', 'true');
+    nbItEntryForm.hidden = true;
+    resetNbItEntryForm();
+    if (restoreFocus && nbItEntryReturnFocus?.isConnected) nbItEntryReturnFocus.focus();
+    nbItEntryReturnFocus = null;
+}
+
 function renderNbItCalendar() {
     const year = Number(nbItYearInput.value);
     if (!Number.isInteger(year) || year < 2000 || year > 2100) {
@@ -3834,8 +3847,12 @@ async function loadNbItSchedule() {
 }
 
 function openNbItEntryForm(entry = null, employeeKey = '', date = '') {
+    nbItEntryReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     resetNbItEntryForm();
     nbItEntryForm.hidden = false;
+    nbItEntryModalTitle.textContent = entry ? 'Chỉnh sửa lịch' : 'Thêm lịch';
+    nbItEntryModal.classList.add('show');
+    nbItEntryModal.setAttribute('aria-hidden', 'false');
     renderNbItEmployeePicker(employeeKey ? [employeeKey] : []);
     if (date) {
         nbItStartDateInput.value = date;
@@ -3852,8 +3869,7 @@ function openNbItEntryForm(entry = null, employeeKey = '', date = '') {
         nbItSaveBtn.textContent = 'Cập nhật';
         nbItDeleteBtn.hidden = false;
     }
-    nbItEntryForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    nbItEmployeePicker.querySelector('input')?.focus();
+    requestAnimationFrame(() => nbItEmployeePicker.querySelector('input')?.focus());
 }
 
 function startNbItCellEdit(cell, initialValue = '') {
@@ -8452,7 +8468,7 @@ nbItDeleteAllBtn.addEventListener('click', async () => {
             throw new Error('Tài khoản đã thay đổi. Vui lòng thử lại.');
         }
         await remove(nbItScheduleRef());
-        nbItEntryForm.hidden = true;
+        closeNbItEntryModal(false);
         resetNbItEntryForm();
         nbItSelectedCells.clear();
         nbItBulkSelectionMode = false;
@@ -8547,8 +8563,14 @@ nbItSaveSelectionBtn.addEventListener('click', async () => {
     }
 });
 nbItCancelBtn.addEventListener('click', () => {
-    nbItEntryForm.hidden = true;
-    resetNbItEntryForm();
+    closeNbItEntryModal();
+});
+nbItEntryCloseBtn.addEventListener('click', () => closeNbItEntryModal());
+nbItEntryModal.addEventListener('click', event => {
+    if (event.target === nbItEntryModal) closeNbItEntryModal();
+});
+nbItEntryModal.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeNbItEntryModal();
 });
 nbItRefreshBtn.addEventListener('click', loadNbItSchedule);
 nbItImportBtn.addEventListener('click', () => {
@@ -8734,7 +8756,7 @@ nbItEntryForm.addEventListener('submit', async event => {
         }
         if (userId !== getCurrentUserId() || !isAdmin()) throw new Error('Tài khoản đã thay đổi. Vui lòng thử lại.');
         await update(ref(db), updates);
-        nbItEntryForm.hidden = true;
+        closeNbItEntryModal(false);
         resetNbItEntryForm();
         await loadNbItSchedule();
     } catch (error) {
@@ -8762,7 +8784,7 @@ nbItDeleteBtn.addEventListener('click', async () => {
             null
         ]));
         await update(ref(db), updates);
-        nbItEntryForm.hidden = true;
+        closeNbItEntryModal(false);
         resetNbItEntryForm();
         await loadNbItSchedule();
     } catch (error) {
