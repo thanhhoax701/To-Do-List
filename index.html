@@ -77,10 +77,11 @@
             <!-- Grid lịch - các ngày được render bởi JavaScript -->
             <div id="calendar"></div>
             <!-- Tiêu đề ngày đang chọn -->
-            <h2 id="selectedDateTitle">Chọn ngày để xem công việc</h2>
-            <!-- Search và Filter Section -->
-            <div id="searchFilterSection">
-                <div class="task-toolbar-row">
+            <div id="taskDayHeader">
+                <h2 id="selectedDateTitle">Chọn ngày để xem công việc</h2>
+                <!-- Search và Filter Section -->
+                <div id="searchFilterSection">
+                    <div class="task-toolbar-row">
                     <div class="task-search-input-wrap">
                         <input
                             type="text"
@@ -113,14 +114,15 @@
                         class="btn-add"
                         style="height: 36px; padding: 0 16px;"
                     >🔍 Tìm kiếm</button>
-                    <div id="taskActions">
-                        <button id="openAddModal" class="btn-add">➕ Thêm công việc</button>
-                        <label class="task-select-all"><input type="checkbox" id="selectAllCheckbox"> Chọn tất cả</label>
-                        <select id="deleteSelect">
-                            <option value="">Xóa...</option>
-                            <option value="selected">Xóa đã chọn</option>
-                        </select>
-                        <button type="button" id="deleteSelectedMobileBtn" class="delete-selected-mobile-btn" aria-label="Xóa công việc đã chọn" hidden>🗑️ Xóa đã chọn</button>
+                        <div id="taskActions">
+                            <button id="openAddModal" class="btn-add">➕ Thêm công việc</button>
+                            <label class="task-select-all"><input type="checkbox" id="selectAllCheckbox"> Chọn tất cả</label>
+                            <select id="deleteSelect">
+                                <option value="">Xóa...</option>
+                                <option value="selected">Xóa đã chọn</option>
+                            </select>
+                            <button type="button" id="deleteSelectedMobileBtn" class="delete-selected-mobile-btn" aria-label="Xóa công việc đã chọn" hidden>🗑️ Xóa đã chọn</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -507,16 +509,38 @@
                             </select>
                         </div>
                         <div class="schedule-form-field schedule-form-field-half">
-                            <label class="menu-form-label" for="scheduleStatus">Trạng thái</label>
-                            <select id="scheduleStatus" class="menu-form-input" required>
-                                <option value="Chưa bắt đầu">CHƯA XỬ LÝ</option>
-                                <option value="Đang thực hiện">ĐANG XỬ LÝ</option>
-                                <option value="Chậm tiến độ">CHẬM TIẾN ĐỘ</option>
-                                <option value="Đã lên lịch">ĐÃ LÊN LỊCH</option>
-                                <option value="Hoàn thành">ĐÃ XỬ LÝ</option>
-                                <option value="Cần chú ý">CẦN CHÚ Ý</option>
-                                <option value="Đã hủy">ĐÃ HỦY</option>
-                            </select>
+                            <label class="menu-form-label" id="scheduleStatusLabel" for="scheduleStatusControl">Trạng thái</label>
+                            <div class="schedule-status-select" id="scheduleStatusPicker">
+                                <button
+                                    type="button"
+                                    id="scheduleStatusControl"
+                                    class="schedule-status-control"
+                                    role="combobox"
+                                    aria-haspopup="listbox"
+                                    aria-expanded="false"
+                                    aria-controls="scheduleStatusOptions"
+                                    aria-labelledby="scheduleStatusLabel scheduleStatusValue"
+                                >
+                                    <span id="scheduleStatusValue"></span>
+                                    <span class="schedule-status-chevron" aria-hidden="true"></span>
+                                </button>
+                                <div
+                                    id="scheduleStatusOptions"
+                                    class="schedule-status-options"
+                                    role="listbox"
+                                    aria-labelledby="scheduleStatusLabel"
+                                    hidden
+                                ></div>
+                                <select id="scheduleStatus" class="schedule-status-native" required aria-hidden="true" tabindex="-1">
+                                    <option value="Chưa bắt đầu">CHƯA XỬ LÝ</option>
+                                    <option value="Đang thực hiện">ĐANG XỬ LÝ</option>
+                                    <option value="Chậm tiến độ">CHẬM TIẾN ĐỘ</option>
+                                    <option value="Đã lên lịch">ĐÃ LÊN LỊCH</option>
+                                    <option value="Hoàn thành">ĐÃ XỬ LÝ</option>
+                                    <option value="Cần chú ý">CẦN CHÚ Ý</option>
+                                    <option value="Đã hủy">ĐÃ HỦY</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="schedule-form-field schedule-form-field-wide" data-schedule-store-field>
                             <label class="menu-form-label" for="scheduleNote">Ghi chú</label>

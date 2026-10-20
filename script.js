@@ -123,6 +123,7 @@ const scheduleUnitInput = document.getElementById('scheduleUnit');
 const scheduleAssigneeInput = document.getElementById('scheduleAssignee');
 const scheduleAssigneeLabel = document.getElementById('scheduleAssigneeLabel');
 const scheduleStatusInput = document.getElementById('scheduleStatus');
+let scheduleStatusPickerSync = () => {};
 const scheduleNoteInput = document.getElementById('scheduleNote');
 const scheduleList = document.getElementById('scheduleList');
 const saveScheduleBtn = document.getElementById('saveScheduleBtn');
@@ -1984,7 +1985,11 @@ function loadTasks(ds) {
         if (selectAllControl) selectAllControl.style.display = '';
         const isReadOnlyRole = !isAdmin();
         syncMenuToggleVisibility();
-        if (searchFilterSection) searchFilterSection.style.display = '';
+        if (searchFilterSection) {
+            searchFilterSection.style.display = '';
+            searchFilterSection.classList.remove('task-toolbar-empty-day');
+            searchFilterSection.parentElement.classList.remove('task-day-header-empty');
+        }
         if (addBtn) addBtn.style.display = isReadOnlyRole ? 'none' : 'inline-block';
         if (expBtn) expBtn.style.display = 'inline-block';
         if (deleteDropdown) deleteDropdown.style.display = isReadOnlyRole ? 'none' : 'inline-block';
@@ -1998,6 +2003,13 @@ function loadTasks(ds) {
     // Lắng nghe thay đổi dữ liệu từ Firebase Realtime Database
     onValue(r, snap => {
         taskTable.innerHTML = ""; // Xóa bảng cũ
+        const hasTasks = snap.exists();
+        taskTableContainer.style.display = hasTasks ? '' : 'none';
+        if (searchFilterSection) {
+            searchFilterSection.classList.toggle('task-toolbar-empty-day', !hasTasks);
+            searchFilterSection.parentElement.classList.toggle('task-day-header-empty', !hasTasks);
+            searchFilterSection.style.display = !hasTasks && !isAdmin() ? 'none' : '';
+        }
         let i = 1;
 
         // Lặp qua từng công việc trong ngày
@@ -3993,6 +4005,124 @@ function syncScheduleDateRequirements() {
     dateInputs.forEach(input => { input.required = required; });
 }
 
+function initializeScheduleStatusPicker() {
+    const picker = document.getElementById('scheduleStatusPicker');
+    const trigger = document.getElementById('scheduleStatusControl');
+    const selectedLabel = document.getElementById('scheduleStatusValue');
+    const optionsPanel = document.getElementById('scheduleStatusOptions');
+    let activeIndex = -1;
+
+    const refresh = () => {
+        const options = Array.from(scheduleStatusInput.options);
+        const selectedOption = options[scheduleStatusInput.selectedIndex] || options[0];
+        selectedLabel.textContent = selectedOption ? selectedOption.textContent : '';
+        optionsPanel.replaceChildren(...options.map((option, index) => {
+            const item = document.createElement('div');
+            item.id = `scheduleStatusOption${index}`;
+            item.className = 'schedule-status-option';
+            item.setAttribute('role', 'option');
+            item.setAttribute('aria-selected', String(option === selectedOption));
+            item.dataset.index = String(index);
+            item.textContent = option.textContent;
+            return item;
+        }));
+        trigger.disabled = scheduleStatusInput.disabled;
+        if (activeIndex >= options.length) activeIndex = options.length - 1;
+        if (!optionsPanel.hidden && options.length) {
+            setActiveIndex(Math.max(0, scheduleStatusInput.selectedIndex));
+        }
+    };
+
+    const setActiveIndex = index => {
+        const options = Array.from(scheduleStatusInput.options);
+        if (!options.length) return;
+        activeIndex = (index + options.length) % options.length;
+        optionsPanel.querySelectorAll('.schedule-status-option').forEach((item, itemIndex) => {
+            item.classList.toggle('is-active', itemIndex === activeIndex);
+        });
+        trigger.setAttribute('aria-activedescendant', `scheduleStatusOption${activeIndex}`);
+        optionsPanel.children[activeIndex].scrollIntoView({ block: 'nearest' });
+    };
+
+    const close = () => {
+        optionsPanel.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+        trigger.removeAttribute('aria-activedescendant');
+        picker.classList.remove('opens-up');
+    };
+
+    const open = () => {
+        if (trigger.disabled) return;
+        optionsPanel.hidden = false;
+        trigger.setAttribute('aria-expanded', 'true');
+        const triggerRect = trigger.getBoundingClientRect();
+        const containerRect = picker.closest('.modal-content')?.getBoundingClientRect();
+        const boundaryTop = Math.max(8, containerRect ? containerRect.top : 0);
+        const boundaryBottom = Math.min(
+            window.innerHeight - 8,
+            containerRect ? containerRect.bottom : window.innerHeight
+        );
+        const spaceAbove = triggerRect.top - boundaryTop - 6;
+        const spaceBelow = boundaryBottom - triggerRect.bottom - 6;
+        picker.classList.toggle(
+            'opens-up',
+            spaceBelow < optionsPanel.offsetHeight && spaceAbove > spaceBelow
+        );
+        setActiveIndex(Math.max(0, scheduleStatusInput.selectedIndex));
+    };
+
+    const selectOption = index => {
+        const option = scheduleStatusInput.options[index];
+        if (!option || option.disabled) return;
+        const changed = scheduleStatusInput.value !== option.value;
+        scheduleStatusInput.value = option.value;
+        refresh();
+        close();
+        if (changed) scheduleStatusInput.dispatchEvent(new Event('change', { bubbles: true }));
+        trigger.focus();
+    };
+
+    trigger.addEventListener('click', () => {
+        if (optionsPanel.hidden) open();
+        else close();
+    });
+    trigger.addEventListener('keydown', event => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (optionsPanel.hidden) {
+                open();
+            } else {
+                setActiveIndex(activeIndex + (event.key === 'ArrowDown' ? 1 : -1));
+            }
+        } else if (event.key === 'Home' && !optionsPanel.hidden) {
+            event.preventDefault();
+            setActiveIndex(0);
+        } else if (event.key === 'End' && !optionsPanel.hidden) {
+            event.preventDefault();
+            setActiveIndex(scheduleStatusInput.options.length - 1);
+        } else if ((event.key === 'Enter' || event.key === ' ') && !optionsPanel.hidden) {
+            event.preventDefault();
+            selectOption(activeIndex);
+        } else if (event.key === 'Escape' && !optionsPanel.hidden) {
+            event.preventDefault();
+            close();
+        } else if (event.key === 'Tab') {
+            close();
+        }
+    });
+    optionsPanel.addEventListener('click', event => {
+        const item = event.target.closest('.schedule-status-option');
+        if (item) selectOption(Number(item.dataset.index));
+    });
+    document.addEventListener('click', event => {
+        if (!picker.contains(event.target)) close();
+    });
+    scheduleStatusInput.addEventListener('change', refresh);
+
+    refresh();
+    return refresh;
+}
+
 function setScheduleTypeMode(type) {
     activeScheduleType = type === 'maintenance' ? 'maintenance' : 'storeVisit';
     scheduleTypeInput.value = activeScheduleType;
@@ -4052,6 +4182,7 @@ function setScheduleTypeMode(type) {
     scheduleStatusInput.value = statuses.some(([value]) => value === currentStatus)
         ? currentStatus
         : statuses[0][0];
+    scheduleStatusPickerSync();
     syncScheduleDateRequirements();
 }
 
@@ -4090,6 +4221,7 @@ function setScheduleFormMode(schedule = null) {
         maintenanceEvidenceCurrent.textContent = '';
         maintenanceLinkInput.value = '';
         scheduleStatusInput.value = activeScheduleType === 'maintenance' ? 'Đã lên lịch' : 'Chưa bắt đầu';
+        scheduleStatusPickerSync();
         syncScheduleDateRequirements();
         saveScheduleBtn.textContent = 'Lưu lịch';
         scheduleEditorTitle.textContent = activeScheduleType === 'maintenance' ? 'Tạo lịch bảo trì' : 'Thêm lịch';
@@ -4130,6 +4262,7 @@ function setScheduleFormMode(schedule = null) {
     scheduleStatusInput.value = activeScheduleType === 'maintenance'
         ? maintenanceStatusMap[schedule.status] || schedule.status || 'Đã lên lịch'
         : schedule.status || 'Chưa bắt đầu';
+    scheduleStatusPickerSync();
     syncScheduleDateRequirements();
     saveScheduleBtn.textContent = 'Lưu lịch';
     scheduleEditorTitle.textContent = activeScheduleType === 'maintenance' ? 'Sửa lịch bảo trì' : 'Sửa lịch';
@@ -5934,6 +6067,7 @@ async function importScheduleWorkbook(file, type) {
 }
 
 if (scheduleForm) {
+    scheduleStatusPickerSync = initializeScheduleStatusPicker();
     scheduleDateInput.value = getTodayString();
     maintenanceStartDateInput.value = getTodayString();
     maintenanceEndDateInput.value = getTodayString();
@@ -6641,6 +6775,11 @@ confirmAdvBtn.onclick = async () => {
  * @param {string} weekId - ID của tuần (week1, week2, ...)
  */
 function loadTasksForWeek(y, m, weekId) {
+    if (searchFilterSection) {
+        searchFilterSection.style.display = '';
+        searchFilterSection.classList.remove('task-toolbar-empty-day');
+        searchFilterSection.parentElement.classList.remove('task-day-header-empty');
+    }
     const r = tasksRef(y, m, weekId);
     // Lắng nghe thay đổi dữ liệu từ Firebase Realtime Database
     onValue(r, snap => {
@@ -8133,7 +8272,11 @@ function appendTaskMobileCard(row) {
 }
 
 function renderSearchedTasks(tasks) {
-    if (searchFilterSection) searchFilterSection.style.display = '';
+    if (searchFilterSection) {
+        searchFilterSection.style.display = '';
+        searchFilterSection.classList.remove('task-toolbar-empty-day');
+        searchFilterSection.parentElement.classList.remove('task-day-header-empty');
+    }
 
     taskTable.innerHTML = '';
 

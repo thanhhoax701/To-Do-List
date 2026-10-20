@@ -6960,3 +6960,260 @@ body {
         transition-duration: .01ms !important;
     }
 }
+
+/* ===== SELECT CONTROLS ===== */
+select:not([multiple]):not([size]):not(.schedule-status-native),
+#searchFilterSection select:not([multiple]):not([size]):not(.schedule-status-native) {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 2.25em !important;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #64748b 50%),
+        linear-gradient(135deg, #64748b 50%, transparent 50%);
+    background-position:
+        calc(100% - 16px) 50%,
+        calc(100% - 11px) 50%;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    cursor: pointer;
+    transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+select:not([multiple]):not([size]):hover:not(:disabled) {
+    border-color: #b9c8d8;
+}
+
+select:not([multiple]):not([size]):focus-visible {
+    outline: 3px solid rgba(59, 130, 246, .18);
+    outline-offset: 1px;
+}
+
+select:not([multiple]):not([size]):disabled {
+    cursor: not-allowed;
+    opacity: .65;
+}
+
+select:not([multiple]):not([size]).priority-low,
+select:not([multiple]):not([size]).priority-medium,
+select:not([multiple]):not([size]).priority-high,
+select:not([multiple]):not([size]).status-pending,
+select:not([multiple]):not([size]).status-doing,
+select:not([multiple]):not([size]).status-done,
+select:not([multiple]):not([size]).status-delayed {
+    background-image:
+        linear-gradient(45deg, transparent 50%, #fff 50%),
+        linear-gradient(135deg, #fff 50%, transparent 50%);
+}
+
+select.task-mobile-card-status:not([multiple]):not([size]) {
+    padding-right: 24px !important;
+    background-position:
+        calc(100% - 12px) 50%,
+        calc(100% - 7px) 50%;
+}
+
+#taskActions #deleteSelect {
+    padding-right: 30px !important;
+}
+
+.schedule-status-select {
+    position: relative;
+    width: 100%;
+}
+
+.schedule-status-native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.schedule-status-control {
+    display: flex;
+    width: 100%;
+    min-height: 38px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 13px;
+    border: 1px solid #d6e0e8;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+    color: #172b43;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.schedule-status-control:hover:not(:disabled) {
+    border-color: #aebfd0;
+    background: #fff;
+}
+
+.schedule-status-control:focus-visible,
+.schedule-status-control[aria-expanded="true"] {
+    border-color: #83b5d7;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(81, 157, 200, .14);
+}
+
+.schedule-status-control:disabled {
+    cursor: not-allowed;
+    opacity: .65;
+}
+
+.schedule-status-chevron {
+    width: 9px;
+    height: 9px;
+    flex: 0 0 auto;
+    border-right: 2px solid #64788c;
+    border-bottom: 2px solid #64788c;
+    transform: translateY(-2px) rotate(45deg);
+    transition: transform .16s ease;
+}
+
+.schedule-status-control[aria-expanded="true"] .schedule-status-chevron {
+    transform: translateY(2px) rotate(225deg);
+}
+
+.schedule-status-options {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    left: 0;
+    z-index: 10020;
+    max-height: min(280px, 40vh);
+    min-width: min(240px, calc(100vw - 40px));
+    overflow-y: auto;
+    padding: 5px;
+    border: 1px solid #dfe6ed;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 14px 32px rgba(24, 42, 62, .18);
+    scrollbar-color: #cbd5e1 transparent;
+    scrollbar-width: thin;
+}
+
+.schedule-status-select.opens-up .schedule-status-options {
+    top: auto;
+    bottom: calc(100% + 6px);
+}
+
+.schedule-status-options[hidden] {
+    display: none;
+}
+
+.schedule-status-option {
+    display: flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 11px;
+    border-radius: 8px;
+    color: #33465a;
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.35;
+    cursor: pointer;
+    transition: background .14s ease, color .14s ease;
+}
+
+.schedule-status-option::after {
+    color: #c9151c;
+    content: "";
+    font-size: 14px;
+    font-weight: 800;
+    opacity: 0;
+}
+
+.schedule-status-option[aria-selected="true"] {
+    background: #fff0f1;
+    color: #bd2028;
+}
+
+.schedule-status-option[aria-selected="true"]::after {
+    content: "✓";
+    opacity: 1;
+}
+
+.schedule-status-option:hover,
+.schedule-status-option.is-active {
+    background: #f1f5f9;
+    color: #172b43;
+}
+
+#searchFilterSection.task-toolbar-empty-day {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+#taskDayHeader.task-day-header-empty {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 14px 28px;
+    margin: 12px 0 0;
+    box-sizing: border-box;
+}
+
+#taskDayHeader.task-day-header-empty #selectedDateTitle {
+    min-width: 0;
+    margin: 0;
+}
+
+#searchFilterSection.task-toolbar-empty-day > .task-toolbar-row {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 0 !important;
+}
+
+#searchFilterSection.task-toolbar-empty-day > .task-toolbar-row > :not(#taskActions),
+#searchFilterSection.task-toolbar-empty-day #taskActions > :not(#openAddModal) {
+    display: none !important;
+}
+
+#searchFilterSection.task-toolbar-empty-day #taskActions {
+    display: flex !important;
+    width: auto;
+    justify-content: flex-end;
+    margin: 0 !important;
+}
+
+@media (max-width: 760px) {
+    #taskDayHeader.task-day-header-empty {
+        gap: 8px;
+        padding: 10px 0;
+        margin-top: 10px;
+    }
+
+    #taskDayHeader.task-day-header-empty #selectedDateTitle {
+        flex: 1 1 auto;
+        font-size: clamp(14px, 4vw, 18px);
+        line-height: 1.25;
+    }
+
+    #searchFilterSection.task-toolbar-empty-day #taskActions {
+        width: auto;
+    }
+
+    #searchFilterSection.task-toolbar-empty-day #taskActions #openAddModal {
+        width: auto;
+        min-height: 38px;
+        padding: 0 10px !important;
+        justify-content: center;
+        font-size: 12px !important;
+    }
+}
