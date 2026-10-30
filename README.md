@@ -21,6 +21,7 @@
 - Hỗ trợ lưu trữ tệp qua Firebase Storage.
 - Trang quản trị để quản lý người dùng, công việc và xem nhật ký chỉnh sửa/đăng nhập.
 - Hỗ trợ xử lý dữ liệu bảng tính Excel.
+- Lịch NB - IT nhận diện mã `TL` (trực lễ) khi nhập Excel và hiển thị riêng trên lịch.
 
 ## Cấu trúc thư mục
 

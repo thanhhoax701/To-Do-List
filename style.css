@@ -2187,6 +2187,11 @@ td select {
         color: #111;
     }
 
+    .nb-it-entry-chip[data-kind="TL"] {
+        background: #e600e6;
+        color: #111;
+    }
+
     .nb-it-entry-chip[data-kind="HD"] {
         background: var(--nb-it-hd-color, #b8c9e4);
         color: #263238;

@@ -3368,7 +3368,7 @@ function renderNbItCalendar() {
                     cell.classList.add('nb-it-event-cell');
                     entries.forEach(entry => {
                         const chip = document.createElement('button');
-                        const kind = ['NB', 'NL', 'NP', 'TC', 'HD'].includes(entry.kind) ? entry.kind : 'HD';
+                        const kind = ['NB', 'NL', 'NP', 'TC', 'TL', 'HD'].includes(entry.kind) ? entry.kind : 'HD';
                         const label = String(entry.label || kind).trim() || kind;
                         chip.type = 'button';
                         chip.className = 'nb-it-entry-chip';
@@ -3430,6 +3430,7 @@ async function exportNbItSchedule() {
     const kindColors = {
         NB: 'FFF31318',
         TC: 'FF20DF21',
+        TL: 'FFE600E6',
         HD: 'FFC6D9F0',
         NL: 'FFFDE68A',
         NP: 'FFC4B5FD'
@@ -3670,7 +3671,7 @@ function parseNbItExcelWorkbook(workbook, year, employees) {
                         if (!dates.length) return;
 
                         const marker = nbItExcelCellText(worksheet, merge.s.r, merge.s.c);
-                        const match = marker.match(/^(NB|NL|NP|TC|H[ĐD])(?:\s*[-:]?\s*(.*))?$/i);
+                        const match = marker.match(/^(NB|NL|NP|TC|TL|H[ĐD])(?:\s*[-:]?\s*(.*))?$/i);
                         if (!match) return;
                         const kind = /^H[ĐD]$/i.test(match[1]) ? 'HD' : match[1].toUpperCase();
                         addEntry(employee, employeeName, marker, kind, dates[0], dates[dates.length - 1]);
@@ -3679,7 +3680,7 @@ function parseNbItExcelWorkbook(workbook, year, employees) {
                 daysByColumn.forEach((date, columnIndex) => {
                     if (mergedDayColumns.has(columnIndex)) return;
                     const marker = nbItExcelCellText(worksheet, rowIndex, columnIndex);
-                    const match = marker.match(/^(NB|NL|NP|TC|H[ĐD])(?:\s*[-:]?\s*(.*))?$/i);
+                    const match = marker.match(/^(NB|NL|NP|TC|TL|H[ĐD])(?:\s*[-:]?\s*(.*))?$/i);
                     if (!match) return;
                     const kind = /^H[ĐD]$/i.test(match[1]) ? 'HD' : match[1].toUpperCase();
                     addEntry(employee, employeeName, marker, kind, date, date);
@@ -3705,7 +3706,7 @@ function nbItScheduleEntriesFromSnapshot(snapshot) {
         const endDate = entry?.endDate || entry?.startDate;
         if (!entry || typeof entry !== 'object' ||
             !isValidYmd(entry.startDate) || !isValidYmd(endDate) ||
-            endDate < entry.startDate || !['NB', 'NL', 'NP', 'TC', 'HD'].includes(entry.kind)) return;
+            endDate < entry.startDate || !['NB', 'NL', 'NP', 'TC', 'TL', 'HD'].includes(entry.kind)) return;
         entries.push({ ...entry, id: child.key, endDate });
     });
     return entries;
@@ -3745,7 +3746,7 @@ async function importNbItExcelFile(file) {
         throw new Error('Không tìm thấy khu vực tiêu đề THÁNG trong file. Hãy dùng đúng mẫu lịch NB - IT.');
     }
     if (!parsed.entries.length) {
-        throw new Error(`Không tìm thấy ô NB, NL, NP, TC hoặc HD hợp lệ trong mẫu.${parsed.unknownEmployeeRows ? ` Không khớp ${parsed.unknownEmployeeRows} dòng mã nhân viên.` : ''}`);
+        throw new Error(`Không tìm thấy ô NB, NL, NP, TC, TL hoặc HD hợp lệ trong mẫu.${parsed.unknownEmployeeRows ? ` Không khớp ${parsed.unknownEmployeeRows} dòng mã nhân viên.` : ''}`);
     }
 
     const alreadyScheduled = nbItScheduleEntriesFromSnapshot(schedulesSnapshot);
@@ -3841,7 +3842,7 @@ async function loadNbItSchedule() {
                 if (!entry || typeof entry !== 'object' || !isValidYmd(entry.startDate) ||
                     !isValidYmd(entry.endDate || entry.startDate) ||
                     (entry.endDate || entry.startDate) < entry.startDate ||
-                    !['NB', 'NL', 'NP', 'TC', 'HD'].includes(entry.kind)) return;
+                    !['NB', 'NL', 'NP', 'TC', 'TL', 'HD'].includes(entry.kind)) return;
                 nbItEntries.push({ ...entry, id: child.key, endDate: entry.endDate || entry.startDate });
             });
         }
@@ -8815,7 +8816,7 @@ nbItEntryForm.addEventListener('submit', async event => {
     const kind = nbItKindInput.value;
     if (!userId || !selectedEmployees.length ||
         (kind !== 'HD' && selectedEmployees.length !== 1) ||
-        !['NB', 'NL', 'NP', 'TC', 'HD'].includes(kind) ||
+        !['NB', 'NL', 'NP', 'TC', 'TL', 'HD'].includes(kind) ||
         !isValidYmd(startDate) || !isValidYmd(endDate) || endDate < startDate) {
         await showCustomAlert('Vui lòng chọn nhân viên, loại lịch và khoảng ngày hợp lệ.');
         return;
