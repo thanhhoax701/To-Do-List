@@ -585,8 +585,22 @@
                                 <span aria-hidden="true">⌕</span>
                                 <input style="margin: 0;" type="search" id="employeeSearch" placeholder="Tìm tên, mã NV, số điện thoại...">
                             </label>
-                            <select id="employeeDepartmentFilter" aria-label="Lọc tên bộ phận hiện tại">
-                                <option value="">Tên bộ phận hiện tại</option>
+                            <div class="employees-unit-filter-wrap">
+                                <input
+                                    type="text"
+                                    id="employeeUnitFilter"
+                                    class="employees-unit-filter"
+                                    placeholder="Tất cả đơn vị"
+                                    autocomplete="off"
+                                    role="combobox"
+                                    aria-label="Lọc theo đơn vị"
+                                    aria-autocomplete="list"
+                                    aria-expanded="false"
+                                    aria-controls="employeeDirectoryUnitList"
+                                >
+                            </div>
+                            <select id="employeeDepartmentFilter" aria-label="Lọc tên bộ phận">
+                                <option value="">Tên bộ phận</option>
                             </select>
                             <select id="employeePageSize" aria-label="Số nhân viên trên mỗi trang">
                                 <option value="50">Phân trang (50/trang)</option>

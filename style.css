@@ -3513,6 +3513,7 @@ td select {
     color: #172b43;
     font-size: 28px;
     line-height: 1.2;
+    text-align: left;
     white-space: nowrap;
 }
 
@@ -3523,17 +3524,15 @@ td select {
 }
 
 .employees-toolbar {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(220px, 1.5fr) repeat(3, minmax(140px, 1fr)) auto auto;
     align-items: center;
-    justify-content: flex-end;
     gap: 10px;
-    flex-wrap: wrap;
 }
 
 .modal-content label.employees-search {
     display: flex;
-    flex: 1 1 260px;
-    width: auto;
+    width: 100%;
     min-width: 0;
     height: 44px;
     align-items: center;
@@ -3593,20 +3592,54 @@ td select {
 }
 
 .employees-toolbar select {
-    flex: 1 1 170px;
-    width: auto;
+    width: 100%;
     min-width: 0;
     max-width: none;
     border: 1px solid #dce4ec;
     background-color: #fff;
 }
 
-.employees-toolbar #employeePageSize {
-    flex-basis: 175px;
+.employees-unit-filter-wrap {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+}
+
+.employees-unit-filter-wrap::after {
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    width: 0;
+    height: 0;
+    border-top: 5px solid #64748b;
+    border-right: 5px solid transparent;
+    border-left: 5px solid transparent;
+    content: "";
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+.employees-unit-filter {
+    width: 100%;
+    height: 44px;
+    padding: 0 36px 0 14px;
+    border: 1px solid #dce4ec;
+    border-radius: 10px;
+    outline: 0;
+    background: #fff;
+    color: #465b6d;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    box-sizing: border-box;
+}
+
+.employees-unit-filter:focus {
+    border-color: #9ab8e8;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .employees-tool-btn {
-    flex: 0 0 auto;
     cursor: pointer;
     white-space: nowrap;
 }
@@ -3631,6 +3664,21 @@ td select {
     .employees-header {
         grid-template-columns: minmax(0, 1fr);
         gap: 14px;
+    }
+}
+
+@media (max-width: 900px) {
+    .employees-toolbar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .employees-search,
+    .employees-toolbar #employeePageSize {
+        grid-column: 1 / -1;
+    }
+
+    .employees-tool-btn {
+        width: 100%;
     }
 }
 

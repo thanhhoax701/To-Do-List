@@ -158,6 +158,7 @@ const maintenanceScheduleHead = document.getElementById('maintenanceScheduleHead
 const employeeTableContainer = document.getElementById('employeeTableContainer');
 const employeesCount = document.getElementById('employeesCount');
 const employeeSearch = document.getElementById('employeeSearch');
+const employeeUnitFilter = document.getElementById('employeeUnitFilter');
 const employeeDepartmentFilter = document.getElementById('employeeDepartmentFilter');
 const employeePageSizeSelect = document.getElementById('employeePageSize');
 const deleteAllEmployeesBtn = document.getElementById('deleteAllEmployeesBtn');
@@ -4672,6 +4673,8 @@ let activeEmployeeAutocomplete = null;
 let employeeAutocompleteDismissalBound = false;
 let employeePage = 1;
 let employeesPerPage = 50;
+let employeeSelectedUnit = '';
+let employeeSelectedUnitType = '';
 const expandedEmployeeDepartments = new Set();
 let initializedEmployeeDepartments = false;
 let employeeEditReturnFocus = null;
@@ -4827,9 +4830,9 @@ async function loadEmployeeTaskOptions() {
         const management = orderedDepartments.filter(value => normalizeEmployeeText(value) === 'ban giam doc');
         const otherDepartments = orderedDepartments.filter(value => normalizeEmployeeText(value) !== 'ban giam doc');
         employeeUnitOptions = [
-            ...management.map(value => ({ value, group: 'Ban Giám Đốc' })),
-            ...otherDepartments.map(value => ({ value, group: 'Phòng ban' })),
-            ...orderedLocations.map(value => ({ value, group: 'Đơn vị cửa hàng' }))
+            ...management.map(value => ({ value, group: 'Ban Giám Đốc', filterType: 'department' })),
+            ...otherDepartments.map(value => ({ value, group: 'Phòng ban', filterType: 'department' })),
+            ...orderedLocations.map(value => ({ value, group: 'Đơn vị cửa hàng', filterType: 'location' }))
         ];
         employeeTaskOptionsLoaded = true;
     } catch (error) {
@@ -4884,11 +4887,14 @@ function parseScheduleAssignees(value) {
 function renderEmployeeAutocomplete() {
     if (!activeEmployeeAutocomplete) return;
     const { input, popup, type } = activeEmployeeAutocomplete;
-    const isUnitField = type === 'unit' || type === 'scheduleUnit';
+    const isUnitField = type === 'unit' || type === 'scheduleUnit' || type === 'employeeDirectoryUnit';
+    const isEmployeeDirectoryUnit = type === 'employeeDirectoryUnit';
     const isScheduleAssignee = type === 'scheduleAssignee';
     const isMultiPersonField = type === 'requester' || type === 'assignee' || isScheduleAssignee;
     const queryValue = isMultiPersonField ? input.value.split(',').pop().trim() : input.value;
-    const query = normalizeEmployeeText(queryValue);
+    const query = isEmployeeDirectoryUnit && input.value === employeeSelectedUnit
+        ? ''
+        : normalizeEmployeeText(queryValue);
     const hasReachedAssigneeLimit = isScheduleAssignee &&
         parseScheduleAssignees(input.value.split(',').slice(0, -1).join(',')).length >= 5;
     const source = isUnitField
@@ -4897,10 +4903,16 @@ function renderEmployeeAutocomplete() {
             ? employeeAssigneeOptions
             : employeeRequesterOptions;
     const matches = source.filter(item => normalizeEmployeeText(item.value).includes(query)).slice(0, 40);
+    const allUnitsMatch = isEmployeeDirectoryUnit &&
+        (!query || normalizeEmployeeText('Tất cả đơn vị').includes(query));
+    const visibleMatches = [
+        ...(allUnitsMatch ? [{ value: '', group: '', filterType: '' }] : []),
+        ...matches
+    ];
     const visibleItems = [];
     popup.replaceChildren();
 
-    if (!matches.length || hasReachedAssigneeLimit) {
+    if (!visibleMatches.length || hasReachedAssigneeLimit) {
         const empty = document.createElement('div');
         empty.className = 'employee-autocomplete-empty';
         empty.textContent = hasReachedAssigneeLimit
@@ -4912,13 +4924,15 @@ function renderEmployeeAutocomplete() {
     }
 
     let currentGroup = '';
-    matches.forEach(item => {
+    visibleMatches.forEach(item => {
         if (isUnitField && item.group !== currentGroup) {
             currentGroup = item.group;
-            const heading = document.createElement('div');
-            heading.className = 'employee-autocomplete-group';
-            heading.textContent = currentGroup;
-            popup.appendChild(heading);
+            if (currentGroup) {
+                const heading = document.createElement('div');
+                heading.className = 'employee-autocomplete-group';
+                heading.textContent = currentGroup;
+                popup.appendChild(heading);
+            }
         }
 
         const option = document.createElement('button');
@@ -4941,7 +4955,7 @@ function renderEmployeeAutocomplete() {
             option.append(code, name, detail);
             popup.appendChild(option);
         } else {
-            option.textContent = item.value;
+            option.textContent = isEmployeeDirectoryUnit && !item.value ? 'Tất cả đơn vị' : item.value;
             popup.appendChild(option);
         }
         visibleItems.push({ item, option });
@@ -4963,6 +4977,15 @@ function renderEmployeeAutocomplete() {
                 );
                 if (!alreadySelected) values.push(item.value);
                 input.value = values.join(', ');
+            } else if (isEmployeeDirectoryUnit) {
+                employeeSelectedUnit = item.value;
+                employeeSelectedUnitType = item.filterType || '';
+                input.value = item.value;
+                employeePage = 1;
+                expandedEmployeeDepartments.clear();
+                initializedEmployeeDepartments = false;
+                updateEmployeeDepartmentFilter();
+                renderEmployees();
             } else {
                 input.value = item.value;
             }
@@ -4988,6 +5011,7 @@ async function openEmployeeAutocomplete(input, type) {
         requester: 'employeeRequesterList',
         assignee: 'employeeAssigneeList',
         unit: 'employeeUnitList',
+        employeeDirectoryUnit: 'employeeDirectoryUnitList',
         scheduleUnit: 'scheduleUnitEmployeeList',
         scheduleAssignee: 'scheduleAssigneeEmployeeList'
     };
@@ -5053,6 +5077,57 @@ function employeeLocation(employee) {
     return String(employee.location || 'Chưa phân loại').trim() || 'Chưa phân loại';
 }
 
+function employeeMatchesSelectedUnit(employee) {
+    if (!employeeSelectedUnit) return true;
+    return employeeSelectedUnitType === 'department'
+        ? employeeDepartment(employee) === employeeSelectedUnit
+        : employeeLocation(employee) === employeeSelectedUnit;
+}
+
+function employeePositionRank(employee) {
+    const normalizeLocation = value => normalizeEmployeeText(value)
+        .replace(/[^\w\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/^[a-z]{1,3}\s*\d+\s+/, '')
+        .replace(/^head\s+/, '')
+        .replace(/^hong duc\s+/, '');
+    const isHeadOffice = normalizeLocation(employeeLocation(employee)) === 'vp cong ty';
+    const positions = [employee.position, employee.positionDetail]
+        .map(position => normalizeEmployeeText(position))
+        .filter(Boolean);
+    const hierarchy = isHeadOffice
+        ? [
+            ['truong phong'],
+            ['quyen truong phong'],
+            ['pho phong'],
+            ['quyen pho phong'],
+            ['giam sat'],
+            ['to truong', 'to tuong'],
+            ['to pho'],
+            ['chuyen vien']
+        ]
+        : [
+            ['cua hang truong'],
+            ['cua hang pho'],
+            ['to truong', 'to tuong'],
+            ['to pho'],
+            ['nhan vien']
+        ];
+    const ranks = positions.map(position => isHeadOffice
+        ? hierarchy.findIndex((patterns, index) => {
+            const matchesRole = patterns.some(pattern => position.includes(pattern));
+            const isAuthorizedRole = index === 1 || index === 3;
+            return matchesRole && (isAuthorizedRole
+                ? position.includes('quyen ')
+                : !position.includes('quyen '));
+        })
+        : hierarchy.findIndex(patterns =>
+            patterns.some(pattern => position.includes(pattern))
+        )).filter(rank => rank >= 0);
+    return ranks.length ? Math.min(...ranks) : hierarchy.length;
+}
+
 const employeeLocationOrder = [
     'mau than',
     'nam can tho',
@@ -5095,6 +5170,7 @@ function compareEmployeeLocations(first, second) {
 function employeeComparator(a, b) {
     return compareEmployeeLocations(employeeLocation(a), employeeLocation(b)) ||
         employeeDepartment(a).localeCompare(employeeDepartment(b), 'vi') ||
+        employeePositionRank(a) - employeePositionRank(b) ||
         String(a.code || '').localeCompare(String(b.code || ''), 'vi', { numeric: true }) ||
         String(a.name || '').localeCompare(String(b.name || ''), 'vi');
 }
@@ -5138,6 +5214,7 @@ function renderEmployees() {
     const query = normalizeEmployeeText(employeeSearch.value);
     const selectedDepartment = employeeDepartmentFilter.value;
     const filtered = employeeRecords
+        .filter(employeeMatchesSelectedUnit)
         .filter(employee => !selectedDepartment || employeeDepartment(employee) === selectedDepartment)
         .filter(employee => {
             if (!query) return true;
@@ -5382,13 +5459,7 @@ async function loadEmployees() {
             });
         }
         employeeRecords.sort(employeeComparator);
-        const departments = [...new Set(employeeRecords.map(employeeDepartment))]
-            .sort((a, b) => a.localeCompare(b, 'vi'));
-        const currentDepartment = employeeDepartmentFilter.value;
-        employeeDepartmentFilter.replaceChildren(new Option('Tên bộ phận hiện tại', ''));
-        departments.forEach(department => employeeDepartmentFilter.add(new Option(department, department)));
-        if (departments.includes(currentDepartment)) employeeDepartmentFilter.value = currentDepartment;
-        else employeeDepartmentFilter.value = '';
+        updateEmployeeDepartmentFilter();
         renderEmployees();
     } catch (error) {
         console.error('Lỗi tải danh sách nhân viên:', error);
@@ -5400,6 +5471,17 @@ async function loadEmployees() {
         employeeTableContainer.appendChild(message);
         await showCustomAlert(`Không thể tải danh sách nhân viên: ${error?.message || String(error)}`);
     }
+}
+
+function updateEmployeeDepartmentFilter() {
+    const departments = [...new Set(employeeRecords
+        .filter(employeeMatchesSelectedUnit)
+        .map(employeeDepartment))]
+        .sort((a, b) => a.localeCompare(b, 'vi'));
+    const currentDepartment = employeeDepartmentFilter.value;
+    employeeDepartmentFilter.replaceChildren(new Option('Tên bộ phận', ''));
+    departments.forEach(department => employeeDepartmentFilter.add(new Option(department, department)));
+    employeeDepartmentFilter.value = departments.includes(currentDepartment) ? currentDepartment : '';
 }
 
 function openEmployeeEdit(employee, trigger) {
@@ -5587,6 +5669,20 @@ async function importEmployeesWorkbook(file) {
 }
 
 function initializeEmployeeDirectory() {
+    setupEmployeeAutocomplete(employeeUnitFilter, 'employeeDirectoryUnit');
+    employeeUnitFilter.addEventListener('input', () => {
+        if (employeeUnitFilter.value === employeeSelectedUnit) return;
+        employeeSelectedUnit = '';
+        employeeSelectedUnitType = '';
+        employeePage = 1;
+        updateEmployeeDepartmentFilter();
+        renderEmployees();
+    });
+    employeeUnitFilter.addEventListener('blur', () => {
+        if (employeeUnitFilter.value !== employeeSelectedUnit) {
+            employeeUnitFilter.value = employeeSelectedUnit;
+        }
+    });
     employeeSearch.addEventListener('input', () => {
         employeePage = 1;
         renderEmployees();
@@ -5596,7 +5692,10 @@ function initializeEmployeeDirectory() {
         const selectedDepartment = employeeDepartmentFilter.value;
         if (selectedDepartment) {
             employeeRecords
-                .filter(employee => employeeDepartment(employee) === selectedDepartment)
+                .filter(employee =>
+                    employeeMatchesSelectedUnit(employee) &&
+                    employeeDepartment(employee) === selectedDepartment
+                )
                 .forEach(employee => {
                     const location = employeeLocation(employee);
                     expandedEmployeeDepartments.add(`location:${location}`);
@@ -5636,8 +5735,11 @@ function initializeEmployeeDirectory() {
             expandedEmployeeDepartments.clear();
             initializedEmployeeDepartments = false;
             employeeSearch.value = '';
+            employeeSelectedUnit = '';
+            employeeSelectedUnitType = '';
+            employeeUnitFilter.value = '';
             employeeDepartmentFilter.value = '';
-            employeeDepartmentFilter.replaceChildren(new Option('Tên bộ phận hiện tại', ''));
+            employeeDepartmentFilter.replaceChildren(new Option('Tên bộ phận', ''));
             renderEmployees();
         } catch (error) {
             console.error('Lỗi xóa toàn bộ nhân viên:', error);
