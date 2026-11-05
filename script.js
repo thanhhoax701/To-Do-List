@@ -8583,7 +8583,9 @@ document.querySelectorAll('.menu-category-btn[data-menu-modal]').forEach(button 
     });
 });
 
-nbItYearInput.value = String(new Date().getFullYear());
+const nbItToday = new Date();
+nbItYearInput.value = String(nbItToday.getFullYear());
+nbItMonthFilter.value = String(nbItToday.getMonth() + 1);
 nbItAddBtn.addEventListener('click', () => openNbItEntryForm());
 nbItAddDesktopBtn.addEventListener('click', () => openNbItEntryForm());
 nbItDeleteAllBtn.addEventListener('click', async () => {
