@@ -674,6 +674,16 @@ button {
     text-align: center;
 }
 
+.btn-check-tl {
+    background: #8b5cf6;
+    color: #fff;
+    padding: 10px 16px;
+    border: none;
+    font-size: 14px;
+    width: 100%;
+    text-align: center;
+}
+
 /* Nút sửa - vàng */
 .btn-edit {
     background: #ffc107;
@@ -855,12 +865,21 @@ td select {
     border: 2px solid #1d4ed8;
 }
 
+.day.tl-day {
+    background: #f3e8ff;
+    border: 2px solid #8b5cf6;
+}
+
 .day.nb-day:hover:not(.selected-day) {
     color: #7a3e00;
 }
 
 .day.nl-day:hover:not(.selected-day) {
     color: #173b73;
+}
+
+.day.tl-day:hover:not(.selected-day) {
+    color: #5b21b6;
 }
 
 /* Animation hiện modal */
@@ -5009,12 +5028,14 @@ td select {
     }
 
     .day.nb-day,
-    .day.nl-day {
+    .day.nl-day,
+    .day.tl-day {
         border-width: 1px;
     }
 
     .day.nb-day.selected-day,
-    .day.nl-day.selected-day {
+    .day.nl-day.selected-day,
+    .day.tl-day.selected-day {
         border-color: #df171f;
     }
 

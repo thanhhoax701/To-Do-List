@@ -135,7 +135,7 @@
                 <div class="side-menu-content">
                     <button type="button" class="menu-category-btn" data-menu-modal="calendarManagementModal">
                         <span class="menu-category-icon">📅</span>
-                        <span class="menu-category-text">1. Quản lý ngày NB / NL</span>
+                        <span class="menu-category-text">1. Quản lý ngày NB / NL / TL</span>
                         <span class="menu-category-arrow">›</span>
                     </button>
                     <button type="button" class="menu-category-btn" data-menu-modal="workScheduleModal">
@@ -163,7 +163,7 @@
             <div id="calendarManagementModal" class="modal menu-detail-modal" role="dialog" aria-modal="true" aria-labelledby="calendarManagementTitle" aria-hidden="true">
                 <div class="modal-content menu-detail-content">
                     <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
-                    <h2 id="calendarManagementTitle">Quản lý ngày NB / NL</h2>
+                    <h2 id="calendarManagementTitle">Quản lý ngày NB / NL / TL</h2>
                     <div class="menu-detail-sections">
                         <button type="button" class="menu-category-btn" data-menu-modal="manageNbModal">
                             <span class="menu-category-icon">🟠</span>
@@ -173,6 +173,11 @@
                         <button type="button" class="menu-category-btn" data-menu-modal="manageNlModal">
                             <span class="menu-category-icon">🔵</span>
                             <span class="menu-category-text">Nghỉ lễ (NL)</span>
+                            <span class="menu-category-arrow">›</span>
+                        </button>
+                        <button type="button" class="menu-category-btn" data-menu-modal="manageTlModal">
+                            <span class="menu-category-icon">🟣</span>
+                            <span class="menu-category-text">Trực lễ (TL)</span>
                             <span class="menu-category-arrow">›</span>
                         </button>
                     </div>
@@ -209,6 +214,23 @@
                         </div>
                         <button id="deleteNlBtn" class="btn-delete" style="width:100%; margin-top:8px;">🗑️ Xóa NL</button>
                         <button id="changeNlBtn" class="btn-edit" style="width:100%; margin-top:4px;">🔄 Đổi ngày NL</button>
+                    </section>
+                </div>
+            </div>
+            <div id="manageTlModal" class="modal menu-detail-modal" role="dialog" aria-modal="true" aria-labelledby="manageTlTitle" aria-hidden="true">
+                <div class="modal-content menu-detail-content">
+                    <button type="button" class="menu-detail-close" aria-label="Đóng">&times;</button>
+                    <h2 id="manageTlTitle">Trực lễ (TL)</h2>
+                    <button type="button" class="menu-detail-back" data-menu-parent="calendarManagementModal">‹ Quay lại</button>
+                    <section class="menu-section">
+                        <h3 class="menu-section-title">Trực lễ (TL)</h3>
+                        <button id="selectTlDayBtn" class="btn-check-tl menu-btn">Lựa chọn ngày TL</button>
+                        <div>
+                            <label class="menu-form-label" for="manageTlDate">Chọn TL cần chỉnh:</label>
+                            <input type="date" id="manageTlDate" class="menu-form-input">
+                        </div>
+                        <button id="deleteTlBtn" class="btn-delete" style="width:100%; margin-top:8px;">🗑️ Xóa TL</button>
+                        <button id="changeTlBtn" class="btn-edit" style="width:100%; margin-top:4px;">🔄 Đổi ngày TL</button>
                     </section>
                 </div>
             </div>
@@ -948,6 +970,37 @@
                             <div id="nlNoDatesMsg" style="color: #999; font-size: 14px;">Chưa chọn ngày nào</div>
                         </div>
                         <button id="nlConfirmButton" style="width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px;">✔️ Xác nhận</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Modal lựa chọn ngày TL -->
+            <div id="tlSelectModal" class="modal">
+                <div class="modal-content tl-modal-content">
+                    <span class="close" id="closeTlSelectModal">&times;</span>
+                    <h2 style="margin-top: 0; color: #333; text-align: center; font-size: 22px; margin-bottom: 20px;">🟣 Lựa chọn ngày Trực Lễ (TL)</h2>
+                    <div id="tlMonthSelectSection" style="margin-bottom: 20px;">
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Chọn Năm:</label>
+                            <select id="tlYearSelect" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;"></select>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px;" id="tlMonthList"></div>
+                    </div>
+                    <div id="tlCalendarSelectSection" style="display: none; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <button id="tlCalendarBack" style="padding: 8px 14px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">← Quay lại</button>
+                            <h3 id="tlCalendarTitle" style="margin: 0; font-size: 18px; color: #333;"></h3>
+                            <div style="width: 100px;"></div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 10px; text-align: center; font-weight: 600; color: #555; font-size: 13px;">
+                            <div>Thứ hai</div><div>Thứ ba</div><div>Thứ tư</div><div>Thứ năm</div><div>Thứ sáu</div><div>Thứ bảy</div><div>Chủ nhật</div>
+                        </div>
+                        <div id="tlCalendarDays" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 15px;"></div>
+                        <div style="margin-bottom: 15px; padding: 12px; background: #f8f0ff; border-radius: 6px; border: 1px solid #d8b4fe;">
+                            <div style="font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">Ngày được chọn:</div>
+                            <div id="tlSelectedDatesList" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+                            <div id="tlNoDatesMsg" style="color: #999; font-size: 14px;">Chưa chọn ngày nào</div>
+                        </div>
+                        <button id="tlConfirmButton" style="width: 100%; padding: 12px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px;">✔️ Xác nhận</button>
                     </div>
                 </div>
             </div>
