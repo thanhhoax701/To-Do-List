@@ -13,12 +13,19 @@
         <div id="adminLogin" class="admin-login">
             <div class="login-box-admin">
                 <h2>Đăng nhập Admin</h2>
-                <!-- Input PIN 4 chữ số -->
                 <input
-                    id="adminPin"
+                    id="adminEmail"
+                    type="email"
+                    autocomplete="username"
+                    placeholder="Email Firebase Admin"
+                    aria-label="Email Firebase Admin"
+                >
+                <input
+                    id="adminPassword"
                     type="password"
-                    placeholder="Nhập PIN admin (4 chữ số)"
-                    maxlength="4"
+                    autocomplete="current-password"
+                    placeholder="Mật khẩu Firebase"
+                    aria-label="Mật khẩu Firebase"
                 >
                 <!-- Hiển thị lỗi đăng nhập -->
                 <div id="adminLoginMsg"></div>
@@ -51,6 +58,7 @@
                     <div class="admin-sidebar-footer">
                         <span class="admin-sidebar-status"></span>
                         <span>Hệ thống quản lý</span>
+                        <button id="adminLogoutBtn" type="button">Đăng xuất Admin</button>
                         <a href="../index.html">Về trang chính <span>↗</span></a>
                     </div>
                 </nav>

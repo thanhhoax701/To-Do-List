@@ -1,7 +1,7 @@
 // ========== NHẬP FIREBASE ==========
 // Nhập Firebase Realtime Database và các hàm cần thiết để thao tác với database
 import { auth, db, storage } from "./firebase.js";
-import { isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { ref, push, onValue, remove, update, get, set, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { ref as firebaseStorageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { recordSuccessfulLogin } from "./login-log.js";
@@ -293,6 +293,7 @@ function tasksRef(...parts) {
 
 async function recordTaskEdit(action, task, taskDate, taskId = '', details = '') {
     const user = getCurrentUser();
+    if (!['admin', 'superadmin'].includes(user?.role)) return;
     if (!user?.key) {
         console.error('Không thể ghi nhật ký chỉnh sửa: không xác định được tài khoản đang đăng nhập.');
         return;
@@ -8089,6 +8090,7 @@ if (deleteSelectedMobileBtn && deleteSelect) {
 const loginOverlay = document.getElementById('loginOverlay');
 const pinDotsEl = document.getElementById('pinDots');
 const loginEmailInput = document.getElementById('loginEmail');
+const adminPasswordInput = document.getElementById('adminPassword');
 const completeEmailLinkBtn = document.getElementById('completeEmailLinkBtn');
 const loginMessageEl = document.getElementById('loginMessage');
 const loginMessageTextEl = document.getElementById('loginMessageText');
@@ -8102,6 +8104,7 @@ let loginInProgress = false;
 let accessApprovalUnsubscribe = null;
 let approvalRedirectInProgress = false;
 let loginToastTimeout = null;
+let verifiedAdminUid = null;
 
 function updatePinDots() {
     const dots = pinDotsEl.querySelectorAll('.dot');
@@ -8131,11 +8134,20 @@ function describeLoginError(error) {
     if (code === 'ACCESS_BLOCKED') {
         return 'Tài khoản này đang bị Admin chặn truy cập. Vui lòng liên hệ Quản trị viên.';
     }
+    if (code === 'ADMIN_AUTH_REQUIRED') {
+        return 'Quản trị viên cần đăng nhập bằng tài khoản Firebase Authentication.';
+    }
+    if (code === 'ADMIN_ACCESS_DENIED') {
+        return 'Tài khoản Firebase này chưa được cấp quyền Admin cho hồ sơ ứng dụng.';
+    }
+    if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+        return 'Email hoặc mật khẩu Firebase không đúng.';
+    }
     if (code === 'PERMISSION_DENIED' || /permission_denied/i.test(detail)) {
         return 'Firebase Realtime Database từ chối quyền truy cập. Kiểm tra Rules của users và accessRequests.';
     }
     if (code === 'auth/operation-not-allowed') {
-        return 'Firebase chưa bật Email link (passwordless sign-in) trong Authentication > Sign-in method.';
+        return 'Firebase chưa bật phương thức đăng nhập cần thiết (Email/Password cho Admin hoặc Email link cho Phòng Ban).';
     }
     if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri' ||
         code === 'auth/unauthorized-domain') {
@@ -8171,6 +8183,31 @@ function normalizeLoginUsers(usersObj) {
         }
     }
     return usersObj;
+}
+
+async function authenticateAdminAccount(user) {
+    const email = String(loginEmailInput?.value || auth.currentUser?.email || '').trim().toLowerCase();
+    if (email && loginEmailInput && !loginEmailInput.value) loginEmailInput.value = email;
+    let firebaseUser = auth.currentUser;
+    if (!firebaseUser || String(firebaseUser.email || '').trim().toLowerCase() !== email) {
+        const password = String(adminPasswordInput?.value || '');
+        if (!email || !password) {
+            const error = new Error('Nhập email và mật khẩu Firebase của Quản trị viên.');
+            error.code = 'ADMIN_AUTH_REQUIRED';
+            throw error;
+        }
+        firebaseUser = (await signInWithEmailAndPassword(auth, email, password)).user;
+    }
+
+    const accessSnap = await get(ref(db, `adminAccess/${firebaseUser.uid}`));
+    const access = accessSnap.exists() ? accessSnap.val() : null;
+    if (access?.enabled !== true || access.userId !== user.key || access.role !== user.role) {
+        if (auth.currentUser?.uid === firebaseUser.uid) await signOut(auth);
+        const error = new Error('UID chưa được cấp quyền cho đúng hồ sơ Admin trong adminAccess.');
+        error.code = 'ADMIN_ACCESS_DENIED';
+        throw error;
+    }
+    verifiedAdminUid = firebaseUser.uid;
 }
 
 function enterApplication(user) {
@@ -8489,6 +8526,10 @@ async function attemptLogin(pin) {
             return;
         }
 
+        if (['admin', 'superadmin'].includes(matched.role)) {
+            await authenticateAdminAccount(matched);
+        }
+
         if (matched.role === 'department') {
             const email = String(loginEmailInput?.value || '').trim().toLowerCase();
             const savedEmail = String(matched.email || '').trim().toLowerCase();
@@ -8529,6 +8570,7 @@ async function attemptLogin(pin) {
     } finally {
         hideLoading();
         loginInProgress = false;
+        if (adminPasswordInput) adminPasswordInput.value = '';
         if (loginMessage) {
             onLoginFail();
             showLoginMessage(loginMessage);
@@ -8559,7 +8601,7 @@ kpButtons.forEach(b => {
 document.addEventListener('keydown', (e) => {
     const key = e.key;
     if (!loginOverlay.classList.contains('hidden')) {
-        if (e.target === loginEmailInput) {
+        if (e.target === loginEmailInput || e.target === adminPasswordInput) {
             if (key === 'Enter' && enteredPin.length === 4) {
                 e.preventDefault();
                 attemptLogin(enteredPin);
@@ -8621,7 +8663,8 @@ function getLoggedInUserRole() {
 function isMember() { return getLoggedInUserRole() === 'member'; }
 function isAdmin() {
     const role = getLoggedInUserRole();
-    return role === 'admin' || role === 'superadmin' || role === 'department';
+    return role === 'department' ||
+        (['admin', 'superadmin'].includes(role) && verifiedAdminUid === auth.currentUser?.uid);
 }
 
 /** Ẩn nút ☰ Menu khi sidebar đang mở (không đè chữ tiêu đề); member không thấy nút. */
@@ -8710,6 +8753,7 @@ function applyRolePermissions() {
 
 // Đăng xuất: Xóa session và quảy lại trang đăng nhập
 function logout() {
+    verifiedAdminUid = null;
     if (taskDayUnsubscribe) {
         taskDayUnsubscribe();
         taskDayUnsubscribe = null;
@@ -9867,6 +9911,28 @@ async function restoreSavedSession() {
                     : 'Tài khoản cần được Admin duyệt và xác minh email trước khi tiếp tục.');
                 return;
             }
+            user = { key: user.key, ...currentUser };
+        } else if (['admin', 'superadmin'].includes(user.role)) {
+            await auth.authStateReady();
+            const firebaseUser = auth.currentUser;
+            if (!firebaseUser) {
+                const error = new Error('Quản trị viên cần đăng nhập Firebase Authentication.');
+                error.code = 'ADMIN_AUTH_REQUIRED';
+                throw error;
+            }
+            const accessSnap = await get(ref(db, `adminAccess/${firebaseUser.uid}`));
+            const access = accessSnap.exists() ? accessSnap.val() : null;
+            const usersSnap = await get(ref(db, 'users'));
+            const users = (usersSnap.exists() ? normalizeLoginUsers(usersSnap.val()) : {}) || {};
+            const currentUser = users[user.key];
+            if (access?.enabled !== true || access.userId !== user.key || access.role !== user.role ||
+                !currentUser || String(currentUser.pin) !== String(user.pin) || currentUser.role !== user.role) {
+                sessionStorage.removeItem('user');
+                const error = new Error('Phiên Admin không còn được cấp quyền trong adminAccess.');
+                error.code = 'ADMIN_ACCESS_DENIED';
+                throw error;
+            }
+            verifiedAdminUid = firebaseUser.uid;
             user = { key: user.key, ...currentUser };
         }
 

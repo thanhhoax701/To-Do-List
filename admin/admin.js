@@ -1,6 +1,7 @@
 // ========== IMPORT FIREBASE ==========
 // Nhập Firebase Database và các hàm thao tác dữ liệu
-import { db } from '../firebase.js';
+import { auth, db } from '../firebase.js';
+import { signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { ref, push, get, remove, onValue, update, set, runTransaction, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 import { recordSuccessfulLogin } from '../login-log.js';
 
@@ -8,9 +9,11 @@ import { recordSuccessfulLogin } from '../login-log.js';
 // Các element cho giao diện đăng nhập quản trị viên
 const adminLoginDiv = document.getElementById('adminLogin'); // Container đăng nhập
 const adminPanel = document.getElementById('adminPanel'); // Panel quản trị (hiện sau khi đăng nhập)
-const adminPinInput = document.getElementById('adminPin'); // Input nhập PIN
+const adminEmailInput = document.getElementById('adminEmail');
+const adminPasswordInput = document.getElementById('adminPassword');
 const adminLoginBtn = document.getElementById('adminLoginBtn'); // Nút đăng nhập
 const adminLoginMsg = document.getElementById('adminLoginMsg'); // Hiển thị lỗi/thông báo
+const adminLogoutBtn = document.getElementById('adminLogoutBtn');
 const adminProfileTrigger = document.getElementById('adminProfileTrigger');
 const adminProfileDialog = document.getElementById('adminProfileDialog');
 const adminProfileClose = document.getElementById('adminProfileClose');
@@ -33,6 +36,8 @@ const newRole = document.getElementById('newRole'); // Dropdown role user
 // ========== BIẾN TOÀN CỤC ==========
 let editingUserId = null; // Lưu ID user đang chỉnh sửa (null = thêm mới)
 let activeAdminUser = null;
+let usersUnsubscribe = null;
+let accessRequestsUnsubscribe = null;
 
 // DOM elements new panels/navigation
 const navItems = document.querySelectorAll('#adminNav li');
@@ -316,7 +321,7 @@ function createAccessActionButton(label, className, handler) {
 function bindAccessRequests() {
     if (accessRequestsBound) return;
     accessRequestsBound = true;
-    onValue(ref(db, 'accessRequests'), snapshot => {
+    accessRequestsUnsubscribe = onValue(ref(db, 'accessRequests'), snapshot => {
         currentAccessRequests = snapshot.exists() ? snapshot.val() : {};
         renderAccessRequests();
     }, error => {
@@ -491,7 +496,11 @@ async function loadEditLogs() {
         console.error('Không thể tải nhật ký chỉnh sửa:', error);
         currentEditLogs = [];
         editLogTableBody.replaceChildren();
-        editLogStatus.textContent = 'Không thể tải nhật ký chỉnh sửa. Vui lòng kiểm tra quyền Firebase hoặc thử tải lại.';
+        const errorDetails = String(error?.code || error?.message || 'Lỗi không xác định').slice(0, 180);
+        const permissionHint = errorDetails.includes('PERMISSION_DENIED')
+            ? ' Hãy kiểm tra quyền đọc taskEditLogs trong Firebase Realtime Database Rules.'
+            : '';
+        editLogStatus.textContent = `Không thể tải nhật ký chỉnh sửa.${permissionHint} Chi tiết: ${errorDetails}`;
     } finally {
         refreshEditLogsBtn.disabled = false;
     }
@@ -630,71 +639,126 @@ document.addEventListener('keydown', event => {
 });
 
 // ========== HÀM ĐĂNG NHẬP ==========
-// Kiểm tra PIN của Admin hoặc Super Admin trước khi mở giao diện quản trị
+async function findAuthorizedAdmin(firebaseUser) {
+    const accessSnap = await get(ref(db, `adminAccess/${firebaseUser.uid}`));
+    const access = accessSnap.exists() ? accessSnap.val() : null;
+    if (access?.enabled !== true || !access.userId ||
+        !['admin', 'superadmin'].includes(access.role)) return null;
 
-async function checkAdminPin(pin) {
-    // Lấy danh sách tất cả users từ database
-    const snap = await get(ref(db, 'users'));
-    if (!snap.exists()) return null; // Nếu không có users, trả về null
-
-    const users = normalizeUsers(snap.val());
-    return Object.entries(users || {}).reduce((matchedAdmin, [key, user]) => {
-        if (matchedAdmin || !user || String(user.pin) !== String(pin) ||
-            !['admin', 'superadmin'].includes(user.role)) return matchedAdmin;
-        return { key, ...user };
-    }, null);
+    const usersSnap = await get(ref(db, 'users'));
+    const users = usersSnap.exists() ? normalizeUsers(usersSnap.val()) : {};
+    const user = users?.[access.userId];
+    if (!user || user.role !== access.role) return null;
+    return { key: access.userId, ...user };
 }
 
-// Thực hiện đăng nhập quản trị viên
-async function performAdminLogin() {
-    const pin = adminPinInput.value.trim(); // Lấy PIN từ input
+function showAdminPanel(adminUser) {
+    activeAdminUser = adminUser;
+    updateRoleOptions();
+    adminLoginDiv.style.display = 'none';
+    adminPanel.style.display = 'block';
+    bindUsers();
+    bindAccessRequests();
+    switchPanel('panel-dashboard');
+}
 
-    // Kiểm tra PIN có đủ 4 chữ số không
-    if (pin.length !== 4) {
-        adminLoginMsg.innerText = 'PIN phải đủ 4 chữ số';
+async function performAdminLogin() {
+    const email = String(adminEmailInput.value || '').trim();
+    const password = String(adminPasswordInput.value || '');
+    adminLoginMsg.innerText = '';
+    if (!email || !password) {
+        adminLoginMsg.innerText = 'Vui lòng nhập email và mật khẩu Firebase.';
         return;
     }
 
-    adminLoginMsg.innerText = ''; // Xóa thông báo lỗi cũ
-
+    adminLoginBtn.disabled = true;
+    let signedInUser = null;
     try {
-        // Kiểm tra PIN có hợp lệ không
-        const adminUser = await checkAdminPin(pin);
+        const credential = await signInWithEmailAndPassword(auth, email, password);
+        signedInUser = credential.user;
+        const adminUser = await findAuthorizedAdmin(credential.user);
         if (!adminUser) {
-            adminLoginMsg.innerText = 'PIN không hợp lệ hoặc tài khoản không có quyền quản trị';
+            await signOut(auth);
+            adminLoginMsg.innerText = 'Tài khoản Firebase này chưa được cấp quyền Admin.';
             return;
         }
-        activeAdminUser = adminUser;
-        updateRoleOptions();
-
+        showAdminPanel(adminUser);
         try {
             await recordSuccessfulLogin(adminUser, 'Quản trị');
         } catch (logError) {
             console.error('Không thể lưu nhật ký đăng nhập quản trị:', logError);
         }
-
-        // Đăng nhập thành công: Ẩn form đăng nhập, hiển thị panel quản trị
-        adminLoginDiv.style.display = 'none';
-        adminPanel.style.display = 'block';
-        bindUsers(); // Tải danh sách users
-        bindAccessRequests();
-        switchPanel('panel-dashboard'); // hiển thị dashboard sau khi đăng nhập
-    } catch (e) {
-        adminLoginMsg.innerText = 'Lỗi khi kiểm tra PIN';
-        console.error(e);
+    } catch (error) {
+        if (signedInUser && auth.currentUser?.uid === signedInUser.uid) {
+            try {
+                await signOut(auth);
+            } catch (signOutError) {
+                console.error('Không thể kết thúc phiên Admin chưa được cấp quyền:', signOutError);
+            }
+        }
+        console.error('Không thể đăng nhập Admin:', error);
+        adminLoginMsg.innerText = error.code === 'auth/invalid-credential' ||
+            error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found'
+            ? 'Email hoặc mật khẩu Firebase không đúng.'
+            : `Không thể đăng nhập Admin${error.code ? ` (${error.code})` : ''}: ${error.message || 'Lỗi không xác định.'}`;
+    } finally {
+        adminPasswordInput.value = '';
+        adminLoginBtn.disabled = false;
     }
 }
 
-// Gán sự kiện click nút đăng nhập
-adminLoginBtn.onclick = performAdminLogin;
+async function restoreAdminSession() {
+    await auth.authStateReady();
+    if (!auth.currentUser) return;
+    try {
+        const adminUser = await findAuthorizedAdmin(auth.currentUser);
+        if (!adminUser) {
+            adminLoginMsg.innerText = 'Phiên Firebase hiện tại chưa được cấp quyền Admin. Hãy đăng nhập bằng tài khoản Admin.';
+            return;
+        }
+        showAdminPanel(adminUser);
+    } catch (error) {
+        console.error('Không thể xác minh phiên Admin:', error);
+        adminLoginMsg.innerText = `Không thể xác minh quyền Admin${error.code ? ` (${error.code})` : ''}: ${error.message || 'Lỗi không xác định.'}`;
+    }
+}
 
-// Hỗ trợ phím Enter để đăng nhập (UX tốt hơn)
-adminPinInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        e.preventDefault();
+adminLoginBtn.onclick = performAdminLogin;
+adminEmailInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+        event.preventDefault();
         performAdminLogin();
     }
-})
+});
+adminPasswordInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        performAdminLogin();
+    }
+});
+adminLogoutBtn.addEventListener('click', async () => {
+    try {
+        await signOut(auth);
+        activeAdminUser = null;
+        if (usersUnsubscribe) usersUnsubscribe();
+        if (accessRequestsUnsubscribe) accessRequestsUnsubscribe();
+        usersUnsubscribe = null;
+        accessRequestsUnsubscribe = null;
+        accessRequestsBound = false;
+        currentUsersObj = null;
+        currentAccessRequests = {};
+        userListDiv.replaceChildren();
+        accessRequestList.replaceChildren();
+        adminPanel.style.display = 'none';
+        adminLoginDiv.style.display = '';
+        adminEmailInput.value = '';
+        adminPasswordInput.value = '';
+        adminLoginMsg.innerText = '';
+    } catch (error) {
+        console.error('Không thể đăng xuất Admin:', error);
+        adminLoginMsg.innerText = `Không thể đăng xuất${error.code ? ` (${error.code})` : ''}: ${error.message || 'Lỗi không xác định.'}`;
+    }
+});
 
 // ========== HÀM QUẢN LÝ FORM ==========
 // Xóa sạch dữ liệu form (dùng khi cancele hoặc sau khi thêm/cập nhật)
@@ -894,8 +958,9 @@ function normalizeUsers(obj) {
 }
 
 function bindUsers() {
+    if (usersUnsubscribe) return;
     const r = ref(db, 'users');
-    onValue(r, snap => {
+    usersUnsubscribe = onValue(r, snap => {
         if (snap.exists()) {
             const data = normalizeUsers(snap.val());
             renderUsers(data);
@@ -1269,3 +1334,8 @@ addUserBtn.onclick = async () => {
 };
 
 cancelEditBtn.onclick = resetFormUI;
+
+restoreAdminSession().catch(error => {
+    console.error('Không thể khôi phục phiên Admin:', error);
+    adminLoginMsg.innerText = `Không thể khôi phục phiên Admin: ${error.message || 'Lỗi không xác định.'}`;
+});

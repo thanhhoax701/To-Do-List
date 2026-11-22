@@ -12,8 +12,10 @@
         <div id="loginOverlay" class="login-overlay">
             <div class="login-box">
                 <h2>ĐĂNG NHẬP</h2>
-                <label class="login-email-label" for="loginEmail">Vui lòng nhập email (Đối với người dùng thuộc Phòng Ban)</label>
+                <label class="login-email-label" for="loginEmail">Email (Phòng Ban hoặc Quản trị viên)</label>
                 <input id="loginEmail" class="login-email-input" type="email" autocomplete="email" placeholder="name@gmail.com">
+                <label class="login-email-label" for="adminPassword">Mật khẩu Firebase (chỉ dành cho Quản trị viên)</label>
+                <input id="adminPassword" class="login-email-input" type="password" autocomplete="current-password" placeholder="Mật khẩu Firebase">
                 <button id="completeEmailLinkBtn" class="email-link-complete-btn" type="button" hidden>Hoàn tất xác minh email</button>
                 <div id="loginMessage" class="login-toast" role="status" aria-live="polite" aria-atomic="true" hidden>
                     <span class="login-toast-icon" aria-hidden="true">!</span>
