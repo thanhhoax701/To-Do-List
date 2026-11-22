@@ -80,13 +80,11 @@ let currentUsersObj = null;
 let currentLoginLogs = [];
 let currentEditLogs = [];
 let loginLogPage = 1;
-let loginLogsUsingUnindexedFallback = false;
 let loginLogsLoading = false;
 let editLogsLoading = false;
 let loginLogRefreshTimer = null;
 let logDeletionInProgress = false;
 let editLogPage = 1;
-let editLogsUsingUnindexedFallback = false;
 const ADMIN_LOGS_PER_PAGE = 50;
 let currentAccessRequests = {};
 let accessRequestsBound = false;
@@ -477,7 +475,6 @@ async function loadLoginLogs({ preservePage = false } = {}) {
     loginLogsLoading = true;
     refreshLoginLogsBtn.disabled = true;
     if (!preservePage) loginLogPage = 1;
-    loginLogsUsingUnindexedFallback = false;
     loginLogStatus.textContent = 'Đang tải nhật ký...';
 
     try {
@@ -502,7 +499,6 @@ async function loadLoginLogs({ preservePage = false } = {}) {
         }
         currentLoginLogs.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
         if (usedUnindexedFallback) currentLoginLogs = currentLoginLogs.slice(0, 200);
-        loginLogsUsingUnindexedFallback = usedUnindexedFallback;
         renderLoginLogs();
     } catch (error) {
         console.error('Không thể tải nhật ký đăng nhập:', error);
@@ -534,9 +530,6 @@ function renderLoginLogs() {
     loginLogPage = Math.min(loginLogPage, pageCount);
     const startIndex = (loginLogPage - 1) * ADMIN_LOGS_PER_PAGE;
     const pageLogs = filteredLogs.slice(startIndex, startIndex + ADMIN_LOGS_PER_PAGE);
-    const fallbackNotice = loginLogsUsingUnindexedFallback
-        ? ' Firebase đang thiếu index loginLogs.timestamp; hãy Publish Rules trong database.rules.json để tối ưu tải dữ liệu.'
-        : '';
     renderLogPagination(loginLogPagination, loginLogPageSummary, filteredLogs.length, pageCount, loginLogPage, ADMIN_LOGS_PER_PAGE, 'nhật ký', page => {
         loginLogPage = page;
         renderLoginLogs();
@@ -555,7 +548,7 @@ function renderLoginLogs() {
         loginLogStatus.textContent = currentLoginLogs.length
             ? 'Không tìm thấy kết quả phù hợp.'
             : 'Nhật ký sẽ xuất hiện sau khi có lần đăng nhập thành công.';
-        loginLogStatus.textContent += `${fallbackNotice} Tự cập nhật mỗi 30 giây.`;
+        loginLogStatus.textContent += ' Tự cập nhật mỗi 30 giây.';
         return;
     }
 
@@ -570,16 +563,61 @@ function renderLoginLogs() {
         const deviceInfo = recordedDeviceInfo
             ? `${recordedDeviceInfo}${log.accessType ? ` · ${log.accessType}` : ''}`
             : `Chưa ghi nhận thiết bị · ${log.accessType || 'Ứng dụng'}`;
-        [date, log.userName || 'Tài khoản không tên', roleName, deviceInfo, 'Thành công']
+        const userName = log.userName || 'Tài khoản không tên';
+        [date, userName, roleName, deviceInfo, 'Thành công']
             .forEach((value, index) => {
                 const cell = document.createElement('td');
                 cell.textContent = String(value);
                 if (index === 4) cell.className = 'login-log-success';
                 row.appendChild(cell);
             });
+        row.appendChild(createLogMobileCell(date, 'Thành công', 'is-success', userName, [
+            { label: 'Vai trò', value: roleName },
+            { label: 'Thiết bị', value: deviceInfo }
+        ]));
         loginLogTableBody.appendChild(row);
     });
-    loginLogStatus.textContent = `Trang ${loginLogPage}/${pageCount} · ${filteredLogs.length} kết quả (tối đa 200).${fallbackNotice} Tự cập nhật mỗi 30 giây.`;
+    loginLogStatus.textContent = `Trang ${loginLogPage}/${pageCount} · ${filteredLogs.length} kết quả (tối đa 200). Tự cập nhật mỗi 30 giây.`;
+}
+
+function createLogMobileCell(date, badgeText, badgeVariant, title, fields) {
+    const cell = document.createElement('td');
+    cell.className = 'log-mobile-cell';
+    cell.colSpan = 5;
+
+    const card = document.createElement('article');
+    card.className = 'task-mobile-card admin-log-mobile-card';
+    const heading = document.createElement('div');
+    heading.className = 'task-mobile-card-heading';
+    const dateElement = document.createElement('span');
+    dateElement.className = 'task-mobile-card-date';
+    dateElement.textContent = date;
+    const badge = document.createElement('span');
+    badge.className = `admin-log-mobile-badge${badgeVariant ? ` ${badgeVariant}` : ''}`;
+    badge.textContent = badgeText;
+    heading.append(dateElement, badge);
+    card.appendChild(heading);
+
+    const titleElement = document.createElement('div');
+    titleElement.className = 'task-mobile-card-title';
+    titleElement.textContent = title;
+    card.appendChild(titleElement);
+
+    fields.forEach(({ label, value }) => {
+        const field = document.createElement('div');
+        field.className = 'task-mobile-card-field';
+        const fieldLabel = document.createElement('span');
+        fieldLabel.className = 'task-mobile-card-field-label';
+        fieldLabel.textContent = label;
+        const fieldValue = document.createElement('span');
+        fieldValue.className = 'task-mobile-card-field-value';
+        fieldValue.textContent = value;
+        field.append(fieldLabel, fieldValue);
+        card.appendChild(field);
+    });
+
+    cell.appendChild(card);
+    return cell;
 }
 
 function getVietnamLogPeriod(period) {
@@ -778,7 +816,6 @@ async function loadEditLogs() {
     editLogsLoading = true;
     refreshEditLogsBtn.disabled = true;
     editLogPage = 1;
-    editLogsUsingUnindexedFallback = false;
     editLogStatus.textContent = 'Đang tải nhật ký...';
 
     try {
@@ -803,7 +840,6 @@ async function loadEditLogs() {
         }
         currentEditLogs.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
         if (usedUnindexedFallback) currentEditLogs = currentEditLogs.slice(0, 200);
-        editLogsUsingUnindexedFallback = usedUnindexedFallback;
         renderEditLogs();
     } catch (error) {
         console.error('Không thể tải nhật ký chỉnh sửa:', error);
@@ -851,9 +887,6 @@ function renderEditLogs() {
     editLogPage = Math.min(editLogPage, pageCount);
     const startIndex = (editLogPage - 1) * ADMIN_LOGS_PER_PAGE;
     const pageLogs = filteredLogs.slice(startIndex, startIndex + ADMIN_LOGS_PER_PAGE);
-    const fallbackNotice = editLogsUsingUnindexedFallback
-        ? ' Firebase đang thiếu index taskEditLogs.timestamp; hãy Publish Rules trong database.rules.json để tối ưu tải dữ liệu.'
-        : '';
     renderEditLogPagination(filteredLogs.length, pageCount);
     editLogTableBody.replaceChildren();
     if (!filteredLogs.length) {
@@ -869,7 +902,6 @@ function renderEditLogs() {
         editLogStatus.textContent = currentEditLogs.length
             ? 'Không tìm thấy kết quả phù hợp.'
             : 'Nhật ký ghi nhận các thay đổi công việc phát sinh từ khi tính năng được bật.';
-        editLogStatus.textContent += fallbackNotice;
         return;
     }
 
@@ -891,9 +923,14 @@ function renderEditLogs() {
             cell.textContent = String(value);
             row.appendChild(cell);
         });
+        row.appendChild(createLogMobileCell(date, action, 'is-action', log.taskContent || 'Công việc không tên', [
+            { label: 'Tài khoản', value: actor || 'Tài khoản không tên' },
+            { label: 'Ngày công việc', value: log.taskDate || '—' },
+            { label: 'Chi tiết', value: log.details || '—' }
+        ]));
         editLogTableBody.appendChild(row);
     });
-    editLogStatus.textContent = `Trang ${editLogPage}/${pageCount} · ${filteredLogs.length} kết quả (tối đa 200).${fallbackNotice}`;
+    editLogStatus.textContent = `Trang ${editLogPage}/${pageCount} · ${filteredLogs.length} kết quả (tối đa 200).`;
 }
 
 function showLoadingAdmin() {
