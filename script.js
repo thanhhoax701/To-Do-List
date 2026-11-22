@@ -8092,6 +8092,8 @@ const pinDotsEl = document.getElementById('pinDots');
 const loginEmailInput = document.getElementById('loginEmail');
 const adminPasswordInput = document.getElementById('adminPassword');
 const completeEmailLinkBtn = document.getElementById('completeEmailLinkBtn');
+const loginAuthFields = document.getElementById('loginAuthFields');
+const loginAuthToggle = document.getElementById('loginAuthToggle');
 const loginMessageEl = document.getElementById('loginMessage');
 const loginMessageTextEl = document.getElementById('loginMessageText');
 const loginToastCloseBtn = document.getElementById('loginToastClose');
@@ -8105,6 +8107,15 @@ let accessApprovalUnsubscribe = null;
 let approvalRedirectInProgress = false;
 let loginToastTimeout = null;
 let verifiedAdminUid = null;
+
+function setLoginAuthFieldsVisible(visible, focusEmail = false) {
+    loginAuthFields.hidden = !visible;
+    loginAuthToggle.setAttribute('aria-expanded', String(visible));
+    loginAuthToggle.textContent = visible
+        ? 'Ẩn đăng nhập Email'
+        : 'Đăng nhập Phòng Ban / Admin';
+    if (visible && focusEmail) loginEmailInput.focus();
+}
 
 function updatePinDots() {
     const dots = pinDotsEl.querySelectorAll('.dot');
@@ -8135,7 +8146,7 @@ function describeLoginError(error) {
         return 'Tài khoản này đang bị Admin chặn truy cập. Vui lòng liên hệ Quản trị viên.';
     }
     if (code === 'ADMIN_AUTH_REQUIRED') {
-        return 'Quản trị viên cần đăng nhập bằng tài khoản Firebase Authentication.';
+        return 'Mở phần đăng nhập Email, nhập thông tin Firebase rồi nhập lại PIN Admin.';
     }
     if (code === 'ADMIN_ACCESS_DENIED') {
         return 'Tài khoản Firebase này chưa được cấp quyền Admin cho hồ sơ ứng dụng.';
@@ -8192,6 +8203,7 @@ async function authenticateAdminAccount(user) {
     if (!firebaseUser || String(firebaseUser.email || '').trim().toLowerCase() !== email) {
         const password = String(adminPasswordInput?.value || '');
         if (!email || !password) {
+            setLoginAuthFieldsVisible(true);
             const error = new Error('Nhập email và mật khẩu Firebase của Quản trị viên.');
             error.code = 'ADMIN_AUTH_REQUIRED';
             throw error;
@@ -8419,6 +8431,7 @@ async function createAccessRequestAfterEmailVerification(user, email) {
 async function completeEmailLinkSignIn(email) {
     if (!email) {
         showLoginMessage('Vui lòng nhập email đã nhận liên kết xác minh.');
+        setLoginAuthFieldsVisible(true);
         loginEmailInput.focus();
         return;
     }
@@ -8486,6 +8499,7 @@ async function handleEmailLinkOnPageLoad() {
     if (!isSignInWithEmailLink(auth, window.location.href)) return;
     const savedEmail = localStorage.getItem('emailForSignIn') || '';
     if (!savedEmail) {
+        setLoginAuthFieldsVisible(true);
         completeEmailLinkBtn.hidden = false;
         showLoginMessage('Nhập email đã nhận liên kết rồi chọn “Hoàn tất xác minh email”.');
         return false;
@@ -8531,6 +8545,7 @@ async function attemptLogin(pin) {
         }
 
         if (matched.role === 'department') {
+            setLoginAuthFieldsVisible(true);
             const email = String(loginEmailInput?.value || '').trim().toLowerCase();
             const savedEmail = String(matched.email || '').trim().toLowerCase();
             if (!savedEmail) {
@@ -8633,6 +8648,9 @@ if (kpBack) kpBack.onclick = () => { enteredPin = enteredPin.slice(0, -1); updat
 loginToastCloseBtn.addEventListener('click', dismissLoginToast);
 completeEmailLinkBtn.addEventListener('click', () => {
     completeEmailLinkSignIn(String(loginEmailInput.value || '').trim().toLowerCase());
+});
+loginAuthToggle.addEventListener('click', () => {
+    setLoginAuthFieldsVisible(loginAuthFields.hidden, !loginAuthFields.hidden);
 });
 
 // Cập nhập hiển thị tên user đăng nhập

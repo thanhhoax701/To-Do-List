@@ -6736,6 +6736,25 @@ body {
     line-height: 1.5;
 }
 
+.login-auth-fields[hidden] {
+    display: none;
+}
+
+.login-auth-toggle {
+    display: block;
+    margin: 12px auto 0;
+    padding: 8px 10px;
+    border: 0;
+    background: transparent;
+    color: #cbd5e1;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.login-auth-toggle:hover {
+    color: #fff;
+}
+
 .login-email-input {
     height: 42px;
     margin-bottom: 6px;
@@ -6811,7 +6830,8 @@ body {
 
 .kp:focus-visible,
 .login-footer a:focus-visible,
-.email-link-complete-btn:focus-visible {
+.email-link-complete-btn:focus-visible,
+.login-auth-toggle:focus-visible {
     outline: 3px solid rgba(255, 128, 132, .72);
     outline-offset: 3px;
 }
