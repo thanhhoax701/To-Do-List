@@ -43,21 +43,21 @@
       ".write": true
     },
     "loginLogs": {
-      ".read": "auth != null && root.child('adminAccess').child(auth.uid).child('enabled').val() === true && (root.child('adminAccess').child(auth.uid).child('role').val() === 'admin' || root.child('adminAccess').child(auth.uid).child('role').val() === 'superadmin')",
+      ".read": "auth != null && root.child('adminAccess').child(auth.uid).child('enabled').val() === true && root.child('adminAccess').child(auth.uid).child('role').val() === 'superadmin'",
       ".write": true,
       ".indexOn": ["timestamp"]
     },
     "adminAccess": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": true
+        ".write": false
       }
     },
     "taskEditLogs": {
-      ".read": "auth != null && root.child('adminAccess').child(auth.uid).child('enabled').val() === true && (root.child('adminAccess').child(auth.uid).child('role').val() === 'admin' || root.child('adminAccess').child(auth.uid).child('role').val() === 'superadmin')",
+      ".read": "auth != null && root.child('adminAccess').child(auth.uid).child('enabled').val() === true && root.child('adminAccess').child(auth.uid).child('role').val() === 'superadmin'",
       ".indexOn": ["timestamp"],
       "$logId": {
-        ".write": "auth != null && !data.exists() && newData.exists() && root.child('adminAccess').child(auth.uid).child('enabled').val() === true && root.child('adminAccess').child(auth.uid).child('userId').val() === newData.child('actorId').val() && root.child('adminAccess').child(auth.uid).child('role').val() === newData.child('actorRole').val() && (newData.child('actorRole').val() === 'admin' || newData.child('actorRole').val() === 'superadmin')",
+        ".write": "auth != null && !data.exists() && newData.exists() && root.child('adminAccess').child(auth.uid).child('enabled').val() === true && root.child('adminAccess').child(auth.uid).child('userId').val() === newData.child('actorId').val() && root.child('adminAccess').child(auth.uid).child('role').val() === newData.child('actorRole').val() && newData.child('actorRole').val() === 'superadmin'",
         ".validate": "newData.hasChildren(['actorId', 'actorName', 'actorRole', 'action', 'taskId', 'taskContent', 'taskDate', 'details', 'timestamp'])"
       }
     }

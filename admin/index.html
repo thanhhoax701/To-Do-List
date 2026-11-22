@@ -9,16 +9,16 @@
     </head>
     <body>
         <!-- ========== ĐĂNG NHẬP ADMIN ========== -->
-        <!-- Form đăng nhập - chỉ admin/superadmin mới vào được -->
+        <!-- Form đăng nhập - chỉ superadmin mới vào được -->
         <div id="adminLogin" class="admin-login">
             <div class="login-box-admin">
-                <h2>Đăng nhập Admin</h2>
+                <h2>Đăng nhập Quản trị viên cấp cao</h2>
                 <input
                     id="adminEmail"
                     type="email"
                     autocomplete="username"
-                    placeholder="Email Firebase Admin"
-                    aria-label="Email Firebase Admin"
+                    placeholder="Email Firebase Super Admin"
+                    aria-label="Email Firebase Super Admin"
                 >
                 <input
                     id="adminPassword"
@@ -65,19 +65,32 @@
                 <!-- main content area -->
                 <div class="admin-main">
                     <header class="admin-topbar">
-                        <div class="admin-breadcrumb"><span>Admin</span><span>/</span><strong id="adminCurrentSection">Tổng quan</strong></div>
-                        <a class="admin-home-link" href="../index.html">← Trang chính</a>
+                        <form id="adminGlobalSearch" class="admin-global-search" role="search">
+                            <span aria-hidden="true">⌕</span>
+                            <input id="dashboardSearchInput" type="search" placeholder="Tìm tài khoản, email, mã nhân viên..." aria-label="Tìm tài khoản">
+                            <button type="submit" aria-label="Mở kết quả tìm kiếm">↵</button>
+                        </form>
+                        <div class="admin-topbar-actions">
+                            <button type="button" class="admin-icon-button" data-admin-action="accessRequests" aria-label="Mở yêu cầu truy cập">
+                                ♧<span id="dashboardPendingRequests" class="admin-icon-badge" hidden></span>
+                            </button>
+                            <div class="admin-topbar-date"><span aria-hidden="true">▦</span><span id="dashboardCurrentDate"></span></div>
+                            <div class="admin-user-chip">
+                                <span id="adminTopbarInitials" class="admin-user-avatar">AD</span>
+                                <span><strong id="adminTopbarName">Quản trị viên</strong><small>Super Admin</small></span>
+                            </div>
+                            <a class="admin-home-link" href="../index.html">Trang chính <span aria-hidden="true">↗</span></a>
+                        </div>
                     </header>
                     <!-- panel: dashboard -->
                     <div id="panel-dashboard" class="panel-content">
-                        <section class="dashboard-welcome">
+                        <section class="dashboard-heading">
                             <div>
-                                <span class="dashboard-eyebrow">BẢNG ĐIỀU KHIỂN</span>
-                                <h1>Xin chào, Quản trị viên <span>👋</span></h1>
-                                <p>Theo dõi nhanh tình hình tài khoản và truy cập các công cụ quản trị.</p>
+                                <span class="dashboard-eyebrow">KHÔNG GIAN QUẢN TRỊ</span>
+                                <h1 id="dashboardGreeting">Tổng quan hệ thống</h1>
+                                <p>Theo dõi tài khoản và truy cập nhanh các công cụ quản trị.</p>
                             </div>
                             <button type="button" class="dashboard-primary-action" data-admin-action="users">＋ Thêm người dùng</button>
-                            <div class="dashboard-welcome-orb" aria-hidden="true"></div>
                         </section>
 
                         <section class="dashboard-stats" aria-label="Thống kê tài khoản">
@@ -87,7 +100,7 @@
                             </article>
                             <article class="dashboard-stat-card stat-admin">
                                 <div class="dashboard-stat-top"><span>Quản trị viên</span><span class="dashboard-stat-icon">⚙</span></div>
-                                <strong id="dashboardAdminTotal">—</strong><small>Quyền quản trị</small>
+                                <strong id="dashboardAdminTotal">—</strong><small><span id="dashboardSuperTotal">0</span> quản trị viên cấp cao</small>
                             </article>
                             <article class="dashboard-stat-card stat-member">
                                 <div class="dashboard-stat-top"><span>Thành viên</span><span class="dashboard-stat-icon">♧</span></div>
@@ -97,17 +110,12 @@
                                 <div class="dashboard-stat-top"><span>Phòng Ban</span><span class="dashboard-stat-icon">🏢</span></div>
                                 <strong id="dashboardDepartmentTotal">—</strong><small>Tài khoản Phòng Ban</small>
                             </article>
-                            <article class="dashboard-stat-card stat-super">
-                                <div class="dashboard-stat-top"><span>Cấp cao</span><span class="dashboard-stat-icon">✦</span></div>
-                                <strong id="dashboardSuperTotal">—</strong><small>Quản trị viên cấp cao</small>
-                            </article>
                         </section>
 
                         <section class="dashboard-content-grid">
                             <article class="dashboard-card role-overview-card">
                                 <div class="dashboard-card-heading">
-                                    <div><h2>Cơ cấu tài khoản</h2><p>Phân bổ theo quyền truy cập</p></div>
-                                    <span class="dashboard-card-dots" aria-hidden="true">•••</span>
+                                    <div><h2>Phân bổ tài khoản</h2><p>Tỷ trọng theo nhóm quyền</p></div>
                                 </div>
                                 <div class="role-overview">
                                     <div class="role-donut" id="dashboardRoleDonut" role="img" aria-label="Biểu đồ cơ cấu tài khoản">
@@ -121,22 +129,57 @@
                                     </div>
                                 </div>
                             </article>
+                            <article class="dashboard-card role-bars-card">
+                                <div class="dashboard-card-heading">
+                                    <div><h2>Quy mô theo vai trò</h2><p>Số tài khoản trong từng nhóm</p></div>
+                                </div>
+                                <div class="dashboard-role-bars">
+                                    <div class="dashboard-role-bar-row">
+                                        <div><span>Thành viên</span><strong id="dashboardMemberBarCount">0</strong></div>
+                                        <div class="dashboard-role-track"><span id="dashboardMemberBar" class="role-bar-member"></span></div>
+                                    </div>
+                                    <div class="dashboard-role-bar-row">
+                                        <div><span>Phòng Ban</span><strong id="dashboardDepartmentBarCount">0</strong></div>
+                                        <div class="dashboard-role-track"><span id="dashboardDepartmentBar" class="role-bar-department"></span></div>
+                                    </div>
+                                    <div class="dashboard-role-bar-row">
+                                        <div><span>Quản trị viên</span><strong id="dashboardAdminBarCount">0</strong></div>
+                                        <div class="dashboard-role-track"><span id="dashboardAdminBar" class="role-bar-admin"></span></div>
+                                    </div>
+                                    <div class="dashboard-role-bar-row">
+                                        <div><span>Cấp cao</span><strong id="dashboardSuperBarCount">0</strong></div>
+                                        <div class="dashboard-role-track"><span id="dashboardSuperBar" class="role-bar-super"></span></div>
+                                    </div>
+                                </div>
+                            </article>
+                        </section>
+
+                        <section class="dashboard-bottom-grid">
+                            <article class="dashboard-card dashboard-admin-list-card">
+                                <div class="dashboard-card-heading">
+                                    <div><h2>Tài khoản quản trị</h2><p>Danh sách Admin và Super Admin</p></div>
+                                    <button type="button" class="dashboard-text-action" data-admin-action="users">Xem tất cả →</button>
+                                </div>
+                                <div id="dashboardAdminList" class="dashboard-admin-list"></div>
+                            </article>
                             <article class="dashboard-card dashboard-shortcuts-card">
                                 <div class="dashboard-card-heading">
-                                    <div><h2>Lối tắt quản trị</h2><p>Truy cập nhanh các khu vực</p></div>
+                                    <div><h2>Truy cập nhanh</h2><p>Các thao tác thường dùng</p></div>
                                 </div>
-                                <button type="button" class="dashboard-shortcut" data-admin-action="users">
-                                    <span class="shortcut-icon shortcut-users">♙</span><span><strong>Quản lý người dùng</strong><small>Thêm, sửa vai trò và PIN</small></span><b>→</b>
-                                </button>
-                                <button type="button" class="dashboard-shortcut" data-admin-action="tasks">
-                                    <span class="shortcut-icon shortcut-tasks">☷</span><span><strong>Tra cứu công việc</strong><small>Xem công việc theo tài khoản</small></span><b>→</b>
-                                </button>
-                                <button type="button" class="dashboard-shortcut" data-admin-action="loginLog">
-                                    <span class="shortcut-icon shortcut-logs">↺</span><span><strong>Nhật ký hệ thống</strong><small>Xem trạng thái các nhật ký</small></span><b>→</b>
-                                </button>
-                                <button type="button" class="dashboard-shortcut" data-admin-action="accessRequests">
-                                    <span class="shortcut-icon shortcut-logs">✉</span><span><strong>Yêu cầu truy cập</strong><small>Duyệt tài khoản Phòng Ban</small></span><b>→</b>
-                                </button>
+                                <div class="dashboard-shortcuts-grid">
+                                    <button type="button" class="dashboard-shortcut" data-admin-action="users">
+                                        <span class="shortcut-icon shortcut-users">♙</span><span><strong>Người dùng</strong><small>Quản lý tài khoản</small></span><b>→</b>
+                                    </button>
+                                    <button type="button" class="dashboard-shortcut" data-admin-action="tasks">
+                                        <span class="shortcut-icon shortcut-tasks">☷</span><span><strong>Công việc</strong><small>Tra cứu theo tài khoản</small></span><b>→</b>
+                                    </button>
+                                    <button type="button" class="dashboard-shortcut" data-admin-action="loginLog">
+                                        <span class="shortcut-icon shortcut-logs">↺</span><span><strong>Nhật ký</strong><small>Theo dõi hoạt động</small></span><b>→</b>
+                                    </button>
+                                    <button type="button" class="dashboard-shortcut" data-admin-action="accessRequests">
+                                        <span class="shortcut-icon shortcut-logs">✉</span><span><strong>Yêu cầu</strong><small>Trạng thái truy cập</small></span><b>→</b>
+                                    </button>
+                                </div>
                             </article>
                         </section>
                         <p class="dashboard-footnote"><span class="admin-sidebar-status"></span> Số liệu tài khoản được cập nhật trực tiếp từ hệ thống.</p>
@@ -260,6 +303,10 @@
                                     <tbody id="editLogTableBody"></tbody>
                                 </table>
                             </div>
+                            <footer class="employees-pagination">
+                                <p id="editLogPageSummary">0 nhật ký</p>
+                                <nav id="editLogPagination" aria-label="Phân trang nhật ký chỉnh sửa"></nav>
+                            </footer>
                         </div>
                     </div>
                     <!-- panel: login log -->

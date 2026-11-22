@@ -6755,6 +6755,13 @@ body {
     color: #fff;
 }
 
+.login-pin-hint {
+    margin: 14px 0 -7px;
+    color: #cbd5e1;
+    font-size: 13px;
+    text-align: center;
+}
+
 .login-email-input {
     height: 42px;
     margin-bottom: 6px;

@@ -16,8 +16,8 @@
 ## Tính năng chính
 
 - Đăng nhập bằng mã PIN và quản lý công việc theo lịch.
-- Trang Admin yêu cầu đăng nhập Firebase Email/Password và UID được cấp quyền trong `adminAccess`.
-- Tài khoản Phòng Ban phải nhập PIN, xác minh email bằng liên kết Firebase Authentication và được Admin duyệt yêu cầu truy cập trước khi vào ứng dụng.
+- Thành viên, Phòng Ban và Admin đăng nhập ứng dụng chính bằng mã nhân viên/PIN; chỉ Super Admin cần Firebase Email/Password.
+- Trang quản trị chỉ dành cho Super Admin đã được cấp UID trong `adminAccess`.
 - Lưu và cập nhật dữ liệu ứng dụng trên Firebase Realtime Database.
 - Hỗ trợ lưu trữ tệp qua Firebase Storage.
 - Admin có thể sắp xếp thứ tự công việc trong danh sách từng ngày; thứ tự được lưu trên Firebase.
@@ -45,13 +45,12 @@
 ## Chạy ứng dụng
 
 1. Cấu hình thông tin Firebase của dự án trong `firebase.js`.
-2. Trong Firebase Console, vào **Authentication → Sign-in method**, bật **Email/Password** và **Email link (passwordless sign-in)**. Email/Password dùng cho Admin; Email link dùng cho tài khoản Phòng Ban.
-3. Với mỗi Admin/Super Admin, tạo tài khoản **Email/Password** trong **Authentication → Users**. Tạo thủ công nút `adminAccess/{UID}` trong Realtime Database, với `enabled: true`, `userId` là khóa hồ sơ trong `users`, và `role` trùng vai trò hồ sơ (`admin` hoặc `superadmin`). Không cấp quyền này từ client; Rules từ chối client ghi `adminAccess`.
+2. Trong Firebase Console, bật **Authentication → Sign-in method → Email/Password** cho Super Admin.
+3. Tạo tài khoản Email/Password của Super Admin trong **Authentication → Users**. Tạo nút `adminAccess/{UID}` trong Realtime Database với `enabled: true`, `userId` bằng khóa hồ sơ Super Admin trong `users`, và `role: "superadmin"`. Không cấp quyền này từ client; Rules từ chối client ghi `adminAccess`.
 4. Triển khai Rules trong `database.rules.json` bằng Firebase CLI (`firebase deploy --only database`) sau khi chọn đúng Firebase project. Có thể kiểm tra và triển khai riêng Rules trong Firebase Console.
 5. Trong **Authentication → Settings → Authorized domains**, thêm domain nơi triển khai ứng dụng (ví dụ `localhost` khi chạy local).
-6. Với tài khoản Phòng Ban, Admin cần cập nhật email trong mục **Quản lý người dùng**. Email này phải trùng email được xác minh qua Firebase.
-7. Mở ứng dụng từ máy chủ web hoặc HTTPS; không mở trực tiếp bằng `file://` vì ứng dụng sử dụng ES modules.
-8. Truy cập `index.html` để dùng ứng dụng chính; trang quản trị nằm tại `admin/index.html`.
+6. Mở ứng dụng từ máy chủ web hoặc HTTPS; không mở trực tiếp bằng `file://` vì ứng dụng sử dụng ES modules.
+7. Truy cập `index.html` để dùng ứng dụng chính; trang quản trị chỉ dành cho Super Admin ở `admin/index.html`.
 
 Ứng dụng không có lệnh `npm run` hoặc bước build được cấu hình trong repository. Cần có kết nối Internet để tải Firebase SDK và các thư viện Excel từ CDN.
 
@@ -59,9 +58,9 @@
 
 Cấu hình Firebase ở phía trình duyệt không phải thông tin bí mật; việc mã hóa Base64 trong `firebase.js` chỉ làm mờ nội dung, không bảo vệ khóa hay dữ liệu. Hãy cấu hình Firebase Security Rules để giới hạn quyền đọc/ghi đúng theo yêu cầu. Không xem mã PIN hoặc kiểm soát giao diện phía trình duyệt là cơ chế phân quyền an toàn thay cho bảo vệ ở Firebase.
 
-Admin đăng nhập ở trang quản trị bằng Email/Password Firebase và được đối chiếu với `adminAccess/{UID}`; trong ứng dụng chính, Admin vẫn nhập PIN hồ sơ cùng Email/Password Firebase. Tài khoản Phòng Ban cần PIN và link đăng nhập email do Firebase Authentication gửi; bấm link sẽ xác minh quyền sở hữu email. Sau khi PIN và email khớp, yêu cầu xuất hiện trong mục **Yêu cầu truy cập** của Admin. Admin có thể duyệt, chặn, hoặc gỡ chặn (gỡ chặn sẽ đưa tài khoản về trạng thái cần duyệt lại); email cũng phải được xác minh trước khi vào ứng dụng. Trạng thái yêu cầu được theo dõi trực tiếp, và phiên đang hoạt động sẽ bị đăng xuất khi Admin chặn hoặc thu hồi quyền. Đây là thông báo trực tiếp trong trang Admin, không phải email gửi đến hộp thư Admin.
+Thành viên, Phòng Ban và Admin thường đăng nhập vào ứng dụng chính bằng mã nhân viên/PIN. Chỉ Super Admin dùng Email/Password Firebase; tài khoản này phải được ánh xạ bằng `adminAccess/{UID}` để mở trang quản trị và nhật ký.
 
-Nhật ký chỉnh sửa lưu các thao tác thêm, cập nhật, đổi trạng thái, xóa, nhân bản, nhập và sắp xếp công việc. Nhật ký không được tạo ngược cho dữ liệu cũ; Admin xem tối đa 200 sự kiện mới nhất. Rules chỉ cho UID Admin đã được whitelist đọc nhật ký; client chỉ được thêm sự kiện mới khớp `userId`/`role` trong whitelist và không thể sửa/xóa sự kiện cũ. Nhật ký vẫn do trình duyệt ghi nên không phải bản ghi kiểm toán chống giả mạo.
+Nhật ký chỉnh sửa lưu các thao tác thêm, cập nhật, đổi trạng thái, xóa, nhân bản, nhập và sắp xếp công việc. Nhật ký không được tạo ngược cho dữ liệu cũ; Super Admin xem tối đa 200 sự kiện mới nhất. Rules chỉ cho UID Super Admin đã được whitelist đọc nhật ký; client chỉ được thêm sự kiện mới khớp `userId`/`role` trong whitelist và không thể sửa/xóa sự kiện cũ. Nhật ký vẫn do trình duyệt ghi nên không phải bản ghi kiểm toán chống giả mạo.
 
 **Giới hạn của Rules hiện tại:** để giữ quyền truy cập cũ theo phạm vi đã chọn, các nhánh dữ liệu ứng dụng như `users`, `tasks`, lịch và `accessRequests` vẫn được cấu hình đọc/ghi công khai. `loginLogs` cho phép ghi công khai để giữ luồng đăng nhập PIN hiện tại, nhưng chỉ Admin đã xác thực mới được đọc. Do đó thay đổi này khóa trang Admin và nhật ký chỉnh sửa, **không bảo vệ dữ liệu công việc/người dùng khỏi truy cập công khai**. Cần thiết kế lại quyền các nhánh ứng dụng riêng trước khi triển khai nếu muốn bảo mật toàn bộ dữ liệu.
 

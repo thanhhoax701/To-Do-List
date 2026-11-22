@@ -13,17 +13,18 @@
             <div class="login-box">
                 <h2>ĐĂNG NHẬP</h2>
                 <div id="loginAuthFields" class="login-auth-fields" hidden>
-                    <label class="login-email-label" for="loginEmail">Email (Phòng Ban hoặc Quản trị viên)</label>
+                    <label class="login-email-label" for="loginEmail">Email Firebase (Quản trị viên cấp cao)</label>
                     <input id="loginEmail" class="login-email-input" type="email" autocomplete="email" placeholder="name@gmail.com">
-                    <label class="login-email-label" for="adminPassword">Mật khẩu Firebase (chỉ dành cho Quản trị viên)</label>
+                    <label class="login-email-label" for="adminPassword">Mật khẩu Firebase</label>
                     <input id="adminPassword" class="login-email-input" type="password" autocomplete="current-password" placeholder="Mật khẩu Firebase">
-                    <button id="completeEmailLinkBtn" class="email-link-complete-btn" type="button" hidden>Hoàn tất xác minh email</button>
+                    <button id="superAdminLoginBtn" class="email-link-complete-btn" type="button">Đăng nhập Quản trị viên cấp cao</button>
                 </div>
                 <div id="loginMessage" class="login-toast" role="status" aria-live="polite" aria-atomic="true" hidden>
                     <span class="login-toast-icon" aria-hidden="true">!</span>
                     <span id="loginMessageText"></span>
                     <button id="loginToastClose" class="login-toast-close" type="button" aria-label="Đóng thông báo">&times;</button>
                 </div>
+                <p class="login-pin-hint">Nhập mã nhân viên / PIN gồm 4 chữ số</p>
                 <div id="pinDots" class="pin-dots">
                     <span class="dot"></span>
                     <span class="dot"></span>
@@ -45,7 +46,7 @@
                     <button id="kp-back" class="kp small">⌫</button>
                 </div>
                 <button id="loginAuthToggle" class="login-auth-toggle" type="button" aria-expanded="false" aria-controls="loginAuthFields">
-                    Đăng nhập Phòng Ban / Admin
+                    Đăng nhập Quản trị viên cấp cao
                 </button>
                 <div class="login-footer">
                     <a href="admin/index.html">Quản trị</a>

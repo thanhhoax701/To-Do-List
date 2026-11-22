@@ -293,7 +293,7 @@ function tasksRef(...parts) {
 
 async function recordTaskEdit(action, task, taskDate, taskId = '', details = '') {
     const user = getCurrentUser();
-    if (!['admin', 'superadmin'].includes(user?.role)) return;
+    if (user?.role !== 'superadmin' || verifiedAdminUid !== auth.currentUser?.uid) return;
     if (!user?.key) {
         console.error('Không thể ghi nhật ký chỉnh sửa: không xác định được tài khoản đang đăng nhập.');
         return;
@@ -8092,6 +8092,7 @@ const pinDotsEl = document.getElementById('pinDots');
 const loginEmailInput = document.getElementById('loginEmail');
 const adminPasswordInput = document.getElementById('adminPassword');
 const completeEmailLinkBtn = document.getElementById('completeEmailLinkBtn');
+const superAdminLoginBtn = document.getElementById('superAdminLoginBtn');
 const loginAuthFields = document.getElementById('loginAuthFields');
 const loginAuthToggle = document.getElementById('loginAuthToggle');
 const loginMessageEl = document.getElementById('loginMessage');
@@ -8113,7 +8114,7 @@ function setLoginAuthFieldsVisible(visible, focusEmail = false) {
     loginAuthToggle.setAttribute('aria-expanded', String(visible));
     loginAuthToggle.textContent = visible
         ? 'Ẩn đăng nhập Email'
-        : 'Đăng nhập Phòng Ban / Admin';
+        : 'Đăng nhập Quản trị viên cấp cao';
     if (visible && focusEmail) loginEmailInput.focus();
 }
 
@@ -8146,10 +8147,10 @@ function describeLoginError(error) {
         return 'Tài khoản này đang bị Admin chặn truy cập. Vui lòng liên hệ Quản trị viên.';
     }
     if (code === 'ADMIN_AUTH_REQUIRED') {
-        return 'Mở phần đăng nhập Email, nhập thông tin Firebase rồi nhập lại PIN Admin.';
+        return 'Quản trị viên cấp cao cần đăng nhập bằng Email/Password Firebase.';
     }
     if (code === 'ADMIN_ACCESS_DENIED') {
-        return 'Tài khoản Firebase này chưa được cấp quyền Admin cho hồ sơ ứng dụng.';
+        return 'Tài khoản Firebase này chưa được cấp quyền Quản trị viên cấp cao.';
     }
     if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
         return 'Email hoặc mật khẩu Firebase không đúng.';
@@ -8158,7 +8159,7 @@ function describeLoginError(error) {
         return 'Firebase Realtime Database từ chối quyền truy cập. Kiểm tra Rules của users và accessRequests.';
     }
     if (code === 'auth/operation-not-allowed') {
-        return 'Firebase chưa bật phương thức đăng nhập cần thiết (Email/Password cho Admin hoặc Email link cho Phòng Ban).';
+        return 'Firebase chưa bật Email/Password trong Authentication > Sign-in method.';
     }
     if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri' ||
         code === 'auth/unauthorized-domain') {
@@ -8166,12 +8167,6 @@ function describeLoginError(error) {
     }
     if (code === 'auth/invalid-email') return 'Email không hợp lệ.';
     if (code === 'auth/too-many-requests') return 'Đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau.';
-    if (code === 'auth/expired-action-code' || code === 'auth/invalid-action-code') {
-        return 'Liên kết xác minh đã hết hạn hoặc đã được sử dụng. Hãy gửi một liên kết mới.';
-    }
-    if (code === 'auth/email-already-in-use') {
-        return 'Email đã được đăng ký theo phương thức khác trong Firebase Authentication.';
-    }
     if (code === 'auth/network-request-failed' || code === 'NETWORK_ERROR' ||
         /network request failed/i.test(detail)) {
         return 'Không kết nối được Firebase. Kiểm tra mạng rồi thử lại.';
@@ -8196,30 +8191,62 @@ function normalizeLoginUsers(usersObj) {
     return usersObj;
 }
 
-async function authenticateAdminAccount(user) {
-    const email = String(loginEmailInput?.value || auth.currentUser?.email || '').trim().toLowerCase();
-    if (email && loginEmailInput && !loginEmailInput.value) loginEmailInput.value = email;
-    let firebaseUser = auth.currentUser;
-    if (!firebaseUser || String(firebaseUser.email || '').trim().toLowerCase() !== email) {
-        const password = String(adminPasswordInput?.value || '');
+async function findAuthorizedSuperAdmin(firebaseUser) {
+    const accessSnap = await get(ref(db, `adminAccess/${firebaseUser.uid}`));
+    const access = accessSnap.exists() ? accessSnap.val() : null;
+    if (access?.enabled !== true || access.role !== 'superadmin' || !access.userId) return null;
+
+    const usersSnap = await get(ref(db, 'users'));
+    const users = (usersSnap.exists() ? normalizeLoginUsers(usersSnap.val()) : {}) || {};
+    const profile = users[access.userId];
+    if (!profile || profile.role !== 'superadmin') return null;
+    return { key: access.userId, ...profile };
+}
+
+async function loginSuperAdmin() {
+    if (loginInProgress) return;
+    loginInProgress = true;
+    showLoginMessage('');
+    let signedInUser = null;
+    let loginMessage = '';
+    try {
+        showLoading();
+        const email = String(loginEmailInput.value || '').trim();
+        const password = String(adminPasswordInput.value || '');
         if (!email || !password) {
-            setLoginAuthFieldsVisible(true);
-            const error = new Error('Nhập email và mật khẩu Firebase của Quản trị viên.');
+            const error = new Error('Nhập email và mật khẩu Firebase của Quản trị viên cấp cao.');
             error.code = 'ADMIN_AUTH_REQUIRED';
             throw error;
         }
-        firebaseUser = (await signInWithEmailAndPassword(auth, email, password)).user;
-    }
 
-    const accessSnap = await get(ref(db, `adminAccess/${firebaseUser.uid}`));
-    const access = accessSnap.exists() ? accessSnap.val() : null;
-    if (access?.enabled !== true || access.userId !== user.key || access.role !== user.role) {
-        if (auth.currentUser?.uid === firebaseUser.uid) await signOut(auth);
-        const error = new Error('UID chưa được cấp quyền cho đúng hồ sơ Admin trong adminAccess.');
-        error.code = 'ADMIN_ACCESS_DENIED';
-        throw error;
+        signedInUser = (await signInWithEmailAndPassword(auth, email, password)).user;
+        const profile = await findAuthorizedSuperAdmin(signedInUser);
+        if (!profile) {
+            const error = new Error('UID này chưa được cấp quyền Super Admin trong adminAccess.');
+            error.code = 'ADMIN_ACCESS_DENIED';
+            throw error;
+        }
+        verifiedAdminUid = signedInUser.uid;
+        try {
+            await recordSuccessfulLogin(profile, 'Ứng dụng');
+        } catch (logError) {
+            console.error('Không thể lưu nhật ký đăng nhập ứng dụng:', logError);
+        }
+        enterApplication(profile);
+    } catch (error) {
+        if (signedInUser && auth.currentUser?.uid === signedInUser.uid) {
+            await signOut(auth).catch(signOutError =>
+                console.error('Không thể kết thúc phiên Super Admin chưa được cấp quyền:', signOutError));
+        }
+        verifiedAdminUid = null;
+        console.error('Không thể đăng nhập Super Admin:', error);
+        loginMessage = describeLoginError(error);
+    } finally {
+        hideLoading();
+        loginInProgress = false;
+        adminPasswordInput.value = '';
+        if (loginMessage) showLoginMessage(loginMessage);
     }
-    verifiedAdminUid = firebaseUser.uid;
 }
 
 function enterApplication(user) {
@@ -8227,9 +8254,6 @@ function enterApplication(user) {
     updateUserDisplay();
     document.getElementById('mainContent').style.display = 'block';
     loginOverlay.classList.add('hidden');
-    if (user.role === 'department') {
-        watchForAccessApproval(user, String(user.email || '').trim().toLowerCase());
-    }
     startApp();
 }
 
@@ -8507,7 +8531,7 @@ async function handleEmailLinkOnPageLoad() {
     return await completeEmailLinkSignIn(savedEmail.trim().toLowerCase());
 }
 
-const emailLinkHandlingPromise = handleEmailLinkOnPageLoad();
+const emailLinkHandlingPromise = Promise.resolve(false);
 
 async function attemptLogin(pin) {
     if (loginInProgress) return;
@@ -8540,37 +8564,15 @@ async function attemptLogin(pin) {
             return;
         }
 
-        if (['admin', 'superadmin'].includes(matched.role)) {
-            await authenticateAdminAccount(matched);
+        if (matched.role === 'superadmin') {
+            setLoginAuthFieldsVisible(true);
+            loginMessage = 'Quản trị viên cấp cao đăng nhập bằng Email/Password ở mục bên dưới.';
+            return;
         }
 
-        if (matched.role === 'department') {
-            setLoginAuthFieldsVisible(true);
-            const email = String(loginEmailInput?.value || '').trim().toLowerCase();
-            const savedEmail = String(matched.email || '').trim().toLowerCase();
-            if (!savedEmail) {
-                loginMessage = 'Tài khoản Phòng Ban chưa có email. Vui lòng liên hệ Admin cập nhật hồ sơ.';
-                return;
-            }
-            if (!email) {
-                loginMessage = 'Vui lòng nhập email đã đăng ký với tài khoản.';
-                return;
-            }
-            if (email !== savedEmail) {
-                loginMessage = 'Email không khớp với email đã đăng ký.';
-                return;
-            }
-
-            if (!hasVerifiedEmailSession(email)) {
-                await createPendingAccessRequest(matched, email);
-                await requestDepartmentEmailLink(matched, email);
-                loginMessage = 'Đang chờ Quản trị viên xác minh yêu cầu truy cập. Liên kết xác minh email đã được gửi; hãy mở liên kết và chờ Admin duyệt trước khi đăng nhập.';
-                return;
-            }
-
-            await createAccessRequestAfterEmailVerification(matched, email);
-            sessionStorage.removeItem('verifiedEmailSignIn');
-            return;
+        if (auth.currentUser) {
+            await signOut(auth);
+            verifiedAdminUid = null;
         }
 
         try {
@@ -8646,11 +8648,18 @@ document.addEventListener('keydown', (e) => {
 if (kpClear) kpClear.onclick = () => { enteredPin = ''; updatePinDots(); };
 if (kpBack) kpBack.onclick = () => { enteredPin = enteredPin.slice(0, -1); updatePinDots(); };
 loginToastCloseBtn.addEventListener('click', dismissLoginToast);
-completeEmailLinkBtn.addEventListener('click', () => {
-    completeEmailLinkSignIn(String(loginEmailInput.value || '').trim().toLowerCase());
-});
+superAdminLoginBtn.addEventListener('click', loginSuperAdmin);
 loginAuthToggle.addEventListener('click', () => {
     setLoginAuthFieldsVisible(loginAuthFields.hidden, !loginAuthFields.hidden);
+});
+
+[loginEmailInput, adminPasswordInput].forEach(input => {
+    input.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            loginSuperAdmin();
+        }
+    });
 });
 
 // Cập nhập hiển thị tên user đăng nhập
@@ -8681,8 +8690,8 @@ function getLoggedInUserRole() {
 function isMember() { return getLoggedInUserRole() === 'member'; }
 function isAdmin() {
     const role = getLoggedInUserRole();
-    return role === 'department' ||
-        (['admin', 'superadmin'].includes(role) && verifiedAdminUid === auth.currentUser?.uid);
+    return role === 'admin' || role === 'department' ||
+        (role === 'superadmin' && verifiedAdminUid === auth.currentUser?.uid);
 }
 
 /** Ẩn nút ☰ Menu khi sidebar đang mở (không đè chữ tiêu đề); member không thấy nút. */
@@ -9893,68 +9902,48 @@ document.addEventListener('click', (e) => {
 });
 
 async function restoreSavedSession() {
-    const emailLinkCompleted = await emailLinkHandlingPromise;
-    if (emailLinkCompleted || isSignInWithEmailLink(auth, window.location.href)) return;
-
     const savedUser = sessionStorage.getItem('user');
     if (!savedUser) return;
 
     try {
-        let user = JSON.parse(savedUser);
-        if (!user || !user.pin) return;
+        const user = JSON.parse(savedUser);
+        if (!user?.key) {
+            sessionStorage.removeItem('user');
+            return;
+        }
 
-        if (user.role === 'department') {
-            if (!user.key) {
+        if (user.role === 'superadmin') {
+            await auth.authStateReady();
+            if (!auth.currentUser) {
                 sessionStorage.removeItem('user');
                 return;
             }
-            await auth.authStateReady();
-            const usersSnap = await get(ref(db, 'users'));
-            const users = (usersSnap.exists() ? normalizeLoginUsers(usersSnap.val()) : {}) || {};
-            const currentUser = users[user.key];
-            const requestSnap = await get(ref(db, `accessRequests/${user.key}`));
-            const request = requestSnap.exists() ? requestSnap.val() : null;
-            const currentEmail = String(currentUser?.email || '').trim().toLowerCase();
-            if (!currentUser || currentUser.role !== 'department' || !currentEmail ||
-                String(currentUser.pin) !== String(user.pin) ||
-                request?.status !== 'approved' ||
-                request.emailVerified !== true ||
-                String(request.email || '').trim().toLowerCase() !== currentEmail ||
-                !auth.currentUser?.emailVerified ||
-                String(auth.currentUser.email || '').trim().toLowerCase() !== currentEmail) {
+            const profile = await findAuthorizedSuperAdmin(auth.currentUser);
+            if (!profile || profile.key !== user.key) {
                 sessionStorage.removeItem('user');
-                signOut(auth).catch(error => console.error('Không thể kết thúc phiên Firebase chưa được phép:', error));
-                showLoginMessage(request?.status === 'blocked'
-                    ? 'Tài khoản này đang bị Admin chặn truy cập. Vui lòng liên hệ Quản trị viên.'
-                    : 'Tài khoản cần được Admin duyệt và xác minh email trước khi tiếp tục.');
-                return;
-            }
-            user = { key: user.key, ...currentUser };
-        } else if (['admin', 'superadmin'].includes(user.role)) {
-            await auth.authStateReady();
-            const firebaseUser = auth.currentUser;
-            if (!firebaseUser) {
-                const error = new Error('Quản trị viên cần đăng nhập Firebase Authentication.');
-                error.code = 'ADMIN_AUTH_REQUIRED';
-                throw error;
-            }
-            const accessSnap = await get(ref(db, `adminAccess/${firebaseUser.uid}`));
-            const access = accessSnap.exists() ? accessSnap.val() : null;
-            const usersSnap = await get(ref(db, 'users'));
-            const users = (usersSnap.exists() ? normalizeLoginUsers(usersSnap.val()) : {}) || {};
-            const currentUser = users[user.key];
-            if (access?.enabled !== true || access.userId !== user.key || access.role !== user.role ||
-                !currentUser || String(currentUser.pin) !== String(user.pin) || currentUser.role !== user.role) {
-                sessionStorage.removeItem('user');
-                const error = new Error('Phiên Admin không còn được cấp quyền trong adminAccess.');
+                await signOut(auth);
+                const error = new Error('Phiên Super Admin không còn được cấp quyền.');
                 error.code = 'ADMIN_ACCESS_DENIED';
                 throw error;
             }
-            verifiedAdminUid = firebaseUser.uid;
-            user = { key: user.key, ...currentUser };
+            verifiedAdminUid = auth.currentUser.uid;
+            enterApplication(profile);
+            return;
         }
 
-        enterApplication(user);
+        const usersSnap = await get(ref(db, 'users'));
+        const users = (usersSnap.exists() ? normalizeLoginUsers(usersSnap.val()) : {}) || {};
+        const currentUser = users[user.key];
+        const savedRole = user.role || 'member';
+        const currentRole = currentUser?.role || 'member';
+        if (!user.pin || !currentUser ||
+            String(currentUser.pin) !== String(user.pin) || currentRole !== savedRole) {
+            sessionStorage.removeItem('user');
+            return;
+        }
+        if (auth.currentUser) await signOut(auth);
+        verifiedAdminUid = null;
+        enterApplication({ key: user.key, ...currentUser });
     } catch (error) {
         console.error('Không thể khôi phục phiên đăng nhập:', error);
         sessionStorage.removeItem('user');

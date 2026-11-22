@@ -49,6 +49,9 @@ const tasksContentDiv = document.getElementById('tasksContent');
 const taskBackBtn = document.getElementById('taskBackBtn');
 const taskSelectedUserName = document.getElementById('taskSelectedUserName');
 const adminCurrentSection = document.getElementById('adminCurrentSection');
+const adminGlobalSearch = document.getElementById('adminGlobalSearch');
+const dashboardSearchInput = document.getElementById('dashboardSearchInput');
+const dashboardPendingRequests = document.getElementById('dashboardPendingRequests');
 const userSearchInput = document.getElementById('userSearchInput');
 const loginLogSearch = document.getElementById('loginLogSearch');
 const loginLogStatus = document.getElementById('loginLogStatus');
@@ -58,6 +61,8 @@ const editLogSearch = document.getElementById('editLogSearch');
 const editLogActionFilter = document.getElementById('editLogActionFilter');
 const editLogStatus = document.getElementById('editLogStatus');
 const editLogTableBody = document.getElementById('editLogTableBody');
+const editLogPageSummary = document.getElementById('editLogPageSummary');
+const editLogPagination = document.getElementById('editLogPagination');
 const refreshEditLogsBtn = document.getElementById('refreshEditLogs');
 const accessRequestList = document.getElementById('accessRequestList');
 const accessRequestStatus = document.getElementById('accessRequestStatus');
@@ -68,6 +73,9 @@ const accessRequestFilters = document.querySelectorAll('[data-access-filter]');
 let currentUsersObj = null;
 let currentLoginLogs = [];
 let currentEditLogs = [];
+let editLogPage = 1;
+let editLogsUsingUnindexedFallback = false;
+const EDIT_LOGS_PER_PAGE = 50;
 let currentAccessRequests = {};
 let accessRequestsBound = false;
 let activeAccessRequestFilter = 'pending';
@@ -133,6 +141,14 @@ document.querySelectorAll('[data-admin-action]').forEach(button => {
     });
 });
 
+adminGlobalSearch.addEventListener('submit', event => {
+    event.preventDefault();
+    userSearchInput.value = String(dashboardSearchInput.value || '').trim();
+    switchPanel('panel-users');
+    renderUsers(currentUsersObj);
+    userSearchInput.focus();
+});
+
 if (userSearchInput) {
     userSearchInput.addEventListener('input', () => renderUsers(currentUsersObj));
 }
@@ -146,11 +162,17 @@ if (refreshLoginLogsBtn) {
 }
 
 if (editLogSearch) {
-    editLogSearch.addEventListener('input', renderEditLogs);
+    editLogSearch.addEventListener('input', () => {
+        editLogPage = 1;
+        renderEditLogs();
+    });
 }
 
 if (editLogActionFilter) {
-    editLogActionFilter.addEventListener('change', renderEditLogs);
+    editLogActionFilter.addEventListener('change', () => {
+        editLogPage = 1;
+        renderEditLogs();
+    });
 }
 
 if (refreshEditLogsBtn) {
@@ -213,6 +235,14 @@ function renderAccessRequests() {
     if (accessRequestCount) {
         accessRequestCount.textContent = String(counts.pending);
         accessRequestCount.hidden = counts.pending === 0;
+    }
+    if (dashboardPendingRequests) {
+        dashboardPendingRequests.textContent = String(counts.pending);
+        dashboardPendingRequests.hidden = counts.pending === 0;
+        dashboardPendingRequests.closest('button')?.setAttribute(
+            'aria-label',
+            counts.pending ? `${counts.pending} yêu cầu truy cập đang chờ` : 'Mở yêu cầu truy cập'
+        );
     }
 
     const searchTerm = String(accessRequestSearch?.value || '').trim().toLowerCase();
@@ -478,11 +508,23 @@ const editLogActionLabels = {
 async function loadEditLogs() {
     if (!editLogStatus || !editLogTableBody) return;
     refreshEditLogsBtn.disabled = true;
+    editLogPage = 1;
+    editLogsUsingUnindexedFallback = false;
     editLogStatus.textContent = 'Đang tải nhật ký...';
 
     try {
         const logsQuery = query(ref(db, 'taskEditLogs'), orderByChild('timestamp'), limitToLast(200));
-        const snapshot = await get(logsQuery);
+        let snapshot;
+        let usedUnindexedFallback = false;
+        try {
+            snapshot = await get(logsQuery);
+        } catch (error) {
+            const missingIndex = /index not defined|indexon/i.test(`${error?.code || ''} ${error?.message || ''}`);
+            if (!missingIndex) throw error;
+            console.warn('Firebase chưa có index timestamp cho taskEditLogs; đang tải nhật ký không giới hạn để dự phòng.', error);
+            snapshot = await get(ref(db, 'taskEditLogs'));
+            usedUnindexedFallback = true;
+        }
         currentEditLogs = [];
         if (snapshot.exists()) {
             snapshot.forEach(child => {
@@ -491,11 +533,15 @@ async function loadEditLogs() {
             });
         }
         currentEditLogs.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+        if (usedUnindexedFallback) currentEditLogs = currentEditLogs.slice(0, 200);
+        editLogsUsingUnindexedFallback = usedUnindexedFallback;
         renderEditLogs();
     } catch (error) {
         console.error('Không thể tải nhật ký chỉnh sửa:', error);
         currentEditLogs = [];
         editLogTableBody.replaceChildren();
+        editLogPagination?.replaceChildren();
+        if (editLogPageSummary) editLogPageSummary.textContent = '0 nhật ký';
         const errorDetails = String(error?.code || error?.message || 'Lỗi không xác định').slice(0, 180);
         const permissionHint = errorDetails.includes('PERMISSION_DENIED')
             ? ' Hãy kiểm tra quyền đọc taskEditLogs trong Firebase Realtime Database Rules.'
@@ -504,6 +550,42 @@ async function loadEditLogs() {
     } finally {
         refreshEditLogsBtn.disabled = false;
     }
+}
+
+function renderEditLogPagination(total, pageCount) {
+    if (!editLogPagination || !editLogPageSummary) return;
+    editLogPagination.replaceChildren();
+    const addPageButton = (label, page, disabled = false, current = false, ariaLabel = '') => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `employee-page-btn${current ? ' is-current' : ''}`;
+        button.textContent = label;
+        button.disabled = disabled;
+        if (ariaLabel) button.setAttribute('aria-label', ariaLabel);
+        if (current) button.setAttribute('aria-current', 'page');
+        button.addEventListener('click', () => {
+            editLogPage = page;
+            renderEditLogs();
+        });
+        editLogPagination.appendChild(button);
+    };
+
+    const firstPage = Math.max(1, editLogPage - 2);
+    const lastPage = Math.min(pageCount, firstPage + 4);
+    addPageButton('≪', 1, editLogPage === 1, false, 'Trang đầu');
+    addPageButton('‹', Math.max(1, editLogPage - 1), editLogPage === 1, false, 'Trang trước');
+    for (let page = firstPage; page <= lastPage; page += 1) {
+        addPageButton(String(page), page, false, page === editLogPage, `Trang ${page}`);
+    }
+    addPageButton('›', Math.min(pageCount, editLogPage + 1), editLogPage >= pageCount, false, 'Trang sau');
+    addPageButton('≫', pageCount, editLogPage >= pageCount, false, 'Trang cuối');
+
+    const start = total ? (editLogPage - 1) * EDIT_LOGS_PER_PAGE + 1 : 0;
+    const end = Math.min(editLogPage * EDIT_LOGS_PER_PAGE, total);
+    editLogPageSummary.replaceChildren();
+    const range = document.createElement('strong');
+    range.textContent = `${start}–${end}`;
+    editLogPageSummary.append(range, document.createTextNode(` trên ${total} nhật ký`));
 }
 
 function renderEditLogs() {
@@ -524,6 +606,14 @@ function renderEditLogs() {
             values.some(value => String(value || '').toLocaleLowerCase('vi').includes(searchTerm));
     });
 
+    const pageCount = Math.max(1, Math.ceil(filteredLogs.length / EDIT_LOGS_PER_PAGE));
+    editLogPage = Math.min(editLogPage, pageCount);
+    const startIndex = (editLogPage - 1) * EDIT_LOGS_PER_PAGE;
+    const pageLogs = filteredLogs.slice(startIndex, startIndex + EDIT_LOGS_PER_PAGE);
+    const fallbackNotice = editLogsUsingUnindexedFallback
+        ? ' Firebase đang thiếu index taskEditLogs.timestamp; hãy Publish Rules trong database.rules.json để tối ưu tải dữ liệu.'
+        : '';
+    renderEditLogPagination(filteredLogs.length, pageCount);
     editLogTableBody.replaceChildren();
     if (!filteredLogs.length) {
         const row = document.createElement('tr');
@@ -538,10 +628,11 @@ function renderEditLogs() {
         editLogStatus.textContent = currentEditLogs.length
             ? 'Không tìm thấy kết quả phù hợp.'
             : 'Nhật ký ghi nhận các thay đổi công việc phát sinh từ khi tính năng được bật.';
+        editLogStatus.textContent += fallbackNotice;
         return;
     }
 
-    filteredLogs.forEach(log => {
+    pageLogs.forEach(log => {
         const row = document.createElement('tr');
         const timestamp = Number(log.timestamp);
         const date = Number.isFinite(timestamp) && timestamp > 0
@@ -561,7 +652,7 @@ function renderEditLogs() {
         });
         editLogTableBody.appendChild(row);
     });
-    editLogStatus.textContent = `Hiển thị ${filteredLogs.length} / ${currentEditLogs.length} sự kiện gần nhất (tối đa 200).`;
+    editLogStatus.textContent = `Trang ${editLogPage}/${pageCount} · ${filteredLogs.length} kết quả (tối đa 200).${fallbackNotice}`;
 }
 
 function showLoadingAdmin() {
@@ -639,21 +730,29 @@ document.addEventListener('keydown', event => {
 });
 
 // ========== HÀM ĐĂNG NHẬP ==========
-async function findAuthorizedAdmin(firebaseUser) {
+async function findAuthorizedSuperAdmin(firebaseUser) {
     const accessSnap = await get(ref(db, `adminAccess/${firebaseUser.uid}`));
     const access = accessSnap.exists() ? accessSnap.val() : null;
-    if (access?.enabled !== true || !access.userId ||
-        !['admin', 'superadmin'].includes(access.role)) return null;
+    if (access?.enabled !== true || !access.userId || access.role !== 'superadmin') return null;
 
     const usersSnap = await get(ref(db, 'users'));
     const users = usersSnap.exists() ? normalizeUsers(usersSnap.val()) : {};
     const user = users?.[access.userId];
-    if (!user || user.role !== access.role) return null;
+    if (!user || user.role !== 'superadmin') return null;
     return { key: access.userId, ...user };
 }
 
 function showAdminPanel(adminUser) {
     activeAdminUser = adminUser;
+    const adminName = String(adminUser.name || adminUser.key || 'Quản trị viên');
+    const initials = adminName.trim().split(/\s+/).slice(-2).map(part => part[0] || '').join('');
+    document.getElementById('adminTopbarName').textContent = adminName;
+    document.getElementById('adminTopbarInitials').textContent = initials.toLocaleUpperCase('vi');
+    document.getElementById('dashboardCurrentDate').textContent = new Intl.DateTimeFormat('vi-VN', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+    }).format(new Date());
     updateRoleOptions();
     adminLoginDiv.style.display = 'none';
     adminPanel.style.display = 'block';
@@ -676,10 +775,10 @@ async function performAdminLogin() {
     try {
         const credential = await signInWithEmailAndPassword(auth, email, password);
         signedInUser = credential.user;
-        const adminUser = await findAuthorizedAdmin(credential.user);
+        const adminUser = await findAuthorizedSuperAdmin(credential.user);
         if (!adminUser) {
             await signOut(auth);
-            adminLoginMsg.innerText = 'Tài khoản Firebase này chưa được cấp quyền Admin.';
+            adminLoginMsg.innerText = 'Chỉ Quản trị viên cấp cao được đăng nhập trang quản trị.';
             return;
         }
         showAdminPanel(adminUser);
@@ -711,9 +810,10 @@ async function restoreAdminSession() {
     await auth.authStateReady();
     if (!auth.currentUser) return;
     try {
-        const adminUser = await findAuthorizedAdmin(auth.currentUser);
+        const adminUser = await findAuthorizedSuperAdmin(auth.currentUser);
         if (!adminUser) {
-            adminLoginMsg.innerText = 'Phiên Firebase hiện tại chưa được cấp quyền Admin. Hãy đăng nhập bằng tài khoản Admin.';
+            await signOut(auth);
+            adminLoginMsg.innerText = 'Chỉ Quản trị viên cấp cao được đăng nhập trang quản trị.';
             return;
         }
         showAdminPanel(adminUser);
@@ -827,7 +927,8 @@ function editUser(userId, userData) {
 
 // Hiển thị danh sách users trên giao diện
 function updateDashboard(usersObj) {
-    const users = Object.values(usersObj || {});
+    const userEntries = Object.entries(usersObj || {});
+    const users = userEntries.map(([, user]) => user);
     const counts = users.reduce((result, user) => {
         const role = user?.role || 'member';
         result[role] = (result[role] || 0) + 1;
@@ -835,6 +936,7 @@ function updateDashboard(usersObj) {
     }, { member: 0, department: 0, admin: 0, superadmin: 0 });
     const total = users.length;
     const percent = role => total ? Math.round((counts[role] / total) * 100) : 0;
+    const maxRoleCount = Math.max(counts.member, counts.department, counts.admin, counts.superadmin, 1);
 
     document.getElementById('dashboardUserTotal').textContent = total;
     document.getElementById('dashboardAdminTotal').textContent = counts.admin;
@@ -847,15 +949,76 @@ function updateDashboard(usersObj) {
     document.getElementById('dashboardAdminPercent').textContent = `${percent('admin')}%`;
     document.getElementById('dashboardSuperPercent').textContent = `${percent('superadmin')}%`;
 
+    [
+        ['member', counts.member],
+        ['department', counts.department],
+        ['admin', counts.admin],
+        ['super', counts.superadmin]
+    ].forEach(([role, count]) => {
+        const key = role === 'super' ? 'Super' : role[0].toUpperCase() + role.slice(1);
+        document.getElementById(`dashboard${key}BarCount`).textContent = String(count);
+        document.getElementById(`dashboard${key}Bar`).style.width = `${(count / maxRoleCount) * 100}%`;
+    });
+
     const memberEnd = percent('member');
     const departmentEnd = memberEnd + percent('department');
     const adminEnd = departmentEnd + percent('admin');
     const superEnd = adminEnd + percent('superadmin');
     const donut = document.getElementById('dashboardRoleDonut');
     donut.style.background = total
-        ? `conic-gradient(#df171f 0% ${memberEnd}%, #5578e8 ${memberEnd}% ${departmentEnd}%, #a9131a ${departmentEnd}% ${adminEnd}%, #f1ae4e ${adminEnd}% ${superEnd}%)`
+        ? `conic-gradient(#2dbb92 0% ${memberEnd}%, #4386f5 ${memberEnd}% ${departmentEnd}%, #f5a640 ${departmentEnd}% ${adminEnd}%, #8b6ce8 ${adminEnd}% ${superEnd}%)`
         : 'conic-gradient(#e8edf4 0% 100%)';
     donut.setAttribute('aria-label', `Cơ cấu tài khoản: ${counts.member} thành viên, ${counts.department} Phòng Ban, ${counts.admin} quản trị viên, ${counts.superadmin} quản trị viên cấp cao`);
+
+    renderDashboardAdminList(userEntries);
+}
+
+function renderDashboardAdminList(userEntries) {
+    const list = document.getElementById('dashboardAdminList');
+    list.replaceChildren();
+    const administrators = userEntries
+        .filter(([, user]) => ['superadmin', 'admin'].includes(user?.role))
+        .sort(([leftId, left], [rightId, right]) =>
+            (left.role === right.role ? 0 : left.role === 'superadmin' ? -1 : 1) ||
+            String(left.name || leftId).localeCompare(String(right.name || rightId), 'vi')
+        )
+        .slice(0, 5);
+
+    if (!administrators.length) {
+        const empty = document.createElement('p');
+        empty.className = 'dashboard-admin-list-empty';
+        empty.textContent = 'Chưa có tài khoản quản trị.';
+        list.appendChild(empty);
+        return;
+    }
+
+    administrators.forEach(([userId, user]) => {
+        const row = document.createElement('div');
+        row.className = 'dashboard-admin-row';
+        const avatar = document.createElement('span');
+        avatar.className = `dashboard-admin-avatar${user.role === 'superadmin' ? ' is-super' : ''}`;
+        avatar.textContent = String(user.name || userId)
+            .trim()
+            .split(/\s+/)
+            .slice(-2)
+            .map(part => part[0] || '')
+            .join('')
+            .toLocaleUpperCase('vi');
+
+        const identity = document.createElement('span');
+        identity.className = 'dashboard-admin-identity';
+        const name = document.createElement('strong');
+        name.textContent = user.name || userId;
+        const detail = document.createElement('small');
+        detail.textContent = user.email || `Mã: ${userId}`;
+        identity.append(name, detail);
+
+        const role = document.createElement('span');
+        role.className = `dashboard-admin-role${user.role === 'superadmin' ? ' is-super' : ''}`;
+        role.textContent = user.role === 'superadmin' ? 'Super Admin' : 'Admin';
+        row.append(avatar, identity, role);
+        list.appendChild(row);
+    });
 }
 
 function renderUsers(usersObj) {
