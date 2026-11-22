@@ -1055,6 +1055,54 @@
                             <label for="taskEndDate">Ngày kết thúc</label>
                             <input type="date" id="taskEndDate">
                         </div>
+                        <div class="task-form-field">
+                            <label for="taskCategory">Phân loại</label>
+                            <select id="taskCategory">
+                                <option value="">Không phân loại</option>
+                                <option>Công việc thường</option>
+                                <option>Dự án</option>
+                                <option>Họp</option>
+                                <option>Báo cáo</option>
+                                <option>Bảo trì</option>
+                                <option>Cá nhân</option>
+                            </select>
+                        </div>
+                        <div class="task-form-field">
+                            <label for="taskPriority">Độ ưu tiên</label>
+                            <select id="taskPriority">
+                                <option value="">Thường</option>
+                                <option value="Cao">Cao</option>
+                                <option value="Trung bình">Trung bình</option>
+                                <option value="Thấp">Thấp</option>
+                            </select>
+                        </div>
+                        <div class="task-form-field">
+                            <label for="reminderAt">Ngày và giờ nhắc</label>
+                            <input type="datetime-local" id="reminderAt">
+                        </div>
+                        <div class="task-form-field">
+                            <label for="reminderLead">Nhắc trước</label>
+                            <select id="reminderLead">
+                                <option value="0">Đúng giờ</option>
+                                <option value="15">Trước 15 phút</option>
+                                <option value="30">Trước 30 phút</option>
+                                <option value="60">Trước 1 giờ</option>
+                                <option value="1440">Trước 1 ngày</option>
+                            </select>
+                        </div>
+                        <div class="task-form-field">
+                            <label for="reminderRepeat">Lặp lại</label>
+                            <select id="reminderRepeat">
+                                <option value="none">Không lặp</option>
+                                <option value="daily">Hằng ngày</option>
+                                <option value="weekly">Hằng tuần</option>
+                                <option value="monthly">Hằng tháng</option>
+                            </select>
+                        </div>
+                        <div class="task-form-field task-form-field-wide reminder-enable-field">
+                            <label><input type="checkbox" id="reminderEnabled"> Bật nhắc nhở cho công việc này</label>
+                            <small class="task-form-hint">Thông báo và âm báo hoạt động khi trang đang mở; trình duyệt cần được cấp quyền thông báo.</small>
+                        </div>
                         <div class="task-form-field task-form-field-wide">
                             <label for="result">Kết quả</label>
                             <input type="text" id="result">

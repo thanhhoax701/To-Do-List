@@ -57,6 +57,12 @@ const completionInput = document.getElementById("completion"); // % hoàn thành
 const statusInput = document.getElementById("status"); // Trạng thái công việc
 const noteInput = document.getElementById("note"); // Ghi chú
 const saveTaskBtn = document.getElementById("saveTaskBtn"); // Nút lưu
+const taskCategoryInput = document.getElementById("taskCategory");
+const taskPriorityInput = document.getElementById("taskPriority");
+const reminderAtInput = document.getElementById("reminderAt");
+const reminderLeadInput = document.getElementById("reminderLead");
+const reminderRepeatInput = document.getElementById("reminderRepeat");
+const reminderEnabledInput = document.getElementById("reminderEnabled");
 
 // Chỉ báo loading (vòng xoay chờ đợi khi xử lý async)
 const loadingIndicator = document.getElementById("loadingIndicator");
@@ -253,6 +259,9 @@ let currentSearch = {
     year: null
 };
 let taskSearchRequestId = 0;
+let taskReminderUnsubscribe = null;
+const taskReminderTimers = new Map();
+let reminderAudioContext = null;
 
 /* ========== BIẾN TOÀN CỤC ========== */
 // Ngày hiện tại đang hiển thị trên lịch
@@ -2109,7 +2118,7 @@ function loadTasks(ds) {
             row.innerHTML = `
                 <td><input type="checkbox" class="task-checkbox" data-key="${k}" data-year="${y}" data-month="${m}" data-week="${w}" data-date="${ds}"></td>
                 <td>${i++}</td>
-                <td>${t.content}</td>
+                <td><span class="task-name">${t.content}</span>${getTaskCategoryPriorityMarkup(t)}${getTaskReminderMarkup(t)}</td>
                 <td>${t.description || ''}</td>
                 <td>${t.requester || ''}</td>
                 <td>${t.unit || ''}</td>
@@ -2170,6 +2179,12 @@ function loadTasks(ds) {
                     completion: t.completion || '',
                     status: t.status || '',
                     note: t.note || '',
+                    category: t.category || '',
+                    priority: t.priority || '',
+                    reminderAt: t.reminderAt || '',
+                    reminderLead: Number(t.reminderLead || 0),
+                    reminderRepeat: t.reminderRepeat || 'none',
+                    reminderEnabled: Boolean(t.reminderEnabled),
                     taskDate: t.taskDate || ds
                 };
                 showLoading();
@@ -2246,6 +2261,13 @@ function openModal(title, id = "", t = {}) {
     statusInput.value = t.status || "Chưa bắt đầu";
     completionInput.value = t.completion ? String(t.completion).replace('%', '') : "";
     noteInput.value = t.note || "";
+    if (taskCategoryInput) taskCategoryInput.value = t.category || "";
+    if (taskPriorityInput) taskPriorityInput.value = t.priority || "";
+    if (reminderAtInput) reminderAtInput.value = t.reminderAt || "";
+    if (reminderLeadInput) reminderLeadInput.value = String(t.reminderLead ?? 0);
+    if (reminderRepeatInput) reminderRepeatInput.value = t.reminderRepeat || "none";
+    if (reminderEnabledInput) reminderEnabledInput.checked = Boolean(t.reminderEnabled);
+    syncReminderInputs();
 
     modal.style.display = "flex"; // Hiển thị modal
 }
@@ -2303,6 +2325,7 @@ document.addEventListener('DOMContentLoaded', function () {
         searchBtn.addEventListener('click', searchTasks);
     }
 
+
     if (clearSearchBtn) {
         clearSearchBtn.addEventListener('click', clearSearch);
     }
@@ -2344,6 +2367,11 @@ if (saveTaskBtn) {
             await showCustomAlert("Vui lòng chọn ngày trước!");
             return;
         }
+        if (reminderEnabledInput?.checked && !reminderAtInput.value) {
+            await showCustomAlert("Vui lòng chọn ngày và giờ nhắc.");
+            reminderAtInput.focus();
+            return;
+        }
         const [y, m] = selectedDate.split("-");
         const w = getWeekNumber(selectedDate);
         const completionValue = completionInput.value.trim();
@@ -2361,6 +2389,12 @@ if (saveTaskBtn) {
             completion: normalizedCompletion,
             status: statusInput.value,
             note: noteInput.value.trim(),
+            category: taskCategoryInput?.value || "",
+            priority: taskPriorityInput?.value || "",
+            reminderAt: reminderAtInput?.value || "",
+            reminderLead: Number(reminderLeadInput?.value || 0),
+            reminderRepeat: reminderRepeatInput?.value || "none",
+            reminderEnabled: Boolean(reminderEnabledInput?.checked),
             taskDate: selectedDate
         };
         showLoading();
@@ -2549,8 +2583,208 @@ prevBtn.addEventListener("click", () => {
  * Khởi động ứng dụng: Vẽ lịch, cấu hình quyền theo role, và tự động chọn hôm nay
  * Hàm này được gọi sau khi người dùng đăng nhập thành công
  */
+function getTaskEndDate(task) {
+    return task.endDate || task.taskDate || '';
+}
+
+function escapeTaskAttribute(value) {
+    return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function getTaskCategoryPriorityMarkup(task) {
+    const priority = task.priority ? `<span class="priority-badge priority-${escapeTaskAttribute(task.priority).replace(/\s/g, '-')}" title="Độ ưu tiên">${escapeTaskAttribute(task.priority)}</span>` : '';
+    const category = task.category ? `<span class="category-badge" title="Phân loại">${escapeTaskAttribute(task.category)}</span>` : '';
+    return `${priority}${category}`;
+}
+
+function getTaskReminderMarkup(task) {
+    return task.reminderEnabled === true && task.reminderAt
+        ? '<span class="task-reminder-badge" title="Công việc này đã bật lịch nhắc" aria-label="Đã bật nhắc">🔔</span>'
+        : '';
+}
+
+function syncReminderInputs() {
+    const enabled = Boolean(reminderEnabledInput?.checked);
+    [reminderAtInput, reminderLeadInput, reminderRepeatInput].forEach(input => {
+        if (input) input.disabled = !enabled;
+    });
+}
+
+function getNextReminderTime(reminderAt, repeat, leadMinutes, now = new Date()) {
+    const occurrence = new Date(`${reminderAt}:00`);
+    if (Number.isNaN(occurrence.getTime())) return null;
+    const leadMs = Number(leadMinutes || 0) * 60 * 1000;
+    let notifyAt = new Date(occurrence.getTime() - leadMs);
+    if (repeat === 'none') return notifyAt > now ? notifyAt : null;
+
+    while (notifyAt <= now) {
+        if (repeat === 'monthly') {
+            const day = occurrence.getDate();
+            occurrence.setDate(1);
+            occurrence.setMonth(occurrence.getMonth() + 1);
+            occurrence.setDate(Math.min(day, new Date(occurrence.getFullYear(), occurrence.getMonth() + 1, 0).getDate()));
+        } else {
+            occurrence.setDate(occurrence.getDate() + (repeat === 'weekly' ? 7 : 1));
+        }
+        notifyAt = new Date(occurrence.getTime() - leadMs);
+    }
+    return notifyAt;
+}
+
+function unlockReminderAudio() {
+    const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextConstructor) return;
+    try {
+        if (!reminderAudioContext) reminderAudioContext = new AudioContextConstructor();
+        if (reminderAudioContext.state === 'suspended') {
+            reminderAudioContext.resume().catch(error => console.error('Không thể bật âm thanh nhắc việc:', error));
+        }
+    } catch (error) {
+        console.error('Không thể khởi tạo âm thanh nhắc việc:', error);
+    }
+}
+
+function playReminderSound() {
+    if (!reminderAudioContext || reminderAudioContext.state !== 'running') return;
+    const now = reminderAudioContext.currentTime;
+    const oscillator = reminderAudioContext.createOscillator();
+    const volume = reminderAudioContext.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, now);
+    oscillator.frequency.setValueAtTime(660, now + 0.18);
+    volume.gain.setValueAtTime(0.0001, now);
+    volume.gain.exponentialRampToValueAtTime(0.18, now + 0.03);
+    volume.gain.setValueAtTime(0.18, now + 0.22);
+    volume.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+    oscillator.connect(volume);
+    volume.connect(reminderAudioContext.destination);
+    oscillator.start(now);
+    oscillator.stop(now + 0.46);
+}
+
+function unlockReminderAudioOnFirstInteraction() {
+    document.removeEventListener('pointerdown', unlockReminderAudioOnFirstInteraction);
+    document.removeEventListener('keydown', unlockReminderAudioOnFirstInteraction);
+    unlockReminderAudio();
+}
+
+document.addEventListener('pointerdown', unlockReminderAudioOnFirstInteraction, { once: true });
+document.addEventListener('keydown', unlockReminderAudioOnFirstInteraction, { once: true });
+
+function scheduleTaskReminder(key, task) {
+    if (taskReminderTimers.has(key)) {
+        const existing = taskReminderTimers.get(key);
+        const signature = JSON.stringify([task.reminderEnabled, task.reminderAt, task.reminderLead, task.reminderRepeat, task.content, task.description]);
+        if (existing.signature === signature) return;
+        clearTimeout(existing.timer);
+        taskReminderTimers.delete(key);
+    }
+
+    if (task.reminderEnabled !== true || !task.reminderAt) return;
+
+    const signature = JSON.stringify([task.reminderEnabled, task.reminderAt, task.reminderLead, task.reminderRepeat, task.content, task.description]);
+    const notifyAt = getNextReminderTime(task.reminderAt, task.reminderRepeat || 'none', task.reminderLead, new Date());
+    if (!notifyAt) return;
+
+    const maxTimeout = 2147483647;
+    const delay = Math.max(0, notifyAt.getTime() - Date.now());
+    const timer = setTimeout(() => {
+        const current = taskReminderTimers.get(key);
+        if (!current || current.signature !== signature) return;
+        if (Date.now() < notifyAt.getTime()) {
+            taskReminderTimers.delete(key);
+            scheduleTaskReminder(key, task);
+            return;
+        }
+
+        taskReminderTimers.delete(key);
+        try {
+            playReminderSound();
+        } catch (error) {
+            console.error('Không thể phát âm thanh nhắc việc:', error);
+        }
+        try {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(task.content || 'Nhắc công việc', {
+                    body: task.description || 'Đã đến thời gian nhắc việc.',
+                    tag: `task-reminder-${key}-${notifyAt.getTime()}`
+                });
+            }
+        } catch (error) {
+            console.error('Không thể hiển thị thông báo nhắc việc:', error);
+        }
+        if (task.reminderRepeat && task.reminderRepeat !== 'none') scheduleTaskReminder(key, task);
+    }, Math.min(delay, maxTimeout));
+    taskReminderTimers.set(key, { timer, signature });
+}
+
+function clearTaskReminderTimers() {
+    taskReminderTimers.forEach(({ timer }) => clearTimeout(timer));
+    taskReminderTimers.clear();
+}
+
+function initTaskReminderSystem() {
+    if (reminderEnabledInput) {
+        reminderEnabledInput.onchange = async () => {
+            syncReminderInputs();
+            if (!reminderEnabledInput.checked) return;
+            unlockReminderAudio();
+            if (!('Notification' in window)) {
+                await showCustomAlert('Trình duyệt này không hỗ trợ thông báo.');
+                return;
+            }
+            if (Notification.permission === 'denied') {
+                await showCustomAlert('Thông báo đang bị chặn. Hãy bật quyền thông báo trong cài đặt trình duyệt.');
+                return;
+            }
+            if (Notification.permission === 'default') {
+                try {
+                    const permission = await Notification.requestPermission();
+                    if (permission !== 'granted') {
+                        await showCustomAlert('Trình duyệt chưa cấp quyền thông báo. Hãy bật quyền thông báo để nhận nhắc việc.');
+                    }
+                } catch (error) {
+                    console.error('Không thể xin quyền thông báo:', error);
+                    await showCustomAlert('Không thể bật thông báo trình duyệt.');
+                }
+            }
+        };
+        syncReminderInputs();
+    }
+
+    if (taskReminderUnsubscribe) taskReminderUnsubscribe();
+    clearTaskReminderTimers();
+    const uid = getCurrentUserId();
+    if (!uid) return;
+
+    taskReminderUnsubscribe = onValue(tasksRef(), snap => {
+        const activeKeys = new Set();
+        if (snap.exists()) {
+            snap.forEach(yearSnap => yearSnap.forEach(monthSnap =>
+                monthSnap.forEach(weekSnap => weekSnap.forEach(dateSnap =>
+                    dateSnap.forEach(taskSnap => {
+                        const task = taskSnap.val();
+                        const key = [yearSnap.key, monthSnap.key, weekSnap.key, dateSnap.key, taskSnap.key].join('/');
+                        if (task.reminderEnabled === true && task.reminderAt) {
+                            activeKeys.add(key);
+                            scheduleTaskReminder(key, task);
+                        }
+                    })
+                ))
+            ));
+        }
+        taskReminderTimers.forEach(({ timer }, key) => {
+            if (!activeKeys.has(key)) {
+                clearTimeout(timer);
+                taskReminderTimers.delete(key);
+            }
+        });
+    }, error => console.error('Lỗi theo dõi nhắc việc:', error));
+}
+
 function startApp() {
     applyRolePermissions();
+    initTaskReminderSystem();
     // Tải danh sách các ngày NB, NL và TL từ Firebase trước
     Promise.all([loadNbDays(), loadNlDays(), loadTlDays()]).then(() => {
         renderCalendar();
@@ -7226,7 +7460,7 @@ function loadTasksForWeek(y, m, weekId) {
                     row.innerHTML = `
                         <td><input type="checkbox" class="task-checkbox" data-key="${k}" data-year="${y}" data-month="${m}" data-week="${weekId}" data-date="${dateKey}"></td>
                         <td>${i++}</td>
-                        <td>${t.content}</td>
+                        <td><span class="task-name">${t.content}</span>${getTaskCategoryPriorityMarkup(t)}${getTaskReminderMarkup(t)}</td>
                         <td>${t.description || ''}</td>
                         <td>${t.requester || ''}</td>
                         <td>${t.unit || ''}</td>
@@ -8305,6 +8539,11 @@ function applyRolePermissions() {
 
 // Đăng xuất: Xóa session và quảy lại trang đăng nhập
 function logout() {
+    if (taskReminderUnsubscribe) {
+        taskReminderUnsubscribe();
+        taskReminderUnsubscribe = null;
+    }
+    clearTaskReminderTimers();
     if (accessApprovalUnsubscribe) {
         accessApprovalUnsubscribe();
         accessApprovalUnsubscribe = null;
@@ -8339,7 +8578,6 @@ async function searchTasks() {
     currentSearch.date = searchDate.value;
     currentSearch.month = searchMonth.value;
     currentSearch.year = searchYear.value;
-
     if (currentSearch.period === 'all' && !currentSearch.search) {
         // If no search, load normal selected date
         if (selectedDate) {
@@ -8620,7 +8858,12 @@ function appendTaskMobileCard(row) {
         status.className = `task-mobile-card-status ${statusClass(sourceStatusText || 'Chưa bắt đầu')}`;
         status.textContent = sourceStatusText;
     }
-    heading.append(selection, status);
+    const headingActions = document.createElement('div');
+    headingActions.className = 'task-mobile-card-heading-actions';
+    const reminderBadge = cells[2].querySelector('.task-reminder-badge');
+    if (reminderBadge) headingActions.appendChild(reminderBadge.cloneNode(true));
+    headingActions.appendChild(status);
+    heading.append(selection, headingActions);
 
     const createSummaryField = (labelText, valueText, className) => {
         const field = document.createElement('div');
@@ -8635,7 +8878,12 @@ function appendTaskMobileCard(row) {
         return field;
     };
 
-    const title = createSummaryField('Công việc', cells[2].textContent.trim() || 'Chưa có tên công việc', 'task-mobile-card-title');
+    const taskTitleText = cells[2].querySelector('.task-name')?.textContent.trim() || cells[2].textContent.trim();
+    const title = createSummaryField('Công việc', taskTitleText || 'Chưa có tên công việc', 'task-mobile-card-title');
+    const titleValue = title.querySelector('.task-mobile-card-field-value');
+    cells[2].querySelectorAll('.priority-badge, .category-badge').forEach(badge => {
+        titleValue.appendChild(badge.cloneNode(true));
+    });
     const description = createSummaryField('Mô tả', cells[3].textContent.trim() || 'Chưa có mô tả', 'task-mobile-card-description');
     const requester = createSummaryField('Người yêu cầu', cells[4].textContent.trim() || 'Chưa có thông tin', 'task-mobile-card-requester');
     const unit = createSummaryField('Đơn vị', cells[5].textContent.trim() || 'Chưa có thông tin', 'task-mobile-card-unit');
@@ -8730,7 +8978,11 @@ function renderSearchedTasks(tasks) {
 
         // Content
         const contentCell = document.createElement('td');
-        contentCell.textContent = task.content || '';
+        const taskName = document.createElement('span');
+        taskName.className = 'task-name';
+        taskName.textContent = task.content || '';
+        contentCell.appendChild(taskName);
+        contentCell.insertAdjacentHTML('beforeend', `${getTaskCategoryPriorityMarkup(task)}${getTaskReminderMarkup(task)}`);
         row.appendChild(contentCell);
 
         // Description
@@ -8881,7 +9133,8 @@ function renderSearchedTasks(tasks) {
 
         if (currentSearch.search) {
             [2, 3, 4, 5, 6, 9, 10, 13].forEach(index => {
-                appendEmployeeSearchHighlights(row.cells[index], row.cells[index].textContent, currentSearch.search);
+                const cell = index === 2 ? row.cells[index].querySelector('.task-name') : row.cells[index];
+                appendEmployeeSearchHighlights(cell, cell.textContent, currentSearch.search);
             });
         }
         appendTaskMobileCard(row);

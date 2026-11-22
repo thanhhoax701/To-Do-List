@@ -23,6 +23,44 @@ body {
     max-width: 100%;
 }
 
+.reminder-enable-field label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.priority-badge,
+.category-badge {
+    display: inline-block;
+    margin: 2px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.priority-Cao { background: #fee2e2; color: #b42318; }
+.priority-Trung-bình { background: #fff3cd; color: #9a6700; }
+.priority-Thấp { background: #dbeafe; color: #175cd3; }
+.category-badge { background: #eef2f6; color: #475569; }
+
+.task-reminder-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #f4d58a;
+    border-radius: 50%;
+    background: #fff4d6;
+    color: #8a5a00;
+    font-size: 15px;
+    white-space: nowrap;
+}
+
 /* ===== HEADER LỊCH ===== */
 /* Thanh tiêu đề hiển thị tháng và các nút chuyển tháng */
 .calendar-header {
@@ -235,6 +273,28 @@ table.task-list-table {
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.task-mobile-card-heading-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.task-mobile-card-heading-actions .task-mobile-card-status {
+    margin-left: 0;
+    max-width: none;
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.task-mobile-card-heading-actions select.task-mobile-card-status {
+    width: auto;
+    min-width: 130px;
+    max-width: none;
 }
 
 .task-mobile-card-selection {
