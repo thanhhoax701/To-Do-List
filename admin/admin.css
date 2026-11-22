@@ -2913,6 +2913,21 @@ select {
     width: min(100%, 380px);
 }
 
+.edit-log-toolbar select {
+    min-height: 40px;
+    max-width: 220px;
+    padding: 0 12px;
+    border: 1px solid #e8ecf3;
+    border-radius: 9px;
+    background: #fff;
+    color: #344054;
+    font: inherit;
+}
+
+.edit-log-table {
+    min-width: 820px;
+}
+
 .login-log-refresh {
     min-height: 40px;
     padding: 0 14px;
@@ -3009,6 +3024,11 @@ select {
 
     .login-log-toolbar .admin-search {
         width: auto;
+    }
+
+    .edit-log-toolbar select {
+        max-width: none;
+        width: 100%;
     }
 
     .login-log-refresh {

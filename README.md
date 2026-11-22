@@ -19,7 +19,8 @@
 - Tài khoản Phòng Ban phải nhập PIN, xác minh email bằng liên kết Firebase Authentication và được Admin duyệt yêu cầu truy cập trước khi vào ứng dụng.
 - Lưu và cập nhật dữ liệu ứng dụng trên Firebase Realtime Database.
 - Hỗ trợ lưu trữ tệp qua Firebase Storage.
-- Trang quản trị để quản lý người dùng, công việc và xem nhật ký chỉnh sửa/đăng nhập.
+- Admin có thể sắp xếp thứ tự công việc trong danh sách từng ngày; thứ tự được lưu trên Firebase.
+- Trang quản trị để quản lý người dùng, công việc và xem nhật ký chỉnh sửa/đăng nhập. Nhật ký chỉnh sửa ghi nhận các thao tác công việc phát sinh từ khi tính năng được triển khai.
 - Hỗ trợ xử lý dữ liệu bảng tính Excel.
 - Lịch NB - IT nhận diện mã `TL` (trực lễ) khi nhập Excel và hiển thị riêng trên lịch.
 
@@ -54,5 +55,7 @@
 Cấu hình Firebase ở phía trình duyệt không phải thông tin bí mật; việc mã hóa Base64 trong `firebase.js` chỉ làm mờ nội dung, không bảo vệ khóa hay dữ liệu. Hãy cấu hình Firebase Security Rules để giới hạn quyền đọc/ghi đúng theo yêu cầu. Không xem mã PIN hoặc kiểm soát giao diện phía trình duyệt là cơ chế phân quyền an toàn thay cho bảo vệ ở Firebase.
 
 Tài khoản Phòng Ban cần PIN và link đăng nhập email do Firebase Authentication gửi; bấm link sẽ xác minh quyền sở hữu email. Sau khi PIN và email khớp, yêu cầu xuất hiện trong mục **Yêu cầu truy cập** của Admin. Admin có thể duyệt, chặn, hoặc gỡ chặn (gỡ chặn sẽ đưa tài khoản về trạng thái cần duyệt lại); email cũng phải được xác minh trước khi vào ứng dụng. Trạng thái yêu cầu được theo dõi trực tiếp, và phiên đang hoạt động sẽ bị đăng xuất khi Admin chặn hoặc thu hồi quyền. Đây là thông báo trực tiếp trong trang Admin, không phải email gửi đến hộp thư Admin.
+
+Nhật ký chỉnh sửa lưu các thao tác thêm, cập nhật, đổi trạng thái, xóa, nhân bản và nhập công việc. Nhật ký không được tạo ngược cho dữ liệu cũ; Admin xem tối đa 200 sự kiện mới nhất. Nhật ký được ghi từ trình duyệt nên không phải bản ghi kiểm toán chống giả mạo; cần cấu hình Firebase Security Rules phù hợp để hạn chế đọc/ghi.
 
 Các thao tác duyệt/chặn và kiểm tra phiên hiện được thực thi ở phía trình duyệt. Chúng giúp kiểm soát luồng giao diện nhưng **không phải cơ chế bảo mật có thể chống sửa mã hoặc gọi trực tiếp Firebase API**. Để bảo vệ dữ liệu thật sự, cần xác thực và phân quyền bằng Firebase Security Rules/Cloud Functions; không cấp quyền ghi `accessRequests` hay đọc dữ liệu nhạy cảm dựa trên trạng thái mà client tự khai báo.

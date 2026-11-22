@@ -2,7 +2,7 @@
 // Nhập Firebase Realtime Database và các hàm cần thiết để thao tác với database
 import { auth, db, storage } from "./firebase.js";
 import { isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { ref, push, onValue, remove, update, get, set, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { ref, push, onValue, remove, update, get, set, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { ref as firebaseStorageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { recordSuccessfulLogin } from "./login-log.js";
 
@@ -268,6 +268,8 @@ let reminderAudioContext = null;
 let currentDate = new Date();
 // Ngày được chọn hiện tại (YYYY-MM-DD)
 let selectedDate = null;
+let taskDayUnsubscribe = null;
+let editingTaskLocation = null;
 // Danh sách nhiều ngày được chọn (cho tính năng nhân bản liên tiếp)
 let multiDates = [];
 // Lưu danh sách các ngày NB (Nghỉ Bù)
@@ -288,6 +290,30 @@ function tasksRef(...parts) {
     const uid = getCurrentUserId();
     return ref(db, `tasks/${uid}${parts.length ? '/' + parts.join('/') : ''}`);
 }
+
+async function recordTaskEdit(action, task, taskDate, taskId = '', details = '') {
+    const user = getCurrentUser();
+    if (!user?.key) {
+        console.error('Không thể ghi nhật ký chỉnh sửa: không xác định được tài khoản đang đăng nhập.');
+        return;
+    }
+    try {
+        await push(ref(db, 'taskEditLogs'), {
+            actorId: String(user.key),
+            actorName: String(user.name || 'Tài khoản không tên'),
+            actorRole: String(user.role || 'member'),
+            action,
+            taskId: String(taskId || ''),
+            taskContent: String(task?.content || '').slice(0, 200),
+            taskDate: String(taskDate || task?.taskDate || ''),
+            details: String(details || '').slice(0, 300),
+            timestamp: serverTimestamp()
+        });
+    } catch (error) {
+        console.error('Không thể ghi nhật ký chỉnh sửa công việc:', error);
+    }
+}
+
 function nbRef(...parts) {
     const uid = getCurrentUserId();
     return ref(db, `nbDays/${uid}${parts.length ? '/' + parts.join('/') : ''}`);
@@ -1437,6 +1463,9 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
                 total++;
             }
         }
+        if (total > 0) {
+            recordTaskEdit('imported', { content: `${total} công việc` }, importDefaultDate || sheetDate || '', '', `Đã nhập ${total} công việc từ file`);
+        }
         hideLoading();
         const skippedMessage = skipped ? `, bỏ qua ${skipped} dòng không có ngày hợp lệ/trong phạm vi` : '';
         await showCustomAlert(`✅ Đã nhập ${total} công việc từ file${skippedMessage}`);
@@ -2036,7 +2065,11 @@ function createColorSelect(options, value, getClass, callback) {
  * @param {string} ds - Ngày dưới dạng string (YYYY-MM-DD)
  */
 function loadTasks(ds) {
-    taskSearchRequestId += 1;
+    const requestId = ++taskSearchRequestId;
+    if (taskDayUnsubscribe) {
+        taskDayUnsubscribe();
+        taskDayUnsubscribe = null;
+    }
     // Kiểm tra nếu ngày đặc biệt: NL, NB, TL
     const addBtn = document.getElementById('openAddModal');
     const expBtn = document.getElementById('exportBtn');
@@ -2095,7 +2128,8 @@ function loadTasks(ds) {
     const r = tasksRef(y, m, w, ds);
 
     // Lắng nghe thay đổi dữ liệu từ Firebase Realtime Database
-    onValue(r, snap => {
+    taskDayUnsubscribe = onValue(r, snap => {
+        if (requestId !== taskSearchRequestId) return;
         taskTable.innerHTML = ""; // Xóa bảng cũ
         const hasTasks = snap.exists();
         taskTableContainer.style.display = hasTasks ? '' : 'none';
@@ -2105,11 +2139,22 @@ function loadTasks(ds) {
             searchFilterSection.style.display = !hasTasks && !isAdmin() ? 'none' : '';
         }
         let i = 1;
+        const dayTasks = [];
+        snap.forEach(child => {
+            dayTasks.push({ key: child.key, task: child.val(), originalIndex: dayTasks.length });
+        });
+        dayTasks.sort((left, right) => {
+            const leftOrder = Number(left.task?.sortOrder);
+            const rightOrder = Number(right.task?.sortOrder);
+            const leftHasOrder = left.task?.sortOrder !== undefined && left.task?.sortOrder !== null && Number.isFinite(leftOrder);
+            const rightHasOrder = right.task?.sortOrder !== undefined && right.task?.sortOrder !== null && Number.isFinite(rightOrder);
+            if (leftHasOrder && rightHasOrder) return leftOrder - rightOrder || left.originalIndex - right.originalIndex;
+            if (leftHasOrder !== rightHasOrder) return leftHasOrder ? -1 : 1;
+            return left.originalIndex - right.originalIndex;
+        });
 
         // Lặp qua từng công việc trong ngày
-        snap.forEach(ch => {
-            const t = ch.val(); // Dữ liệu công việc
-            const k = ch.key; // ID của công việc
+        dayTasks.forEach(({ task: t, key: k }, taskIndex) => {
             const row = document.createElement("tr");
 
             // (bỏ qua logs debug)
@@ -2132,6 +2177,10 @@ function loadTasks(ds) {
                 <td>${t.note ? t.note.replace(/\./g, '.<br>') : ''}</td>
                 <td>
                     <div class="task-actions">
+                        ${isAdmin() ? `
+                            <button class="btn-move-up icon-action" aria-label="Chuyển công việc lên một vị trí" title="Chuyển lên" ${taskIndex === 0 ? 'disabled' : ''}></button>
+                            <button class="btn-move-down icon-action" aria-label="Chuyển công việc xuống một vị trí" title="Chuyển xuống" ${taskIndex === dayTasks.length - 1 ? 'disabled' : ''}></button>
+                        ` : ''}
                         <button class="btn-duplicate icon-action" aria-label="Nhân bản"></button>
                         <button class="btn-edit icon-action" aria-label="Sửa"></button>
                         <button class="btn-delete icon-action" aria-label="Xóa"></button>
@@ -2144,7 +2193,11 @@ function loadTasks(ds) {
                 ["Chưa bắt đầu", "Đang thực hiện", "Hoàn thành", "Chậm tiến độ"],
                 t.status,
                 statusClass,
-                v => update(tasksRef(y, m, w, ds, k), { status: v })
+                v => {
+                    update(tasksRef(y, m, w, ds, k), { status: v }).then(() => {
+                        recordTaskEdit('status_changed', { ...t, status: v }, ds, k, `${t.status || 'Chưa xác định'} → ${v}`);
+                    }).catch(error => console.error('Không thể cập nhật trạng thái công việc:', error));
+                }
             );
 
             // Vô hiệu hóa select cho member (họ không được phép sửa)
@@ -2154,6 +2207,11 @@ function loadTasks(ds) {
 
             // Thêm dropdown vào cột trạng thái
             row.children[11].appendChild(stSelect);
+
+            const moveUpButton = row.querySelector('.btn-move-up');
+            const moveDownButton = row.querySelector('.btn-move-down');
+            if (moveUpButton) moveUpButton.onclick = () => moveTaskWithinDay(dayTasks, taskIndex, -1, ds);
+            if (moveDownButton) moveDownButton.onclick = () => moveTaskWithinDay(dayTasks, taskIndex, 1, ds);
 
             // Nút nhân bản công việc
             row.querySelector(".btn-duplicate").onclick = async () => {
@@ -2189,7 +2247,8 @@ function loadTasks(ds) {
                 };
                 showLoading();
                 try {
-                    await push(tasksRef(y, m, w, ds), newTask);
+                    const newTaskRef = await push(tasksRef(y, m, w, ds), newTask);
+                    recordTaskEdit('duplicated', newTask, ds, newTaskRef.key, 'Nhân bản từ công việc hiện có');
                     await showCustomAlert("🔁 Đã nhân bản công việc!");
                 } catch (e) {
                     console.error(e);
@@ -2213,6 +2272,7 @@ function loadTasks(ds) {
 
                 try {
                     await remove(tasksRef(y, m, w, ds, k));
+                    recordTaskEdit('deleted', t, ds, k);
                     hideLoading();
                     // đợi trình duyệt vẽ lại để spinner biến mất trước khi thông báo
                     await new Promise(r => requestAnimationFrame(r));
@@ -2240,11 +2300,52 @@ function loadTasks(ds) {
     });
 }
 
+async function moveTaskWithinDay(entries, fromIndex, direction, dateStr) {
+    if (!isAdmin()) {
+        await showCustomAlert('Bạn không có quyền sắp xếp công việc.');
+        return;
+    }
+
+    const toIndex = fromIndex + direction;
+    if (toIndex < 0 || toIndex >= entries.length) return;
+
+    const reordered = entries.slice();
+    const [movedTask] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, movedTask);
+    const updates = {};
+    reordered.forEach((entry, index) => {
+        updates[`${entry.key}/sortOrder`] = index;
+    });
+
+    const [year, month] = dateStr.split('-');
+    const buttons = Array.from(taskTable.querySelectorAll('.btn-move-up, .btn-move-down'));
+    buttons.forEach(button => { button.disabled = true; });
+    try {
+        await update(tasksRef(year, month, getWeekNumber(dateStr), dateStr), updates);
+        recordTaskEdit('reordered', movedTask.task, dateStr, movedTask.key, `Vị trí ${fromIndex + 1} → ${toIndex + 1}`);
+    } catch (error) {
+        console.error('Không thể thay đổi thứ tự công việc:', error);
+        await showCustomAlert(`Không thể thay đổi thứ tự công việc: ${error.message || 'Lỗi không xác định'}`);
+        buttons.forEach(button => {
+            if (button.isConnected) button.disabled = false;
+        });
+    }
+}
+
 // ========== MODAL THÊM/SỎA CÔNG VIệC ========== 
 // Mở modal để thêm công việc mới hoặc sửa công việc có sẵn
 function openModal(title, id = "", t = {}) {
     modalTitle.innerText = title; // Đậu Để modal: "Thêm công việc" hoặc "Chỉnh sửa công việc"
     taskIdField.value = id; // Nếu có ID, tức là sửa; nếu trống là thêm mới
+    const sourceDate = t.date || selectedDate;
+    editingTaskLocation = id && sourceDate
+        ? {
+            date: sourceDate,
+            year: String(t.year || sourceDate.slice(0, 4)),
+            month: String(t.month || sourceDate.slice(5, 7)).padStart(2, '0'),
+            week: String(t.week || getWeekNumber(sourceDate))
+        }
+        : null;
 
     // Đặt giá trị đặn các input field nếu đang sửa
     contentInput.value = t.content || "";
@@ -2270,6 +2371,26 @@ function openModal(title, id = "", t = {}) {
     syncReminderInputs();
 
     modal.style.display = "flex"; // Hiển thị modal
+}
+
+function navigateToTaskDate(dateStr) {
+    const [year, month] = dateStr.split('-').map(Number);
+    if (currentDate.getFullYear() !== year || currentDate.getMonth() !== month - 1) {
+        currentDate = new Date(year, month - 1, 1);
+        renderCalendar();
+    }
+
+    if (searchInput) searchInput.value = '';
+    if (searchPeriod) {
+        searchPeriod.value = 'all';
+        searchPeriod.dispatchEvent(new Event('change'));
+    }
+    currentSearch = { search: '', period: 'all', date: null, month: null, year: null };
+    updateClearSearchButton();
+
+    const dayElement = Array.from(calendarDiv.querySelectorAll('.day'))
+        .find(element => element.dataset.date === dateStr);
+    if (dayElement) selectDate(dateStr, dayElement);
 }
 
 // Đảm bảo nút X (close) của modal thêm/sửa công việc luôn hoạt động
@@ -2372,8 +2493,12 @@ if (saveTaskBtn) {
             reminderAtInput.focus();
             return;
         }
-        const [y, m] = selectedDate.split("-");
-        const w = getWeekNumber(selectedDate);
+        const existingTaskId = taskIdField.value;
+        const sourceDate = (existingTaskId && editingTaskLocation?.date) || selectedDate;
+        if (!sourceDate) {
+            await showCustomAlert("Vui lòng chọn ngày trước!");
+            return;
+        }
         const completionValue = completionInput.value.trim();
         const normalizedCompletion = completionValue ? (completionValue.toString().endsWith('%') ? completionValue.toString() : `${completionValue}%`) : '';
         const data = {
@@ -2397,25 +2522,63 @@ if (saveTaskBtn) {
             reminderEnabled: Boolean(reminderEnabledInput?.checked),
             taskDate: selectedDate
         };
+        if ((data.startDate && !isValidYmd(data.startDate)) ||
+            (data.endDate && !isValidYmd(data.endDate))) {
+            await showCustomAlert('Ngày bắt đầu hoặc ngày kết thúc không hợp lệ.');
+            return;
+        }
+        if (data.startDate && data.endDate && data.endDate < data.startDate) {
+            await showCustomAlert('Ngày kết thúc không thể trước ngày bắt đầu.');
+            return;
+        }
+        const targetDate = data.startDate || sourceDate;
+        data.taskDate = targetDate;
+        const [targetYear, targetMonth] = targetDate.split('-');
+        const targetWeek = getWeekNumber(targetDate);
+        const [sourceYear, sourceMonth] = sourceDate.split('-');
+        const sourceLocation = editingTaskLocation || {
+            date: sourceDate,
+            year: sourceYear,
+            month: sourceMonth,
+            week: getWeekNumber(sourceDate)
+        };
+        const dateChanged = targetDate !== sourceDate;
         showLoading();
         try {
-            if (taskIdField.value) {
-                await update(tasksRef(y, m, w, selectedDate, taskIdField.value), data);
+            if (existingTaskId) {
+                if (dateChanged) {
+                    const userId = getCurrentUserId();
+                    if (!userId) throw new Error('Không xác định được tài khoản đang đăng nhập.');
+                    const updates = {};
+                    updates[`tasks/${userId}/${targetYear}/${targetMonth}/${targetWeek}/${targetDate}/${existingTaskId}`] = data;
+                    updates[`tasks/${userId}/${sourceLocation.year}/${sourceLocation.month}/${sourceLocation.week}/${sourceLocation.date}/${existingTaskId}`] = null;
+                    await update(ref(db), updates);
+                } else {
+                    await update(tasksRef(sourceLocation.year, sourceLocation.month, sourceLocation.week, sourceLocation.date, existingTaskId), data);
+                }
+                recordTaskEdit('updated', data, targetDate, existingTaskId, dateChanged ? `Đã chuyển từ ${sourceDate} sang ${targetDate}` : '');
             } else {
-                await push(tasksRef(y, m, w, selectedDate), data);
+                const newTaskRef = await push(tasksRef(targetYear, targetMonth, targetWeek, targetDate), data);
+                recordTaskEdit('created', data, targetDate, newTaskRef.key, dateChanged ? `Đã tạo tại ngày ${targetDate}` : '');
             }
+            if (dateChanged) navigateToTaskDate(targetDate);
             // ẩn spinner trước khi hiển thị xác nhận
             hideLoading();
-            if (taskIdField.value) {
+            if (existingTaskId && dateChanged) {
+                await showCustomAlert(`✅ Đã cập nhật và chuyển công việc sang ngày ${formatDisplayDate(targetDate)}.`);
+            } else if (existingTaskId) {
                 await showCustomAlert("✅ Cập nhật công việc thành công!");
+            } else if (dateChanged) {
+                await showCustomAlert(`✅ Đã thêm công việc vào ngày ${formatDisplayDate(targetDate)}.`);
             } else {
                 await showCustomAlert("✅ Thêm công việc mới thành công!");
             }
             modal.style.display = "none";
+            editingTaskLocation = null;
         } catch (error) {
             console.error(error);
             hideLoading();
-            await showCustomAlert("\u274c Có lỗi xảy ra khi lưu công việc!");
+            await showCustomAlert(`❌ Không thể lưu công việc: ${error.message || 'Lỗi không xác định'}`);
         } finally {
             // đảm bảo spinner đã bị ẩn nếu chưa
             hideLoading();
@@ -7313,11 +7476,13 @@ confirmAdvBtn.onclick = async () => {
                             }
                         }
 
-                        await push(tasksRef(nty, ntm, ntw, newTargetDateStr), {
+                        const duplicatedTask = {
                             ...task,
                             startDate: newTargetDateStr,
                             endDate: newEndDate
-                        });
+                        };
+                        const duplicatedTaskRef = await push(tasksRef(nty, ntm, ntw, newTargetDateStr), duplicatedTask);
+                        recordTaskEdit('duplicated', duplicatedTask, newTargetDateStr, duplicatedTaskRef.key, 'Nhân bản công việc theo khoảng ngày');
                     }
                 }
             } else {
@@ -7339,11 +7504,13 @@ confirmAdvBtn.onclick = async () => {
                         }
                     }
 
-                    await push(tasksRef(ty, tm, tw, targetDate), {
+                    const duplicatedTask = {
                         ...task,
                         startDate: targetDate,
                         endDate: newEndDate
-                    });
+                    };
+                    const duplicatedTaskRef = await push(tasksRef(ty, tm, tw, targetDate), duplicatedTask);
+                    recordTaskEdit('duplicated', duplicatedTask, targetDate, duplicatedTaskRef.key, 'Nhân bản công việc sang ngày khác');
                 }
             }
         };
@@ -7718,6 +7885,7 @@ if (document.getElementById('deleteDayBtn')) {
         showLoading();
         try {
             await remove(tasksRef(y, m, w, selectedDate));
+            recordTaskEdit('bulk_deleted', { content: `${cnt} công việc` }, selectedDate, '', `Đã xóa ${cnt} công việc trong ngày`);
             hideLoading();
             await showCustomAlert(`✅ Đã xóa ${cnt} công việc`);
             taskTable.innerHTML = ""; // Xóa bảng hiển thị
@@ -7774,6 +7942,7 @@ if (document.getElementById('deleteWeekBtn')) {
             showLoading();
             try {
                 await remove(tasksRef(y, m, w));
+                recordTaskEdit('bulk_deleted', { content: `${stats.tasksCount} công việc` }, `${y}-${m}`, '', `Đã xóa ${stats.tasksCount} công việc trong tuần`);
                 hideLoading();
                 await new Promise(r => requestAnimationFrame(r));
                 await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc)`);
@@ -7828,6 +7997,7 @@ if (document.getElementById('deleteMonthBtn')) {
             showLoading();
             try {
                 await remove(tasksRef(y, m));
+                recordTaskEdit('bulk_deleted', { content: `${stats.tasksCount} công việc` }, `${y}-${m}`, '', `Đã xóa ${stats.tasksCount} công việc trong tháng`);
                 hideLoading();
                 await new Promise(r => requestAnimationFrame(r));
                 await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc) của tháng ${m}/${y}`);
@@ -7894,6 +8064,7 @@ if (deleteSelect) {
                     const k = cb.dataset.key;
                     await remove(tasksRef(y, m, w, d, k));
                 }
+                recordTaskEdit('bulk_deleted', { content: `${selected.length} công việc` }, selected[0]?.dataset.date || '', '', `Đã xóa ${selected.length} công việc đã chọn`);
                 hideLoading();
                 await new Promise(r => requestAnimationFrame(r));
                 await showCustomAlert(`✅ Đã xóa ${selected.length} công việc`);
@@ -8531,7 +8702,7 @@ function applyRolePermissions() {
 
     // Ẩn nút action trong bảng công việc cho member
     if (isReadOnlyRole) {
-        document.querySelectorAll('.btn-edit, .btn-duplicate, .btn-delete').forEach(btn => {
+        document.querySelectorAll('.btn-edit, .btn-duplicate, .btn-delete, .btn-move-up, .btn-move-down').forEach(btn => {
             btn.style.display = 'none';
         });
     }
@@ -8539,6 +8710,10 @@ function applyRolePermissions() {
 
 // Đăng xuất: Xóa session và quảy lại trang đăng nhập
 function logout() {
+    if (taskDayUnsubscribe) {
+        taskDayUnsubscribe();
+        taskDayUnsubscribe = null;
+    }
     if (taskReminderUnsubscribe) {
         taskReminderUnsubscribe();
         taskReminderUnsubscribe = null;
@@ -8572,6 +8747,10 @@ if (logoutBtn) logoutBtn.onclick = logout;
 // ========== SEARCH & FILTER FUNCTIONS ==========
 async function searchTasks() {
     const requestId = ++taskSearchRequestId;
+    if (taskDayUnsubscribe) {
+        taskDayUnsubscribe();
+        taskDayUnsubscribe = null;
+    }
     // Always use the latest search input value on button click
     currentSearch.search = searchInput.value.trim().toLowerCase();
     currentSearch.period = searchPeriod.value;
@@ -9089,7 +9268,8 @@ function renderSearchedTasks(tasks) {
                 try {
                     const [y, m] = task.date.split("-");
                     const w = getWeekNumber(task.date);
-                    await push(tasksRef(y, m, w, task.date), newTask);
+                    const newTaskRef = await push(tasksRef(y, m, w, task.date), newTask);
+                    recordTaskEdit('duplicated', newTask, task.date, newTaskRef.key, 'Nhân bản từ kết quả tìm kiếm');
                     await showCustomAlert("🔁 Đã nhân bản công việc!");
                 } catch (e) {
                     console.error(e);
@@ -9116,6 +9296,7 @@ function renderSearchedTasks(tasks) {
 
                 try {
                     await remove(tasksRef(task.year, task.month, task.week, task.date, task.id));
+                    recordTaskEdit('deleted', task, task.date, task.id);
                     hideLoading();
                     // Reload searched tasks
                     await loadSearchedTasks();

@@ -49,6 +49,11 @@ const loginLogSearch = document.getElementById('loginLogSearch');
 const loginLogStatus = document.getElementById('loginLogStatus');
 const loginLogTableBody = document.getElementById('loginLogTableBody');
 const refreshLoginLogsBtn = document.getElementById('refreshLoginLogs');
+const editLogSearch = document.getElementById('editLogSearch');
+const editLogActionFilter = document.getElementById('editLogActionFilter');
+const editLogStatus = document.getElementById('editLogStatus');
+const editLogTableBody = document.getElementById('editLogTableBody');
+const refreshEditLogsBtn = document.getElementById('refreshEditLogs');
 const accessRequestList = document.getElementById('accessRequestList');
 const accessRequestStatus = document.getElementById('accessRequestStatus');
 const refreshAccessRequestsBtn = document.getElementById('refreshAccessRequests');
@@ -57,6 +62,7 @@ const accessRequestSearch = document.getElementById('accessRequestSearch');
 const accessRequestFilters = document.querySelectorAll('[data-access-filter]');
 let currentUsersObj = null;
 let currentLoginLogs = [];
+let currentEditLogs = [];
 let currentAccessRequests = {};
 let accessRequestsBound = false;
 let activeAccessRequestFilter = 'pending';
@@ -85,6 +91,9 @@ function switchPanel(panelId) {
     }
     if (panelId === 'panel-loginLog') {
         loadLoginLogs();
+    }
+    if (panelId === 'panel-editLog') {
+        loadEditLogs();
     }
     if (panelId === 'panel-accessRequests') {
         loadAccessRequests();
@@ -129,6 +138,18 @@ if (loginLogSearch) {
 
 if (refreshLoginLogsBtn) {
     refreshLoginLogsBtn.addEventListener('click', loadLoginLogs);
+}
+
+if (editLogSearch) {
+    editLogSearch.addEventListener('input', renderEditLogs);
+}
+
+if (editLogActionFilter) {
+    editLogActionFilter.addEventListener('change', renderEditLogs);
+}
+
+if (refreshEditLogsBtn) {
+    refreshEditLogsBtn.addEventListener('click', loadEditLogs);
 }
 
 if (refreshAccessRequestsBtn) {
@@ -436,6 +457,102 @@ function renderLoginLogs() {
         loginLogTableBody.appendChild(row);
     });
     loginLogStatus.textContent = `Hiển thị ${filteredLogs.length} / ${currentLoginLogs.length} sự kiện gần nhất (tối đa 200).`;
+}
+
+const editLogActionLabels = {
+    created: 'Thêm công việc',
+    updated: 'Cập nhật công việc',
+    status_changed: 'Đổi trạng thái',
+    deleted: 'Xóa công việc',
+    bulk_deleted: 'Xóa nhiều công việc',
+    duplicated: 'Nhân bản công việc',
+    imported: 'Nhập công việc',
+    reordered: 'Dời thứ tự công việc'
+};
+
+async function loadEditLogs() {
+    if (!editLogStatus || !editLogTableBody) return;
+    refreshEditLogsBtn.disabled = true;
+    editLogStatus.textContent = 'Đang tải nhật ký...';
+
+    try {
+        const logsQuery = query(ref(db, 'taskEditLogs'), orderByChild('timestamp'), limitToLast(200));
+        const snapshot = await get(logsQuery);
+        currentEditLogs = [];
+        if (snapshot.exists()) {
+            snapshot.forEach(child => {
+                const log = child.val();
+                if (log && typeof log === 'object') currentEditLogs.push(log);
+            });
+        }
+        currentEditLogs.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+        renderEditLogs();
+    } catch (error) {
+        console.error('Không thể tải nhật ký chỉnh sửa:', error);
+        currentEditLogs = [];
+        editLogTableBody.replaceChildren();
+        editLogStatus.textContent = 'Không thể tải nhật ký chỉnh sửa. Vui lòng kiểm tra quyền Firebase hoặc thử tải lại.';
+    } finally {
+        refreshEditLogsBtn.disabled = false;
+    }
+}
+
+function renderEditLogs() {
+    if (!editLogStatus || !editLogTableBody) return;
+    const searchTerm = String(editLogSearch?.value || '').trim().toLocaleLowerCase('vi');
+    const actionFilter = editLogActionFilter?.value || 'all';
+    const filteredLogs = currentEditLogs.filter(log => {
+        const values = [
+            log.actorName,
+            log.actorId,
+            roleDisplay[log.actorRole]?.label || log.actorRole,
+            editLogActionLabels[log.action] || log.action,
+            log.taskContent,
+            log.taskDate,
+            log.details
+        ];
+        return (actionFilter === 'all' || log.action === actionFilter) &&
+            values.some(value => String(value || '').toLocaleLowerCase('vi').includes(searchTerm));
+    });
+
+    editLogTableBody.replaceChildren();
+    if (!filteredLogs.length) {
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 5;
+        cell.className = 'login-log-empty';
+        cell.textContent = currentEditLogs.length
+            ? 'Không tìm thấy nhật ký phù hợp.'
+            : 'Chưa có thay đổi nào được ghi nhận.';
+        row.appendChild(cell);
+        editLogTableBody.appendChild(row);
+        editLogStatus.textContent = currentEditLogs.length
+            ? 'Không tìm thấy kết quả phù hợp.'
+            : 'Nhật ký ghi nhận các thay đổi công việc phát sinh từ khi tính năng được bật.';
+        return;
+    }
+
+    filteredLogs.forEach(log => {
+        const row = document.createElement('tr');
+        const timestamp = Number(log.timestamp);
+        const date = Number.isFinite(timestamp) && timestamp > 0
+            ? new Date(timestamp).toLocaleString('vi-VN')
+            : '—';
+        const actor = [log.actorName || 'Tài khoản không tên', roleDisplay[log.actorRole]?.label || log.actorRole]
+            .filter(Boolean)
+            .join(' · ');
+        const action = editLogActionLabels[log.action] || 'Thay đổi khác';
+        const task = [log.taskContent || 'Công việc không tên', log.taskDate || '']
+            .filter(Boolean)
+            .join(' · ');
+        [date, actor, action, task || '—', log.details || '—'].forEach(value => {
+            const cell = document.createElement('td');
+            cell.textContent = String(value);
+            row.appendChild(cell);
+        });
+        editLogTableBody.appendChild(row);
+    });
+    editLogStatus.textContent = `Hiển thị ${filteredLogs.length} / ${currentEditLogs.length} sự kiện gần nhất (tối đa 200).`;
 }
 
 function showLoadingAdmin() {

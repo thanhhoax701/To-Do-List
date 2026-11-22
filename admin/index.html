@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-        <title>Admin Dashboard - Quản lý hệ thống</title>
+        <title>Admin - Quản lý công việc</title>
         <link rel="stylesheet" href="../style.css">
         <link rel="stylesheet" href="admin.css">
     </head>
@@ -219,7 +219,39 @@
                     <div id="panel-editLog" class="panel-content" style="display:none">
                         <div class="admin-box">
                             <div class="admin-panel-heading"><div><span class="dashboard-eyebrow">THEO DÕI HOẠT ĐỘNG</span><h1>Nhật ký chỉnh sửa</h1><p>Lịch sử thay đổi dữ liệu trong hệ thống.</p></div></div>
-                            <div class="admin-coming-soon"><span>↺</span><strong>Nhật ký chỉnh sửa đang được phát triển</strong><p>Khu vực này sẽ hiển thị thay đổi theo người dùng, thời gian và nội dung công việc khi nguồn nhật ký được kết nối.</p></div>
+                            <div class="login-log-toolbar edit-log-toolbar">
+                                <label class="admin-search">
+                                    <span aria-hidden="true">⌕</span>
+                                    <input id="editLogSearch" type="search" placeholder="Tìm tài khoản, công việc hoặc ngày" aria-label="Tìm trong nhật ký chỉnh sửa">
+                                </label>
+                                <select id="editLogActionFilter" aria-label="Lọc loại thay đổi">
+                                    <option value="all">Tất cả thay đổi</option>
+                                    <option value="created">Thêm công việc</option>
+                                    <option value="updated">Cập nhật công việc</option>
+                                    <option value="status_changed">Đổi trạng thái</option>
+                                    <option value="deleted">Xóa công việc</option>
+                                    <option value="bulk_deleted">Xóa nhiều công việc</option>
+                                    <option value="duplicated">Nhân bản công việc</option>
+                                    <option value="imported">Nhập công việc</option>
+                                    <option value="reordered">Dời thứ tự công việc</option>
+                                </select>
+                                <button id="refreshEditLogs" class="login-log-refresh" type="button">↻ Tải lại</button>
+                            </div>
+                            <p id="editLogStatus" class="login-log-status" aria-live="polite">Đang tải nhật ký...</p>
+                            <div class="login-log-table-wrap">
+                                <table class="login-log-table edit-log-table">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Thời gian</th>
+                                            <th scope="col">Tài khoản</th>
+                                            <th scope="col">Thay đổi</th>
+                                            <th scope="col">Công việc</th>
+                                            <th scope="col">Chi tiết</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="editLogTableBody"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                     <!-- panel: login log -->

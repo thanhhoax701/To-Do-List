@@ -525,7 +525,9 @@ select.task-mobile-card-status {
 
 .task-list-table button.btn-duplicate.icon-action,
 .task-list-table button.btn-edit.icon-action,
-.task-list-table button.btn-delete.icon-action {
+.task-list-table button.btn-delete.icon-action,
+.task-list-table button.btn-move-up.icon-action,
+.task-list-table button.btn-move-down.icon-action {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -542,7 +544,9 @@ select.task-mobile-card-status {
 
 .task-list-table button.btn-duplicate.icon-action::before,
 .task-list-table button.btn-edit.icon-action::before,
-.task-list-table button.btn-delete.icon-action::before {
+.task-list-table button.btn-delete.icon-action::before,
+.task-list-table button.btn-move-up.icon-action::before,
+.task-list-table button.btn-move-down.icon-action::before {
     font-size: 16px;
     line-height: 1;
 }
@@ -559,9 +563,19 @@ select.task-mobile-card-status {
     content: "\1f5d1\fe0f";
 }
 
+.task-list-table button.btn-move-up.icon-action::before {
+    content: "\2191";
+}
+
+.task-list-table button.btn-move-down.icon-action::before {
+    content: "\2193";
+}
+
 .task-list-table button.btn-duplicate.icon-action,
 .task-list-table button.btn-edit.icon-action,
-.task-list-table button.btn-delete.icon-action {
+.task-list-table button.btn-delete.icon-action,
+.task-list-table button.btn-move-up.icon-action,
+.task-list-table button.btn-move-down.icon-action {
     border: 1px solid #e0e6ed;
     background: #fff;
     color: #334155;
@@ -575,6 +589,12 @@ select.task-mobile-card-status {
 .task-list-table button.icon-action:hover {
     background: #f5f7fa;
     transform: translateY(-1px);
+}
+
+.task-list-table button.icon-action:disabled {
+    cursor: not-allowed;
+    opacity: .4;
+    transform: none;
 }
 
 #searchFilterSection {
