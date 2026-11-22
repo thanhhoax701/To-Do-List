@@ -286,6 +286,16 @@
                                     <option value="imported">Nhập công việc</option>
                                     <option value="reordered">Dời thứ tự công việc</option>
                                 </select>
+                                <div class="log-delete-controls">
+                                    <select id="editLogDeletePeriod" class="login-log-delete-period" aria-label="Chọn phạm vi xóa nhật ký chỉnh sửa">
+                                        <option value="">Xóa theo thời gian</option>
+                                        <option value="day">Xóa hôm nay</option>
+                                        <option value="week">Xóa tuần này</option>
+                                        <option value="month">Xóa tháng này</option>
+                                        <option value="all">Xóa tất cả</option>
+                                    </select>
+                                    <button id="deleteEditLogs" class="login-log-refresh log-delete-btn" type="button">Xóa</button>
+                                </div>
                                 <button id="refreshEditLogs" class="login-log-refresh" type="button">↻ Tải lại</button>
                             </div>
                             <p id="editLogStatus" class="login-log-status" aria-live="polite">Đang tải nhật ký...</p>
@@ -318,6 +328,16 @@
                                     <span aria-hidden="true">⌕</span>
                                     <input id="loginLogSearch" type="search" placeholder="Tìm tên, vai trò hoặc nơi đăng nhập" aria-label="Tìm trong nhật ký đăng nhập">
                                 </label>
+                                <div class="log-delete-controls">
+                                    <select id="loginLogDeletePeriod" class="login-log-delete-period" aria-label="Chọn phạm vi xóa nhật ký đăng nhập">
+                                        <option value="">Xóa theo thời gian</option>
+                                        <option value="day">Xóa hôm nay</option>
+                                        <option value="week">Xóa tuần này</option>
+                                        <option value="month">Xóa tháng này</option>
+                                        <option value="all">Xóa tất cả</option>
+                                    </select>
+                                    <button id="deleteLoginLogs" class="login-log-refresh log-delete-btn" type="button">Xóa</button>
+                                </div>
                                 <button id="refreshLoginLogs" class="login-log-refresh" type="button">↻ Tải lại</button>
                             </div>
                             <p id="loginLogStatus" class="login-log-status" aria-live="polite">Đang tải nhật ký...</p>
@@ -328,13 +348,17 @@
                                             <th scope="col">Thời gian</th>
                                             <th scope="col">Tài khoản</th>
                                             <th scope="col">Vai trò</th>
-                                            <th scope="col">Nơi đăng nhập</th>
+                                            <th scope="col">Thiết bị / trình duyệt</th>
                                             <th scope="col">Kết quả</th>
                                         </tr>
                                     </thead>
                                     <tbody id="loginLogTableBody"></tbody>
                                 </table>
                             </div>
+                            <footer class="employees-pagination">
+                                <p id="loginLogPageSummary">0 nhật ký</p>
+                                <nav id="loginLogPagination" aria-label="Phân trang nhật ký đăng nhập"></nav>
+                            </footer>
                         </div>
                     </div>
                 </div>

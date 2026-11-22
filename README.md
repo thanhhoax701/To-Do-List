@@ -51,6 +51,7 @@
 5. Trong **Authentication → Settings → Authorized domains**, thêm domain nơi triển khai ứng dụng (ví dụ `localhost` khi chạy local).
 6. Mở ứng dụng từ máy chủ web hoặc HTTPS; không mở trực tiếp bằng `file://` vì ứng dụng sử dụng ES modules.
 7. Truy cập `index.html` để dùng ứng dụng chính; trang quản trị chỉ dành cho Super Admin ở `admin/index.html`.
+8. Super Admin có thể xóa nhật ký đăng nhập và nhật ký chỉnh sửa theo ngày hiện tại, tuần hiện tại (Thứ Hai–Chủ Nhật), tháng hiện tại theo giờ Việt Nam hoặc xóa toàn bộ. Thao tác yêu cầu xác nhận và chỉ hoạt động khi Rules mới trong `database.rules.json` đã được triển khai.
 
 Ứng dụng không có lệnh `npm run` hoặc bước build được cấu hình trong repository. Cần có kết nối Internet để tải Firebase SDK và các thư viện Excel từ CDN.
 

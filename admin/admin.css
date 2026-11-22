@@ -3764,6 +3764,28 @@ body {
     opacity: .65;
 }
 
+.log-delete-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.login-log-delete-period {
+    min-height: 40px;
+    max-width: 180px;
+    padding: 0 10px;
+    border: 1px solid #e8ecf3;
+    border-radius: 9px;
+    background: #fff;
+    color: #344054;
+    font: inherit;
+    font-size: 12px;
+}
+
+.log-delete-controls .login-log-refresh {
+    white-space: nowrap;
+}
+
 .login-log-status {
     margin: 12px 0 9px;
     color: #8994a5;
@@ -3838,6 +3860,21 @@ body {
     }
 
     .login-log-toolbar .admin-search {
+        width: auto;
+    }
+
+    .log-delete-controls {
+        width: 100%;
+    }
+
+    .log-delete-controls .login-log-delete-period {
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .log-delete-controls .login-log-refresh {
         width: auto;
     }
 

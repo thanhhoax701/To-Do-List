@@ -2,7 +2,7 @@
 // Nhập Firebase Database và các hàm thao tác dữ liệu
 import { auth, db } from '../firebase.js';
 import { signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { ref, push, get, remove, onValue, update, set, runTransaction, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { ref, push, get, remove, onValue, update, set, runTransaction, query, orderByChild, limitToLast, startAt, endAt } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 import { recordSuccessfulLogin } from '../login-log.js';
 
 // ========== DOM ELEMENTS - PHẦN ĐĂNG NHẬP ==========
@@ -56,7 +56,11 @@ const userSearchInput = document.getElementById('userSearchInput');
 const loginLogSearch = document.getElementById('loginLogSearch');
 const loginLogStatus = document.getElementById('loginLogStatus');
 const loginLogTableBody = document.getElementById('loginLogTableBody');
+const loginLogPageSummary = document.getElementById('loginLogPageSummary');
+const loginLogPagination = document.getElementById('loginLogPagination');
 const refreshLoginLogsBtn = document.getElementById('refreshLoginLogs');
+const loginLogDeletePeriod = document.getElementById('loginLogDeletePeriod');
+const deleteLoginLogsBtn = document.getElementById('deleteLoginLogs');
 const editLogSearch = document.getElementById('editLogSearch');
 const editLogActionFilter = document.getElementById('editLogActionFilter');
 const editLogStatus = document.getElementById('editLogStatus');
@@ -64,6 +68,8 @@ const editLogTableBody = document.getElementById('editLogTableBody');
 const editLogPageSummary = document.getElementById('editLogPageSummary');
 const editLogPagination = document.getElementById('editLogPagination');
 const refreshEditLogsBtn = document.getElementById('refreshEditLogs');
+const editLogDeletePeriod = document.getElementById('editLogDeletePeriod');
+const deleteEditLogsBtn = document.getElementById('deleteEditLogs');
 const accessRequestList = document.getElementById('accessRequestList');
 const accessRequestStatus = document.getElementById('accessRequestStatus');
 const refreshAccessRequestsBtn = document.getElementById('refreshAccessRequests');
@@ -73,9 +79,15 @@ const accessRequestFilters = document.querySelectorAll('[data-access-filter]');
 let currentUsersObj = null;
 let currentLoginLogs = [];
 let currentEditLogs = [];
+let loginLogPage = 1;
+let loginLogsUsingUnindexedFallback = false;
+let loginLogsLoading = false;
+let editLogsLoading = false;
+let loginLogRefreshTimer = null;
+let logDeletionInProgress = false;
 let editLogPage = 1;
 let editLogsUsingUnindexedFallback = false;
-const EDIT_LOGS_PER_PAGE = 50;
+const ADMIN_LOGS_PER_PAGE = 50;
 let currentAccessRequests = {};
 let accessRequestsBound = false;
 let activeAccessRequestFilter = 'pending';
@@ -83,7 +95,29 @@ let activeAccessRequestFilter = 'pending';
 // ---------- hàm tiện ích hiển thị/loading cho trang quản trị ----------
 
 // ---------- panel navigation ----------
+function stopLoginLogAutoRefresh() {
+    if (loginLogRefreshTimer !== null) {
+        window.clearInterval(loginLogRefreshTimer);
+        loginLogRefreshTimer = null;
+    }
+}
+
+function startLoginLogAutoRefresh() {
+    stopLoginLogAutoRefresh();
+    loginLogRefreshTimer = window.setInterval(() => {
+        const loginLogPanel = document.getElementById('panel-loginLog');
+        if (document.visibilityState === 'visible' &&
+            adminPanel.style.display === 'block' &&
+            auth.currentUser &&
+            !logDeletionInProgress &&
+            loginLogPanel?.style.display !== 'none') {
+            loadLoginLogs({ preservePage: true });
+        }
+    }, 30000);
+}
+
 function switchPanel(panelId) {
+    if (panelId !== 'panel-loginLog') stopLoginLogAutoRefresh();
     // hide all panels
     panels.forEach(p => p.style.display = 'none');
     // remove active class
@@ -104,6 +138,7 @@ function switchPanel(panelId) {
     }
     if (panelId === 'panel-loginLog') {
         loadLoginLogs();
+        startLoginLogAutoRefresh();
     }
     if (panelId === 'panel-editLog') {
         loadEditLogs();
@@ -154,11 +189,20 @@ if (userSearchInput) {
 }
 
 if (loginLogSearch) {
-    loginLogSearch.addEventListener('input', renderLoginLogs);
+    loginLogSearch.addEventListener('input', () => {
+        loginLogPage = 1;
+        renderLoginLogs();
+    });
 }
 
 if (refreshLoginLogsBtn) {
     refreshLoginLogsBtn.addEventListener('click', loadLoginLogs);
+}
+
+if (deleteLoginLogsBtn) {
+    deleteLoginLogsBtn.addEventListener('click', () => {
+        deleteLogsByPeriod('loginLogs', loginLogDeletePeriod.value, deleteLoginLogsBtn, () => loadLoginLogs());
+    });
 }
 
 if (editLogSearch) {
@@ -177,6 +221,12 @@ if (editLogActionFilter) {
 
 if (refreshEditLogsBtn) {
     refreshEditLogsBtn.addEventListener('click', loadEditLogs);
+}
+
+if (deleteEditLogsBtn) {
+    deleteEditLogsBtn.addEventListener('click', () => {
+        deleteLogsByPeriod('taskEditLogs', editLogDeletePeriod.value, deleteEditLogsBtn, () => loadEditLogs());
+    });
 }
 
 if (refreshAccessRequestsBtn) {
@@ -422,14 +472,27 @@ async function reviewAccessRequest(userId, nextStatus) {
     }
 }
 
-async function loadLoginLogs() {
-    if (!loginLogStatus || !loginLogTableBody) return;
+async function loadLoginLogs({ preservePage = false } = {}) {
+    if (!loginLogStatus || !loginLogTableBody || loginLogsLoading || logDeletionInProgress) return;
+    loginLogsLoading = true;
     refreshLoginLogsBtn.disabled = true;
+    if (!preservePage) loginLogPage = 1;
+    loginLogsUsingUnindexedFallback = false;
     loginLogStatus.textContent = 'Đang tải nhật ký...';
 
     try {
         const logsQuery = query(ref(db, 'loginLogs'), orderByChild('timestamp'), limitToLast(200));
-        const snapshot = await get(logsQuery);
+        let snapshot;
+        let usedUnindexedFallback = false;
+        try {
+            snapshot = await get(logsQuery);
+        } catch (error) {
+            const missingIndex = /index not defined|indexon/i.test(`${error?.code || ''} ${error?.message || ''}`);
+            if (!missingIndex) throw error;
+            console.warn('Firebase chưa có index timestamp cho loginLogs; đang tải nhật ký không giới hạn để dự phòng.', error);
+            snapshot = await get(ref(db, 'loginLogs'));
+            usedUnindexedFallback = true;
+        }
         currentLoginLogs = [];
         if (snapshot.exists()) {
             snapshot.forEach(child => {
@@ -438,14 +501,23 @@ async function loadLoginLogs() {
             });
         }
         currentLoginLogs.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+        if (usedUnindexedFallback) currentLoginLogs = currentLoginLogs.slice(0, 200);
+        loginLogsUsingUnindexedFallback = usedUnindexedFallback;
         renderLoginLogs();
     } catch (error) {
         console.error('Không thể tải nhật ký đăng nhập:', error);
         currentLoginLogs = [];
         loginLogTableBody.replaceChildren();
-        loginLogStatus.textContent = 'Không thể tải nhật ký đăng nhập. Vui lòng thử tải lại.';
+        loginLogPagination?.replaceChildren();
+        if (loginLogPageSummary) loginLogPageSummary.textContent = '0 nhật ký';
+        const errorDetails = String(error?.code || error?.message || 'Lỗi không xác định').slice(0, 180);
+        const permissionError = /permission_denied|permission denied/i.test(`${error?.code || ''} ${error?.message || ''}`);
+        loginLogStatus.textContent = permissionError
+            ? 'Firebase từ chối quyền đọc loginLogs. Hãy đăng nhập bằng Super Admin và kiểm tra adminAccess/{UID}: enabled=true, role=superadmin. Sẽ thử lại sau 30 giây.'
+            : `Không thể tải nhật ký đăng nhập. Chi tiết: ${errorDetails} Sẽ thử lại sau 30 giây.`;
     } finally {
         refreshLoginLogsBtn.disabled = false;
+        loginLogsLoading = false;
     }
 }
 
@@ -454,10 +526,21 @@ function renderLoginLogs() {
     const searchTerm = (loginLogSearch?.value || '').trim().toLocaleLowerCase('vi');
     const filteredLogs = currentLoginLogs.filter(log => {
         const roleName = roleDisplay[log.role]?.label || String(log.role || 'Không xác định');
-        return [log.userName, roleName, log.accessType]
+        return [log.userName, roleName, log.accessType, log.deviceInfo]
             .some(value => String(value || '').toLocaleLowerCase('vi').includes(searchTerm));
     });
 
+    const pageCount = Math.max(1, Math.ceil(filteredLogs.length / ADMIN_LOGS_PER_PAGE));
+    loginLogPage = Math.min(loginLogPage, pageCount);
+    const startIndex = (loginLogPage - 1) * ADMIN_LOGS_PER_PAGE;
+    const pageLogs = filteredLogs.slice(startIndex, startIndex + ADMIN_LOGS_PER_PAGE);
+    const fallbackNotice = loginLogsUsingUnindexedFallback
+        ? ' Firebase đang thiếu index loginLogs.timestamp; hãy Publish Rules trong database.rules.json để tối ưu tải dữ liệu.'
+        : '';
+    renderLogPagination(loginLogPagination, loginLogPageSummary, filteredLogs.length, pageCount, loginLogPage, ADMIN_LOGS_PER_PAGE, 'nhật ký', page => {
+        loginLogPage = page;
+        renderLoginLogs();
+    });
     loginLogTableBody.replaceChildren();
     if (!filteredLogs.length) {
         const row = document.createElement('tr');
@@ -472,17 +555,22 @@ function renderLoginLogs() {
         loginLogStatus.textContent = currentLoginLogs.length
             ? 'Không tìm thấy kết quả phù hợp.'
             : 'Nhật ký sẽ xuất hiện sau khi có lần đăng nhập thành công.';
+        loginLogStatus.textContent += `${fallbackNotice} Tự cập nhật mỗi 30 giây.`;
         return;
     }
 
-    filteredLogs.forEach(log => {
+    pageLogs.forEach(log => {
         const row = document.createElement('tr');
         const timestamp = Number(log.timestamp);
         const date = Number.isFinite(timestamp) && timestamp > 0
             ? new Date(timestamp).toLocaleString('vi-VN')
             : '—';
         const roleName = roleDisplay[log.role]?.label || String(log.role || 'Không xác định');
-        [date, log.userName || 'Tài khoản không tên', roleName, log.accessType || 'Ứng dụng', 'Thành công']
+        const recordedDeviceInfo = String(log.deviceInfo || '').replace(/\s·\sMáy tính$/, ' · Laptop/PC');
+        const deviceInfo = recordedDeviceInfo
+            ? `${recordedDeviceInfo}${log.accessType ? ` · ${log.accessType}` : ''}`
+            : `Chưa ghi nhận thiết bị · ${log.accessType || 'Ứng dụng'}`;
+        [date, log.userName || 'Tài khoản không tên', roleName, deviceInfo, 'Thành công']
             .forEach((value, index) => {
                 const cell = document.createElement('td');
                 cell.textContent = String(value);
@@ -491,7 +579,187 @@ function renderLoginLogs() {
             });
         loginLogTableBody.appendChild(row);
     });
-    loginLogStatus.textContent = `Hiển thị ${filteredLogs.length} / ${currentLoginLogs.length} sự kiện gần nhất (tối đa 200).`;
+    loginLogStatus.textContent = `Trang ${loginLogPage}/${pageCount} · ${filteredLogs.length} kết quả (tối đa 200).${fallbackNotice} Tự cập nhật mỗi 30 giây.`;
+}
+
+function getVietnamLogPeriod(period) {
+    const utcOffset = 7 * 60 * 60 * 1000;
+    const vietnamNow = new Date(Date.now() + utcOffset);
+    const year = vietnamNow.getUTCFullYear();
+    const month = vietnamNow.getUTCMonth();
+    const day = vietnamNow.getUTCDate();
+    const todayStart = Date.UTC(year, month, day);
+    let startCalendarDay = todayStart;
+    let endCalendarDay;
+
+    if (period === 'day') {
+        endCalendarDay = todayStart + 24 * 60 * 60 * 1000;
+    } else if (period === 'week') {
+        const daysSinceMonday = (new Date(todayStart).getUTCDay() + 6) % 7;
+        startCalendarDay -= daysSinceMonday * 24 * 60 * 60 * 1000;
+        endCalendarDay = startCalendarDay + 7 * 24 * 60 * 60 * 1000;
+    } else if (period === 'month') {
+        startCalendarDay = Date.UTC(year, month, 1);
+        endCalendarDay = Date.UTC(year, month + 1, 1);
+    } else {
+        throw new Error('Khoảng thời gian xóa không hợp lệ.');
+    }
+
+    const start = startCalendarDay - utcOffset;
+    const end = endCalendarDay - utcOffset;
+    const formatDate = timestamp => new Intl.DateTimeFormat('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    }).format(new Date(timestamp));
+    const startLabel = formatDate(start);
+    const endLabel = formatDate(end - 1);
+    const label = period === 'day'
+        ? `hôm nay (${startLabel})`
+        : period === 'week'
+            ? `tuần này (${startLabel}–${endLabel})`
+            : `tháng này (${startLabel}–${endLabel})`;
+    return { start, end, label };
+}
+
+async function getLogKeysForDeletion(path, period, range) {
+    let snapshot;
+    if (period === 'all') {
+        snapshot = await get(ref(db, path));
+    } else {
+        try {
+            const periodQuery = query(
+                ref(db, path),
+                orderByChild('timestamp'),
+                startAt(range.start),
+                endAt(range.end - 1)
+            );
+            snapshot = await get(periodQuery);
+        } catch (error) {
+            const missingIndex = /index not defined|indexon/i.test(`${error?.code || ''} ${error?.message || ''}`);
+            if (!missingIndex) throw error;
+            snapshot = await get(ref(db, path));
+        }
+    }
+
+    const keys = [];
+    snapshot.forEach(child => {
+        if (period === 'all') {
+            keys.push(child.key);
+            return;
+        }
+        const timestamp = Number(child.child('timestamp').val());
+        if (Number.isFinite(timestamp) && timestamp >= range.start && timestamp < range.end) {
+            keys.push(child.key);
+        }
+    });
+    return keys;
+}
+
+async function deleteLogsByPeriod(path, period, button, reload) {
+    if (logDeletionInProgress) return;
+    if (loginLogsLoading || editLogsLoading) {
+        window.alert('Nhật ký đang tải. Vui lòng đợi tải xong rồi thử lại.');
+        return;
+    }
+    if (!['day', 'week', 'month', 'all'].includes(period)) {
+        window.alert('Hãy chọn khoảng thời gian cần xóa.');
+        return;
+    }
+
+    const isLoginLog = path === 'loginLogs';
+    const logName = isLoginLog ? 'nhật ký đăng nhập' : 'nhật ký chỉnh sửa';
+    const range = period === 'all' ? null : getVietnamLogPeriod(period);
+    const rangeLabel = period === 'all' ? 'toàn bộ thời gian' : range.label;
+    const status = isLoginLog ? loginLogStatus : editLogStatus;
+    const actionButtons = [deleteLoginLogsBtn, deleteEditLogsBtn, refreshLoginLogsBtn, refreshEditLogsBtn].filter(Boolean);
+    const previousDisabledState = actionButtons.map(actionButton => actionButton.disabled);
+    let deletedCount = 0;
+    let shouldReload = false;
+    logDeletionInProgress = true;
+    actionButtons.forEach(actionButton => { actionButton.disabled = true; });
+
+    try {
+        if (status) status.textContent = `Đang tìm ${logName} thuộc ${rangeLabel}...`;
+        const keys = await getLogKeysForDeletion(path, period, range);
+        if (!keys.length) {
+            if (status) status.textContent = `Không có ${logName} thuộc ${rangeLabel}.`;
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Bạn sắp xóa ${keys.length} mục ${logName} thuộc ${rangeLabel} trong toàn bộ dữ liệu, không chỉ kết quả đang lọc. Thao tác này không thể hoàn tác. Bạn có chắc không?`
+        );
+        if (!confirmed) {
+            if (status) status.textContent = 'Đã hủy thao tác xóa.';
+            return;
+        }
+
+        if (status) status.textContent = `Đang xóa ${keys.length} mục ${logName}...`;
+        const batchSize = 40;
+        for (let index = 0; index < keys.length; index += batchSize) {
+            const batch = keys.slice(index, index + batchSize);
+            const results = await Promise.allSettled(
+                batch.map(key => remove(ref(db, `${path}/${key}`)))
+            );
+            const failed = [];
+            results.forEach(result => {
+                if (result.status === 'fulfilled') deletedCount += 1;
+                else failed.push(result.reason);
+            });
+            if (failed.length) {
+                shouldReload = deletedCount > 0;
+                const reason = failed[0]?.message || String(failed[0] || 'Lỗi không xác định');
+                throw new Error(`Đã xóa ${deletedCount}/${keys.length} mục. Firebase báo: ${reason}`);
+            }
+        }
+
+        shouldReload = true;
+        window.alert(`Đã xóa ${deletedCount} mục ${logName} thuộc ${rangeLabel}.`);
+    } catch (error) {
+        console.error(`Không thể xóa ${logName}:`, error);
+        window.alert(`Không thể xóa ${logName}. Chi tiết: ${error?.message || 'Lỗi không xác định'}`);
+    } finally {
+        logDeletionInProgress = false;
+        actionButtons.forEach((actionButton, index) => {
+            actionButton.disabled = previousDisabledState[index];
+        });
+        if (shouldReload) await reload();
+    }
+}
+
+function renderLogPagination(pagination, summary, total, pageCount, currentPage, pageSize, itemLabel, onPageChange) {
+    if (!pagination || !summary) return;
+    pagination.replaceChildren();
+    const addPageButton = (label, page, disabled = false, current = false, ariaLabel = '') => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `employee-page-btn${current ? ' is-current' : ''}`;
+        button.textContent = label;
+        button.disabled = disabled;
+        if (ariaLabel) button.setAttribute('aria-label', ariaLabel);
+        if (current) button.setAttribute('aria-current', 'page');
+        button.addEventListener('click', () => onPageChange(page));
+        pagination.appendChild(button);
+    };
+
+    const firstPage = Math.max(1, currentPage - 2);
+    const lastPage = Math.min(pageCount, firstPage + 4);
+    addPageButton('≪', 1, currentPage === 1, false, 'Trang đầu');
+    addPageButton('‹', Math.max(1, currentPage - 1), currentPage === 1, false, 'Trang trước');
+    for (let page = firstPage; page <= lastPage; page += 1) {
+            addPageButton(String(page), page, false, page === currentPage, `Trang ${page}`);
+    }
+    addPageButton('›', Math.min(pageCount, currentPage + 1), currentPage >= pageCount, false, 'Trang sau');
+    addPageButton('≫', pageCount, currentPage >= pageCount, false, 'Trang cuối');
+
+    const start = total ? (currentPage - 1) * pageSize + 1 : 0;
+    const end = Math.min(currentPage * pageSize, total);
+    summary.replaceChildren();
+    const range = document.createElement('strong');
+    range.textContent = `${start}–${end}`;
+    summary.append(range, document.createTextNode(` trên ${total} ${itemLabel}`));
 }
 
 const editLogActionLabels = {
@@ -506,7 +774,8 @@ const editLogActionLabels = {
 };
 
 async function loadEditLogs() {
-    if (!editLogStatus || !editLogTableBody) return;
+    if (!editLogStatus || !editLogTableBody || editLogsLoading || logDeletionInProgress) return;
+    editLogsLoading = true;
     refreshEditLogsBtn.disabled = true;
     editLogPage = 1;
     editLogsUsingUnindexedFallback = false;
@@ -549,43 +818,15 @@ async function loadEditLogs() {
         editLogStatus.textContent = `Không thể tải nhật ký chỉnh sửa.${permissionHint} Chi tiết: ${errorDetails}`;
     } finally {
         refreshEditLogsBtn.disabled = false;
+        editLogsLoading = false;
     }
 }
 
 function renderEditLogPagination(total, pageCount) {
-    if (!editLogPagination || !editLogPageSummary) return;
-    editLogPagination.replaceChildren();
-    const addPageButton = (label, page, disabled = false, current = false, ariaLabel = '') => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = `employee-page-btn${current ? ' is-current' : ''}`;
-        button.textContent = label;
-        button.disabled = disabled;
-        if (ariaLabel) button.setAttribute('aria-label', ariaLabel);
-        if (current) button.setAttribute('aria-current', 'page');
-        button.addEventListener('click', () => {
-            editLogPage = page;
-            renderEditLogs();
-        });
-        editLogPagination.appendChild(button);
-    };
-
-    const firstPage = Math.max(1, editLogPage - 2);
-    const lastPage = Math.min(pageCount, firstPage + 4);
-    addPageButton('≪', 1, editLogPage === 1, false, 'Trang đầu');
-    addPageButton('‹', Math.max(1, editLogPage - 1), editLogPage === 1, false, 'Trang trước');
-    for (let page = firstPage; page <= lastPage; page += 1) {
-        addPageButton(String(page), page, false, page === editLogPage, `Trang ${page}`);
-    }
-    addPageButton('›', Math.min(pageCount, editLogPage + 1), editLogPage >= pageCount, false, 'Trang sau');
-    addPageButton('≫', pageCount, editLogPage >= pageCount, false, 'Trang cuối');
-
-    const start = total ? (editLogPage - 1) * EDIT_LOGS_PER_PAGE + 1 : 0;
-    const end = Math.min(editLogPage * EDIT_LOGS_PER_PAGE, total);
-    editLogPageSummary.replaceChildren();
-    const range = document.createElement('strong');
-    range.textContent = `${start}–${end}`;
-    editLogPageSummary.append(range, document.createTextNode(` trên ${total} nhật ký`));
+    renderLogPagination(editLogPagination, editLogPageSummary, total, pageCount, editLogPage, ADMIN_LOGS_PER_PAGE, 'nhật ký', page => {
+        editLogPage = page;
+        renderEditLogs();
+    });
 }
 
 function renderEditLogs() {
@@ -606,10 +847,10 @@ function renderEditLogs() {
             values.some(value => String(value || '').toLocaleLowerCase('vi').includes(searchTerm));
     });
 
-    const pageCount = Math.max(1, Math.ceil(filteredLogs.length / EDIT_LOGS_PER_PAGE));
+    const pageCount = Math.max(1, Math.ceil(filteredLogs.length / ADMIN_LOGS_PER_PAGE));
     editLogPage = Math.min(editLogPage, pageCount);
-    const startIndex = (editLogPage - 1) * EDIT_LOGS_PER_PAGE;
-    const pageLogs = filteredLogs.slice(startIndex, startIndex + EDIT_LOGS_PER_PAGE);
+    const startIndex = (editLogPage - 1) * ADMIN_LOGS_PER_PAGE;
+    const pageLogs = filteredLogs.slice(startIndex, startIndex + ADMIN_LOGS_PER_PAGE);
     const fallbackNotice = editLogsUsingUnindexedFallback
         ? ' Firebase đang thiếu index taskEditLogs.timestamp; hãy Publish Rules trong database.rules.json để tối ưu tải dữ liệu.'
         : '';
@@ -837,6 +1078,7 @@ adminPasswordInput.addEventListener('keydown', event => {
     }
 });
 adminLogoutBtn.addEventListener('click', async () => {
+    stopLoginLogAutoRefresh();
     try {
         await signOut(auth);
         activeAdminUser = null;
