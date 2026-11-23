@@ -581,26 +581,39 @@ function renderLoginLogs() {
 }
 
 function createLogMobileCell(date, badgeText, badgeVariant, title, fields) {
+    return createAdminMobileCardCell({
+        cellClass: 'log-mobile-cell',
+        colSpan: 5,
+        cardClass: 'admin-log-mobile-card',
+        headingText: date,
+        badgeText,
+        badgeClass: `admin-log-mobile-badge${badgeVariant ? ` ${badgeVariant}` : ''}`,
+        title,
+        fields
+    });
+}
+
+function createAdminMobileCardCell({ cellClass, colSpan, cardClass, headingText, badgeText, badgeClass, title, fields }) {
     const cell = document.createElement('td');
-    cell.className = 'log-mobile-cell';
-    cell.colSpan = 5;
+    cell.className = cellClass;
+    cell.colSpan = colSpan;
 
     const card = document.createElement('article');
-    card.className = 'task-mobile-card admin-log-mobile-card';
+    card.className = `task-mobile-card ${cardClass}`;
     const heading = document.createElement('div');
     heading.className = 'task-mobile-card-heading';
-    const dateElement = document.createElement('span');
-    dateElement.className = 'task-mobile-card-date';
-    dateElement.textContent = date;
+    const headingElement = document.createElement('span');
+    headingElement.className = 'task-mobile-card-date';
+    headingElement.textContent = headingText;
     const badge = document.createElement('span');
-    badge.className = `admin-log-mobile-badge${badgeVariant ? ` ${badgeVariant}` : ''}`;
+    badge.className = badgeClass;
     badge.textContent = badgeText;
-    heading.append(dateElement, badge);
+    heading.append(headingElement, badge);
     card.appendChild(heading);
 
     const titleElement = document.createElement('div');
     titleElement.className = 'task-mobile-card-title';
-    titleElement.textContent = title;
+    titleElement.textContent = String(title || '—');
     card.appendChild(titleElement);
 
     fields.forEach(({ label, value }) => {
@@ -611,7 +624,7 @@ function createLogMobileCell(date, badgeText, badgeVariant, title, fields) {
         fieldLabel.textContent = label;
         const fieldValue = document.createElement('span');
         fieldValue.className = 'task-mobile-card-field-value';
-        fieldValue.textContent = value;
+        fieldValue.textContent = value === null || value === undefined || value === '' ? '—' : String(value);
         field.append(fieldLabel, fieldValue);
         card.appendChild(field);
     });
@@ -1607,13 +1620,27 @@ function renderTasksForDate(year, month, week, date) {
     const tbody = document.createElement('tbody');
     Object.values(list).forEach((task, index) => {
         const tr = document.createElement('tr');
+        const taskData = task || {};
         columns.forEach((column, columnIndex) => {
             const td = document.createElement('td');
-            const value = column.value(task || {}, index);
+            const value = column.value(taskData, index);
             td.textContent = value === null || value === undefined || value === '' ? '—' : String(value);
             if (columnIndex === 0) td.className = 'admin-task-index';
             tr.appendChild(td);
         });
+        const mobileFields = columns.slice(2)
+            .filter(column => column.label !== 'Trạng thái')
+            .map(column => ({ label: column.label, value: column.value(taskData, index) }));
+        tr.appendChild(createAdminMobileCardCell({
+            cellClass: 'admin-task-mobile-cell',
+            colSpan: columns.length,
+            cardClass: 'admin-task-mobile-card',
+            headingText: `${date} · STT ${index + 1}`,
+            badgeText: taskData.status || 'Chưa có trạng thái',
+            badgeClass: 'admin-task-mobile-badge',
+            title: taskData.content || 'Công việc không tên',
+            fields: mobileFields
+        }));
         tbody.appendChild(tr);
     });
     table.appendChild(tbody);

@@ -3980,3 +3980,167 @@ body {
         background: #fff;
     }
 }
+
+.admin-task-mobile-cell {
+    display: none;
+}
+
+.admin-task-mobile-card {
+    padding: 14px;
+}
+
+.admin-task-mobile-card .task-mobile-card-field-value {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.admin-task-mobile-badge {
+    max-width: 58%;
+    flex: 0 1 auto;
+    padding: 5px 9px;
+    border: 1px solid #d7e5f5;
+    border-radius: 999px;
+    background: #eff6fd;
+    color: #365f8a;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+    .admin-sidebar {
+        position: relative;
+        z-index: 12;
+        width: 100%;
+        height: auto;
+        flex: 0 0 auto;
+        padding: 8px 12px 0;
+        border: 0;
+        box-shadow: none;
+    }
+
+    .admin-brand-button {
+        justify-content: center;
+        padding: 0 3px 9px;
+    }
+
+    #adminNav {
+        position: fixed;
+        z-index: 20;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 4px;
+        box-sizing: border-box;
+        width: 100%;
+        margin: 0;
+        padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+        border-top: 1px solid #2a3b54;
+        background: #17283f;
+        box-shadow: 0 -8px 22px rgba(17, 35, 59, .16);
+        overflow: visible;
+    }
+
+    #adminNav li {
+        position: relative;
+        display: flex;
+        min-width: 0;
+        min-height: 54px;
+        flex: initial;
+        flex-direction: column;
+        justify-content: center;
+        gap: 3px;
+        margin: 0;
+        padding: 4px 2px;
+        border-radius: 8px;
+        font-size: 10px;
+        line-height: 1.15;
+        text-align: center;
+        white-space: normal;
+    }
+
+    #adminNav li.active {
+        box-shadow: none;
+    }
+
+    #adminNav li > span:not(.admin-nav-icon) {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    #adminNav .admin-nav-icon {
+        width: auto;
+        font-size: 16px;
+    }
+
+    #adminNav .access-request-count {
+        position: absolute;
+        top: 2px;
+        right: calc(50% - 21px);
+        min-width: 17px;
+        height: 17px;
+        margin: 0;
+        font-size: 10px;
+    }
+
+    .admin-main {
+        padding-bottom: calc(155px + env(safe-area-inset-bottom));
+    }
+}
+
+@media (max-width: 620px) {
+    #tasksContent .admin-task-table-wrap {
+        width: 100%;
+        max-width: 100%;
+        overflow: visible;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    #tasksContent .admin-task-table {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        table-layout: auto;
+        background: transparent;
+    }
+
+    #tasksContent .admin-task-table thead {
+        display: none;
+    }
+
+    #tasksContent .admin-task-table tbody {
+        display: grid;
+        gap: 10px;
+    }
+
+    #tasksContent .admin-task-table tbody tr {
+        display: block;
+        width: 100%;
+        overflow: hidden;
+        border: 1px solid #e8ecf3;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(30, 52, 80, .05);
+    }
+
+    #tasksContent .admin-task-table tbody tr > td {
+        display: none;
+    }
+
+    #tasksContent .admin-task-table tbody tr > td.admin-task-mobile-cell {
+        display: block;
+        width: auto;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        text-align: left;
+    }
+}
