@@ -4032,9 +4032,9 @@ body {
         right: 0;
         bottom: 0;
         left: 0;
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 4px;
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 5px;
         box-sizing: border-box;
         width: 100%;
         margin: 0;
@@ -4042,25 +4042,34 @@ body {
         border-top: 1px solid #2a3b54;
         background: #17283f;
         box-shadow: 0 -8px 22px rgba(17, 35, 59, .16);
-        overflow: visible;
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #adminNav::-webkit-scrollbar {
+        display: none;
     }
 
     #adminNav li {
         position: relative;
         display: flex;
-        min-width: 0;
+        min-width: 82px;
         min-height: 54px;
-        flex: initial;
+        flex: 0 0 82px;
         flex-direction: column;
         justify-content: center;
         gap: 3px;
         margin: 0;
-        padding: 4px 2px;
+        padding: 4px 3px;
         border-radius: 8px;
-        font-size: 10px;
-        line-height: 1.15;
+        font-size: 11px;
+        line-height: 1.2;
         text-align: center;
         white-space: normal;
+        scroll-snap-align: start;
     }
 
     #adminNav li.active {
@@ -4088,7 +4097,7 @@ body {
     }
 
     .admin-main {
-        padding-bottom: calc(155px + env(safe-area-inset-bottom));
+        padding-bottom: calc(90px + env(safe-area-inset-bottom));
     }
 }
 
