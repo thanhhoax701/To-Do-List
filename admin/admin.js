@@ -14,6 +14,7 @@ const adminPasswordInput = document.getElementById('adminPassword');
 const adminLoginBtn = document.getElementById('adminLoginBtn'); // Nút đăng nhập
 const adminLoginMsg = document.getElementById('adminLoginMsg'); // Hiển thị lỗi/thông báo
 const adminLogoutBtn = document.getElementById('adminLogoutBtn');
+const mobileAdminLogoutBtn = document.getElementById('mobileAdminLogoutBtn');
 const adminProfileTrigger = document.getElementById('adminProfileTrigger');
 const adminProfileDialog = document.getElementById('adminProfileDialog');
 const adminProfileClose = document.getElementById('adminProfileClose');
@@ -1127,7 +1128,7 @@ adminPasswordInput.addEventListener('keydown', event => {
         performAdminLogin();
     }
 });
-adminLogoutBtn.addEventListener('click', async () => {
+async function performAdminLogout() {
     stopLoginLogAutoRefresh();
     try {
         await signOut(auth);
@@ -1150,7 +1151,10 @@ adminLogoutBtn.addEventListener('click', async () => {
         console.error('Không thể đăng xuất Admin:', error);
         adminLoginMsg.innerText = `Không thể đăng xuất${error.code ? ` (${error.code})` : ''}: ${error.message || 'Lỗi không xác định.'}`;
     }
-});
+}
+
+adminLogoutBtn.addEventListener('click', performAdminLogout);
+mobileAdminLogoutBtn?.addEventListener('click', performAdminLogout);
 
 // ========== HÀM QUẢN LÝ FORM ==========
 // Xóa sạch dữ liệu form (dùng khi cancele hoặc sau khi thêm/cập nhật)

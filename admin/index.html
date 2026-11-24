@@ -68,18 +68,16 @@
                         <form id="adminGlobalSearch" class="admin-global-search" role="search">
                             <span aria-hidden="true">⌕</span>
                             <input id="dashboardSearchInput" type="search" placeholder="Tìm tài khoản, email, mã nhân viên..." aria-label="Tìm tài khoản">
-                            <button type="submit" aria-label="Mở kết quả tìm kiếm">↵</button>
                         </form>
                         <div class="admin-topbar-actions">
-                            <button type="button" class="admin-icon-button" data-admin-action="accessRequests" aria-label="Mở yêu cầu truy cập">
-                                ♧<span id="dashboardPendingRequests" class="admin-icon-badge" hidden></span>
-                            </button>
-                            <div class="admin-topbar-date"><span aria-hidden="true">▦</span><span id="dashboardCurrentDate"></span></div>
+                            <div class="admin-topbar-date"><span id="dashboardCurrentDate"></span></div>
                             <div class="admin-user-chip">
                                 <span id="adminTopbarInitials" class="admin-user-avatar">AD</span>
                                 <span><strong id="adminTopbarName">Quản trị viên</strong><small>Super Admin</small></span>
                             </div>
-                            <a class="admin-home-link" href="../index.html">Trang chính <span aria-hidden="true">↗</span></a>
+                            <button id="mobileAdminLogoutBtn" class="mobile-admin-logout" type="button" aria-label="Đăng xuất quản trị viên">
+                                Đăng xuất
+                            </button>
                         </div>
                     </header>
                     <!-- panel: dashboard -->

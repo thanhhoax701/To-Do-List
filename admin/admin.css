@@ -3078,23 +3078,14 @@ body {
     color: #8391a7;
 }
 
-.admin-global-search button {
-    display: grid;
-    width: 25px;
-    height: 25px;
-    flex: 0 0 auto;
-    place-items: center;
-    border: 0;
-    border-radius: 7px;
-    background: #fff;
-    color: #6b7b92;
-    cursor: pointer;
-}
-
 .admin-topbar-actions {
     display: flex;
     align-items: center;
     gap: clamp(10px, 1.5vw, 21px);
+}
+
+.mobile-admin-logout {
+    display: none;
 }
 
 .admin-icon-button {
@@ -3650,6 +3641,22 @@ body {
     .admin-topbar-actions {
         width: 100%;
         justify-content: space-between;
+    }
+
+    .mobile-admin-logout {
+        display: inline-flex;
+        min-height: 36px;
+        align-items: center;
+        justify-content: center;
+        margin-left: auto;
+        padding: 0 12px;
+        border: 1px solid #d9aeb1;
+        border-radius: 8px;
+        background: #fff;
+        color: #b4232a;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
     }
 
     .dashboard-heading {
