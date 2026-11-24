@@ -2071,7 +2071,7 @@ function loadTasks(ds) {
         taskDayUnsubscribe();
         taskDayUnsubscribe = null;
     }
-    // Kiểm tra nếu ngày đặc biệt: NL, NB, TL
+    // Kiểm tra nếu ngày là NL/NB: TL vẫn hoạt động như ngày thường
     const addBtn = document.getElementById('openAddModal');
     const expBtn = document.getElementById('exportBtn');
     const deleteDropdown = document.getElementById('deleteSelect');
@@ -2089,17 +2089,6 @@ function loadTasks(ds) {
     } else if (isNbDay(ds)) {
         taskTableContainer.style.display = 'none';
         taskTable.innerHTML = `<tr><td colspan="100" style="text-align: center; padding: 20px; background: #fff3cd; border: 2px solid #ffc107;"><strong style="font-size: 18px; color: #856404;">🏷️ Hôm nay là ngày Nghỉ Bù (NB)</strong></td></tr>`;
-        if (addBtn) addBtn.style.display = 'none';
-        if (expBtn) expBtn.style.display = 'none';
-        if (selectAllControl) selectAllControl.style.display = 'none';
-        selectAllCheckbox.checked = false;
-        if (deleteDropdown) deleteDropdown.style.display = 'none';
-        syncMobileDeleteActionVisibility();
-        if (searchFilterSection) searchFilterSection.style.display = 'none';
-        return;
-    } else if (isTlDay(ds)) {
-        taskTableContainer.style.display = 'none';
-        taskTable.innerHTML = `<tr><td colspan="100" style="text-align: center; padding: 20px; background: #f3e8ff; border: 2px solid #8b5cf6;"><strong style="font-size: 18px; color: #7c3aed;">🟣 Hôm nay là ngày Trực Lễ (TL)</strong></td></tr>`;
         if (addBtn) addBtn.style.display = 'none';
         if (expBtn) expBtn.style.display = 'none';
         if (selectAllControl) selectAllControl.style.display = 'none';
