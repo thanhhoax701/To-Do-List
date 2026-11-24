@@ -1144,26 +1144,38 @@
             </div>
             <!-- Modal nhân bản nâng cao -->
             <div id="advancedDuplicateModal" class="modal">
-                <div class="modal-content" style="max-width:500px">
+                <div class="modal-content advanced-duplicate-modal">
                     <span class="close" id="closeAdvancedDuplicate">&times;</span>
-                    <h3>Nhân bản công việc</h3>
-                    <label>Chọn kiểu nhân bản</label>
-                    <select id="duplicateType">
+                    <h3 class="advanced-duplicate-title">Nhân bản công việc</h3>
+                    <label class="advanced-duplicate-field-label" for="duplicateType">Chọn kiểu nhân bản</label>
+                    <select id="duplicateType" class="advanced-duplicate-select">
                         <option value="multi">Nhân bản sang nhiều ngày</option>
                         <option value="week">Nhân bản cả tuần</option>
                         <option value="month">Nhân bản cả tháng</option>
                     </select>
+                    <div id="duplicateSourceTaskBox" class="advanced-duplicate-source">
+                        <div class="advanced-duplicate-source-header">
+                            <strong>Chọn công việc cần nhân bản</strong>
+                            <label class="advanced-duplicate-select-all" for="duplicateSelectAllTasks">
+                                <input type="checkbox" id="duplicateSelectAllTasks" checked>
+                                Chọn tất cả
+                            </label>
+                        </div>
+                        <div id="duplicateSourceTaskList" class="advanced-duplicate-task-list"></div>
+                    </div>
                     <!-- Bộ phận nhân bản nâng cao - multiple dates -->
-                    <div id="multiDateBox" style="margin-top:15px; display:block;">
+                    <div id="multiDateBox" class="advanced-duplicate-target-box" style="display:block;">
                         <label>
                             <strong>Nhân bản sang các ngày</strong>
                         </label>
-                        <input type="date" id="multiDatePicker" style="margin-right:5px;">
-                        <button id="addDateBtn" style="padding:5px 10px; margin-top:5px;">➕ Thêm ngày</button>
-                        <ul id="dateList" style="margin-top:10px;"></ul>
+                        <div class="advanced-duplicate-date-actions">
+                            <input type="date" id="multiDatePicker">
+                            <button id="addDateBtn" type="button">➹ Thêm ngày</button>
+                        </div>
+                        <ul id="dateList"></ul>
                     </div>
                     <!-- Bộ phận nhân bản nâng cao - week -->
-                    <div id="weekBox" style="margin-top:15px; display:none;">
+                    <div id="weekBox" class="advanced-duplicate-target-box" style="display:none;">
                         <label>
                             <strong>Chọn tuần đích để nhân bản</strong>
                         </label>
@@ -1172,7 +1184,7 @@
                         </select>
                     </div>
                     <!-- Bộ phận nhân bản nâng cao - month -->
-                    <div id="monthBox" style="margin-top:15px; display:none;">
+                    <div id="monthBox" class="advanced-duplicate-target-box" style="display:none;">
                         <label>
                             <strong>Chọn tháng đích để nhân bản</strong>
                         </label>

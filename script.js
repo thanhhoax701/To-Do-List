@@ -2980,9 +2980,118 @@ const weekBox = document.getElementById("weekBox");
 const monthBox = document.getElementById("monthBox");
 const targetWeekSelect = document.getElementById("targetWeekSelect");
 const targetMonthPicker = document.getElementById("targetMonthPicker");
+const duplicateSourceTaskBox = document.getElementById("duplicateSourceTaskBox");
+const duplicateSourceTaskList = document.getElementById("duplicateSourceTaskList");
+const duplicateSelectAllTasks = document.getElementById("duplicateSelectAllTasks");
 
 // Danh sách các ngày được chọn để nhân bản vào
 let advancedDates = [];
+let advancedSourceTasks = {};
+let selectedAdvancedTaskKeys = new Set();
+
+function getAdvancedTaskKey(sourceDate, key, index) {
+    return `${sourceDate}|${key || `index-${index}`}`;
+}
+
+async function loadAdvancedSourceTaskSelection() {
+    if (!selectedDate || !duplicateSourceTaskList) return;
+    const [year, month] = selectedDate.split("-");
+    const weekId = getWeekNumber(selectedDate);
+    advancedSourceTasks = {};
+    duplicateSourceTaskList.replaceChildren();
+
+    try {
+        if (duplicateType.value === "week") {
+            const snap = await get(tasksRef(year, month, weekId));
+            if (snap.exists()) {
+                snap.forEach(dateSnap => {
+                    advancedSourceTasks[dateSnap.key] = [];
+                    dateSnap.forEach((taskSnap, index) => {
+                        advancedSourceTasks[dateSnap.key].push({
+                            key: taskSnap.key,
+                            task: taskSnap.val(),
+                            sourceDate: dateSnap.key
+                        });
+                    });
+                });
+            }
+        } else if (duplicateType.value === "month") {
+            const snap = await get(tasksRef(year, month));
+            if (snap.exists()) {
+                snap.forEach(weekSnap => {
+                    weekSnap.forEach(dateSnap => {
+                        advancedSourceTasks[dateSnap.key] = [];
+                        dateSnap.forEach(taskSnap => {
+                            advancedSourceTasks[dateSnap.key].push({
+                                key: taskSnap.key,
+                                task: taskSnap.val(),
+                                sourceDate: dateSnap.key
+                            });
+                        });
+                    });
+                });
+            }
+        } else {
+            const snap = await get(tasksRef(year, month, weekId, selectedDate));
+            advancedSourceTasks[selectedDate] = [];
+            if (snap.exists()) {
+                snap.forEach(taskSnap => {
+                    advancedSourceTasks[selectedDate].push({
+                        key: taskSnap.key,
+                        task: taskSnap.val(),
+                        sourceDate: selectedDate
+                    });
+                });
+            }
+        }
+
+        selectedAdvancedTaskKeys = new Set();
+        let taskIndex = 0;
+        for (const [sourceDate, records] of Object.entries(advancedSourceTasks)) {
+            for (let index = 0; index < records.length; index++) {
+                const record = records[index];
+                const taskKey = getAdvancedTaskKey(sourceDate, record.key, index);
+                selectedAdvancedTaskKeys.add(taskKey);
+                const row = document.createElement("label");
+                row.className = "advanced-duplicate-task-row";
+
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.checked = true;
+                checkbox.className = "advanced-duplicate-task-checkbox";
+                checkbox.dataset.taskKey = taskKey;
+                checkbox.onchange = () => {
+                    if (checkbox.checked) selectedAdvancedTaskKeys.add(taskKey);
+                    else selectedAdvancedTaskKeys.delete(taskKey);
+                    duplicateSelectAllTasks.checked =
+                        selectedAdvancedTaskKeys.size === duplicateSourceTaskList.querySelectorAll('input[data-task-key]').length;
+                };
+
+                const text = document.createElement("span");
+                text.className = "advanced-duplicate-task-text";
+                text.textContent = `${formatDisplayDate(sourceDate)} — ${record.task?.content || `(Công việc ${++taskIndex})`}`;
+                row.append(checkbox, text);
+                duplicateSourceTaskList.appendChild(row);
+            }
+        }
+
+        duplicateSelectAllTasks.checked = selectedAdvancedTaskKeys.size > 0;
+        if (selectedAdvancedTaskKeys.size === 0) {
+            duplicateSourceTaskList.textContent = "Không có công việc để chọn.";
+        }
+    } catch (error) {
+        console.error("Không thể tải danh sách công việc để nhân bản:", error);
+        duplicateSourceTaskList.textContent = "Không thể tải danh sách công việc.";
+    }
+}
+
+duplicateSelectAllTasks?.addEventListener("change", () => {
+    duplicateSourceTaskList.querySelectorAll("input[data-task-key]").forEach(checkbox => {
+        checkbox.checked = duplicateSelectAllTasks.checked;
+        if (duplicateSelectAllTasks.checked) selectedAdvancedTaskKeys.add(checkbox.dataset.taskKey);
+        else selectedAdvancedTaskKeys.delete(checkbox.dataset.taskKey);
+    });
+});
 
 /**
  * Xử lý thay đổi loại nhân bản (ngày, tuần, tháng)
@@ -3008,6 +3117,7 @@ duplicateType.onchange = async () => {
         const ym = `${nextMonth.getFullYear()}-${pad(nextMonth.getMonth() + 1)}`;
         targetMonthPicker.value = ym;
     }
+    await loadAdvancedSourceTaskSelection();
 };
 
 /**
@@ -7336,6 +7446,7 @@ if (duplicateDayBtn) {
         advancedDates = [];
         dateList.innerHTML = "";
         multiDatePicker.value = "";
+        await loadAdvancedSourceTaskSelection();
         advModal.style.display = "flex";
     };
 }
@@ -7369,6 +7480,9 @@ confirmAdvBtn.onclick = async () => {
     const sw = getWeekNumber(selectedDate);
 
     try {
+        const isAdvancedTaskSelected = (sourceDate, record, index) =>
+            selectedAdvancedTaskKeys.has(getAdvancedTaskKey(sourceDate, record.key, index));
+
         async function getAllWeekTasks(year, month, weekId) {
             const r = tasksRef(year, month, weekId);
             const snap = await get(r);
@@ -7378,7 +7492,7 @@ confirmAdvBtn.onclick = async () => {
                     const dateKey = dateSnap.key;
                     allTasks[dateKey] = [];
                     dateSnap.forEach(ch => {
-                        allTasks[dateKey].push(ch.val());
+                        allTasks[dateKey].push({ key: ch.key, task: ch.val() });
                     });
                 });
             }
@@ -7394,7 +7508,6 @@ confirmAdvBtn.onclick = async () => {
             if (duplicateType.value === "week") {
                 allSourceTasks = await getAllWeekTasks(sy, sm, sw);
                 sourceTaskCount = Object.values(allSourceTasks).reduce((sum, arr) => sum + arr.length, 0);
-                await showCustomAlert(`🔎 Tìm thấy ${sourceTaskCount} công việc ở tuần ${sw}`);
             } else {
                 // Month: lấy tất cả công việc của tháng
                 const r = tasksRef(sy, sm);
@@ -7406,13 +7519,12 @@ confirmAdvBtn.onclick = async () => {
                             const dateKey = dateSnap.key;
                             allSourceTasks[dateKey] = [];
                             dateSnap.forEach(ch => {
-                                allSourceTasks[dateKey].push(ch.val());
+                                allSourceTasks[dateKey].push({ key: ch.key, task: ch.val() });
                                 sourceTaskCount++;
                             });
                         });
                     });
                 }
-                await showCustomAlert(`🔎 Tìm thấy ${sourceTaskCount} công việc ở tháng ${sm}/${sy}`);
             }
         } else {
             // Nhân bản ngày hoặc nhiều ngày: lấy công việc của ngày được chọn
@@ -7420,14 +7532,36 @@ confirmAdvBtn.onclick = async () => {
             if (snap.exists()) {
                 allSourceTasks[selectedDate] = [];
                 snap.forEach(ch => {
-                    allSourceTasks[selectedDate].push(ch.val());
+                    allSourceTasks[selectedDate].push({ key: ch.key, task: ch.val() });
                 });
                 sourceTaskCount = allSourceTasks[selectedDate].length;
             }
-            await showCustomAlert(`🔎 Tìm thấy ${sourceTaskCount} công việc ở ${formatDisplayDate(selectedDate)}`);
         }
 
         if (sourceTaskCount === 0) { await showCustomAlert("Không có công việc để nhân bản!"); return; }
+
+        function getSelectedSourceTaskCount() {
+            let count = 0;
+            for (const [sourceDate, records] of Object.entries(allSourceTasks)) {
+                records.forEach((record, index) => {
+                    if (isAdvancedTaskSelected(sourceDate, record, index)) count++;
+                });
+            }
+            return count;
+        }
+
+        const selectedSourceTaskCount = getSelectedSourceTaskCount();
+        if (selectedSourceTaskCount === 0) {
+            await showCustomAlert("Vui lòng chọn ít nhất một công việc để nhân bản!");
+            return;
+        }
+        if (duplicateType.value === "week") {
+            await showCustomAlert(`🔎 Tìm thấy ${selectedSourceTaskCount} công việc đã chọn ở tuần ${sw}`);
+        } else if (duplicateType.value === "month") {
+            await showCustomAlert(`🔎 Tìm thấy ${selectedSourceTaskCount} công việc đã chọn ở tháng ${sm}/${sy}`);
+        } else {
+            await showCustomAlert(`🔎 Tìm thấy ${selectedSourceTaskCount} công việc đã chọn ở ${formatDisplayDate(selectedDate)}`);
+        }
 
         const duplicateTo = async (targetDate, sourceStartDate) => {
             const [ty, tm] = targetDate.split("-");
@@ -7450,7 +7584,10 @@ confirmAdvBtn.onclick = async () => {
                     const [nty, ntm] = newTargetDateStr.split("-");
                     const ntw = getWeekNumber(newTargetDateStr);
 
-                    for (const task of tasksArr) {
+                    for (let taskIndex = 0; taskIndex < tasksArr.length; taskIndex++) {
+                        const record = tasksArr[taskIndex];
+                        if (!isAdvancedTaskSelected(sourceDateKey, record, taskIndex)) continue;
+                        const task = record.task;
                         const sourceTaskStart = task.startDate || sourceDateKey;
                         const sourceStartDate = parseYMD(sourceTaskStart);
                         const targetStartDate = parseYMD(newTargetDateStr);
@@ -7478,7 +7615,10 @@ confirmAdvBtn.onclick = async () => {
             } else {
                 // Nhân bản ngày: dùng công việc từ selectedDate
                 const tasksArr = allSourceTasks[selectedDate] || [];
-                for (const task of tasksArr) {
+                for (let taskIndex = 0; taskIndex < tasksArr.length; taskIndex++) {
+                    const record = tasksArr[taskIndex];
+                    if (!isAdvancedTaskSelected(selectedDate, record, taskIndex)) continue;
+                    const task = record.task;
                     const sourceTaskStart = task.startDate || selectedDate;
                     const sourceStartDate = parseYMD(sourceTaskStart);
                     const targetStartDate = parseYMD(targetDate);
@@ -7513,11 +7653,11 @@ confirmAdvBtn.onclick = async () => {
                     if (!targetDate || targetDate === selectedDate) { await showCustomAlert("Ngày đích không hợp lệ hoặc trùng ngày nguồn!"); return; }
                     await duplicateTo(targetDate);
                     hideLoading();
-                    await showCustomAlert(`✅ Đã nhân bản ${sourceTaskCount} công việc sang ${formatDisplayDate(targetDate)}`);
+                    await showCustomAlert(`✅ Đã nhân bản ${selectedSourceTaskCount} công việc sang ${formatDisplayDate(targetDate)}`);
                 } else {
                     for (const d of advancedDates) await duplicateTo(d);
                     hideLoading();
-                    await showCustomAlert(`✅ Đã nhân bản ${sourceTaskCount * advancedDates.length} công việc`);
+                    await showCustomAlert(`✅ Đã nhân bản ${selectedSourceTaskCount * advancedDates.length} công việc`);
                 }
             } catch (error) {
                 hideLoading();
@@ -7546,7 +7686,7 @@ confirmAdvBtn.onclick = async () => {
                 // Hiển thị chi tiết số công việc của mỗi ngày trong tuần
                 let detailMsg = `✅ Nhân bản tuần ${weekNum} - ${pad(tm)}/${ty}<br>`;
                 detailMsg += `   (${targetRange.startStr} - ${targetRange.endStr})<br>`;
-                detailMsg += `   Tổng: ${sourceTaskCount} công việc trên ${Object.keys(allSourceTasks).length} ngày`;
+                detailMsg += `   Tổng: ${selectedSourceTaskCount} công việc trên ${Object.keys(allSourceTasks).length} ngày`;
                 hideLoading();
                 await showCustomAlert(detailMsg);
             } catch (error) {
@@ -7566,7 +7706,7 @@ confirmAdvBtn.onclick = async () => {
                 const targetFirstDate = `${ty}-${tm}-01`;
                 await duplicateTo(targetFirstDate, sourceFirstDate);
                 hideLoading();
-                await showCustomAlert(`✅ Đã nhân bản ${sourceTaskCount} công việc sang tháng ${tm}/${ty}`);
+                await showCustomAlert(`✅ Đã nhân bản ${selectedSourceTaskCount} công việc sang tháng ${tm}/${ty}`);
             } catch (error) {
                 hideLoading();
                 throw error;

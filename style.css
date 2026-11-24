@@ -989,6 +989,308 @@ td select {
     display: block;
 }
 
+.advanced-duplicate-modal {
+    width: min(560px, calc(100vw - 32px));
+    max-width: 560px;
+    height: auto;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px 18px 12px;
+}
+
+.advanced-duplicate-title {
+    margin: 0 36px 12px 0;
+    text-align: left;
+    font-size: 22px;
+}
+
+.advanced-duplicate-field-label {
+    margin: 0 0 6px;
+}
+
+.advanced-duplicate-select {
+    margin-bottom: 12px;
+}
+
+.advanced-duplicate-source {
+    display: block;
+    flex: none;
+    min-height: 0;
+    margin-top: 4px;
+}
+
+.advanced-duplicate-target-box {
+    width: 100%;
+    flex: 0 0 auto;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #e5e9f0;
+    box-sizing: border-box;
+}
+
+.advanced-duplicate-source-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.advanced-duplicate-source-header strong {
+    font-size: 15px;
+}
+
+.advanced-duplicate-select-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.advanced-duplicate-select-all input {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    margin: 0;
+}
+
+#duplicateSelectAllTasks {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+}
+
+.advanced-duplicate-task-list {
+    height: 150px;
+    max-height: 150px;
+    flex: none;
+    overflow-y: auto;
+    border: 1px solid #dfe4ec;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.advanced-duplicate-task-row {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 10px;
+    min-height: 52px;
+    margin: 0;
+    padding: 10px 12px;
+    border-bottom: 1px solid #edf0f5;
+    font-size: 14px;
+    line-height: 1.35;
+    cursor: pointer;
+}
+
+.advanced-duplicate-task-row:last-child {
+    border-bottom: 0;
+}
+
+.advanced-duplicate-task-text {
+    padding-left: 5px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+}
+
+.advanced-duplicate-task-checkbox {
+    width: 18px !important;
+    min-width: 18px !important;
+    max-width: 18px !important;
+    height: 18px !important;
+    min-height: 18px !important;
+    max-height: 18px !important;
+    margin: 0;
+    padding: 0 !important;
+    align-self: center;
+    justify-self: start;
+    box-sizing: border-box;
+}
+
+.advanced-duplicate-date-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.advanced-duplicate-date-actions input {
+    width: 100%;
+    height: 42px;
+    margin: 0;
+}
+
+.advanced-duplicate-date-actions button {
+    height: 42px;
+    padding: 0 12px;
+    white-space: nowrap;
+}
+
+#advancedDuplicateModal #dateList {
+    min-height: 0;
+    max-height: 72px;
+    overflow-y: auto;
+    margin: 8px 0 0;
+    padding: 0 0 0 20px;
+}
+
+#advancedDuplicateModal #confirmAdvancedDuplicate {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    width: 100%;
+    height: 44px;
+    flex: 0 0 auto;
+    margin: 10px 0 0;
+}
+
+#advancedDuplicateModal #multiDateBox,
+#advancedDuplicateModal #weekBox,
+#advancedDuplicateModal #monthBox {
+    flex: 0 0 auto;
+    width: 100%;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #e5e9f0;
+    box-sizing: border-box;
+}
+
+#advancedDuplicateModal #dateList {
+    max-height: 70px;
+    overflow-y: auto;
+    margin: 8px 0 0;
+    padding-left: 20px;
+}
+
+#advancedDuplicateModal #multiDatePicker {
+    width: calc(100% - 130px);
+    margin-right: 6px;
+}
+
+#advancedDuplicateModal #addDateBtn {
+    width: 118px;
+}
+
+#advancedDuplicateModal #confirmAdvancedDuplicate {
+    flex: 0 0 auto;
+    margin-top: 12px;
+}
+
+#advancedDuplicateModal .close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+}
+
+@media (max-width: 600px) {
+    #advancedDuplicateModal.modal {
+        align-items: center;
+        padding: 8px;
+    }
+
+    .advanced-duplicate-modal {
+        width: calc(100vw - 16px);
+        max-width: none;
+        max-height: calc(100dvh - 16px);
+        padding: 12px 10px 10px;
+        border-radius: 12px;
+    }
+
+    .advanced-duplicate-title {
+        margin: 0 32px 8px 0;
+        font-size: 18px;
+    }
+
+    .advanced-duplicate-field-label {
+        margin-bottom: 4px;
+    }
+
+    .advanced-duplicate-select {
+        height: 42px;
+        margin-bottom: 8px;
+    }
+
+    .advanced-duplicate-source-header {
+        grid-template-columns: 1fr;
+        gap: 4px;
+        margin-bottom: 5px;
+    }
+
+    .advanced-duplicate-source-header strong {
+        font-size: 14px;
+    }
+
+    .advanced-duplicate-select-all {
+        justify-self: start;
+    }
+
+    .advanced-duplicate-task-list {
+        height: min(31dvh, 210px);
+        max-height: min(31dvh, 210px);
+    }
+
+    .advanced-duplicate-task-row {
+        grid-template-columns: 24px minmax(0, 1fr);
+        column-gap: 7px;
+        min-height: 48px;
+        padding: 8px 9px;
+        font-size: 13px;
+    }
+
+    .advanced-duplicate-task-text {
+        padding-left: 2px;
+    }
+
+    .advanced-duplicate-target-box {
+        margin-top: 8px;
+        padding-top: 7px;
+    }
+
+    .advanced-duplicate-date-actions {
+        grid-template-columns: minmax(0, 1fr) 112px;
+        gap: 6px;
+    }
+
+    .advanced-duplicate-date-actions input {
+        min-width: 0;
+        height: 40px;
+        font-size: 12px;
+    }
+
+    .advanced-duplicate-date-actions button {
+        width: 112px;
+        height: 40px;
+        padding: 0 8px;
+        font-size: 12px;
+    }
+
+    #advancedDuplicateModal #dateList {
+        max-height: 48px;
+    }
+
+    #advancedDuplicateModal #confirmAdvancedDuplicate {
+        height: 42px;
+        margin-top: 8px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 380px) {
+    .advanced-duplicate-date-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .advanced-duplicate-date-actions button {
+        width: 100%;
+    }
+}
+
 
 .modal-content input,
 .modal-content textarea,
