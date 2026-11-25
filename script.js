@@ -291,11 +291,27 @@ function tasksRef(...parts) {
     return ref(db, `tasks/${uid}${parts.length ? '/' + parts.join('/') : ''}`);
 }
 
+let taskEditLogWarningShown = false;
+
+async function warnTaskEditLogFailure(reason) {
+    console.error(reason);
+    if (taskEditLogWarningShown) return;
+    taskEditLogWarningShown = true;
+    await showCustomAlert(
+        'Thao tác công việc đã thực hiện, nhưng nhật ký chỉnh sửa chưa ghi được. ' +
+        'Vui lòng kiểm tra đăng nhập Super Admin và quyền taskEditLogs trong Firebase.'
+    );
+}
+
 async function recordTaskEdit(action, task, taskDate, taskId = '', details = '') {
     const user = getCurrentUser();
-    if (user?.role !== 'superadmin' || verifiedAdminUid !== auth.currentUser?.uid) return;
+    if (user?.role !== 'superadmin') return;
+    if (!auth.currentUser?.uid || verifiedAdminUid !== auth.currentUser.uid) {
+        await warnTaskEditLogFailure('Không thể ghi nhật ký chỉnh sửa: phiên Super Admin chưa được xác thực với Firebase.');
+        return;
+    }
     if (!user?.key) {
-        console.error('Không thể ghi nhật ký chỉnh sửa: không xác định được tài khoản đang đăng nhập.');
+        await warnTaskEditLogFailure('Không thể ghi nhật ký chỉnh sửa: không xác định được tài khoản đang đăng nhập.');
         return;
     }
     try {
@@ -311,7 +327,7 @@ async function recordTaskEdit(action, task, taskDate, taskId = '', details = '')
             timestamp: serverTimestamp()
         });
     } catch (error) {
-        console.error('Không thể ghi nhật ký chỉnh sửa công việc:', error);
+        await warnTaskEditLogFailure(`Không thể ghi nhật ký chỉnh sửa công việc: ${error?.code || error?.message || error}`);
     }
 }
 
@@ -1465,7 +1481,7 @@ async function importWorkbookArrayBuffer(ab, filename, importType, importValue) 
             }
         }
         if (total > 0) {
-            recordTaskEdit('imported', { content: `${total} công việc` }, importDefaultDate || sheetDate || '', '', `Đã nhập ${total} công việc từ file`);
+            await recordTaskEdit('imported', { content: `${total} công việc` }, importDefaultDate || sheetDate || '', '', `Đã nhập ${total} công việc từ file`);
         }
         hideLoading();
         const skippedMessage = skipped ? `, bỏ qua ${skipped} dòng không có ngày hợp lệ/trong phạm vi` : '';
@@ -2183,10 +2199,13 @@ function loadTasks(ds) {
                 ["Chưa bắt đầu", "Đang thực hiện", "Hoàn thành", "Chậm tiến độ"],
                 t.status,
                 statusClass,
-                v => {
-                    update(tasksRef(y, m, w, ds, k), { status: v }).then(() => {
-                        recordTaskEdit('status_changed', { ...t, status: v }, ds, k, `${t.status || 'Chưa xác định'} → ${v}`);
-                    }).catch(error => console.error('Không thể cập nhật trạng thái công việc:', error));
+                async v => {
+                    try {
+                        await update(tasksRef(y, m, w, ds, k), { status: v });
+                        await recordTaskEdit('status_changed', { ...t, status: v }, ds, k, `${t.status || 'Chưa xác định'} → ${v}`);
+                    } catch (error) {
+                        console.error('Không thể cập nhật trạng thái công việc:', error);
+                    }
                 }
             );
 
@@ -2238,7 +2257,7 @@ function loadTasks(ds) {
                 showLoading();
                 try {
                     const newTaskRef = await push(tasksRef(y, m, w, ds), newTask);
-                    recordTaskEdit('duplicated', newTask, ds, newTaskRef.key, 'Nhân bản từ công việc hiện có');
+                    await recordTaskEdit('duplicated', newTask, ds, newTaskRef.key, 'Nhân bản từ công việc hiện có');
                     await showCustomAlert("🔁 Đã nhân bản công việc!");
                 } catch (e) {
                     console.error(e);
@@ -2262,7 +2281,7 @@ function loadTasks(ds) {
 
                 try {
                     await remove(tasksRef(y, m, w, ds, k));
-                    recordTaskEdit('deleted', t, ds, k);
+                    await recordTaskEdit('deleted', t, ds, k);
                     hideLoading();
                     // đợi trình duyệt vẽ lại để spinner biến mất trước khi thông báo
                     await new Promise(r => requestAnimationFrame(r));
@@ -2312,7 +2331,7 @@ async function moveTaskWithinDay(entries, fromIndex, direction, dateStr) {
     buttons.forEach(button => { button.disabled = true; });
     try {
         await update(tasksRef(year, month, getWeekNumber(dateStr), dateStr), updates);
-        recordTaskEdit('reordered', movedTask.task, dateStr, movedTask.key, `Vị trí ${fromIndex + 1} → ${toIndex + 1}`);
+        await recordTaskEdit('reordered', movedTask.task, dateStr, movedTask.key, `Vị trí ${fromIndex + 1} → ${toIndex + 1}`);
     } catch (error) {
         console.error('Không thể thay đổi thứ tự công việc:', error);
         await showCustomAlert(`Không thể thay đổi thứ tự công việc: ${error.message || 'Lỗi không xác định'}`);
@@ -2546,10 +2565,10 @@ if (saveTaskBtn) {
                 } else {
                     await update(tasksRef(sourceLocation.year, sourceLocation.month, sourceLocation.week, sourceLocation.date, existingTaskId), data);
                 }
-                recordTaskEdit('updated', data, targetDate, existingTaskId, dateChanged ? `Đã chuyển từ ${sourceDate} sang ${targetDate}` : '');
+                await recordTaskEdit('updated', data, targetDate, existingTaskId, dateChanged ? `Đã chuyển từ ${sourceDate} sang ${targetDate}` : '');
             } else {
                 const newTaskRef = await push(tasksRef(targetYear, targetMonth, targetWeek, targetDate), data);
-                recordTaskEdit('created', data, targetDate, newTaskRef.key, dateChanged ? `Đã tạo tại ngày ${targetDate}` : '');
+                await recordTaskEdit('created', data, targetDate, newTaskRef.key, dateChanged ? `Đã tạo tại ngày ${targetDate}` : '');
             }
             if (dateChanged) navigateToTaskDate(targetDate);
             // ẩn spinner trước khi hiển thị xác nhận
@@ -7609,7 +7628,7 @@ confirmAdvBtn.onclick = async () => {
                             endDate: newEndDate
                         };
                         const duplicatedTaskRef = await push(tasksRef(nty, ntm, ntw, newTargetDateStr), duplicatedTask);
-                        recordTaskEdit('duplicated', duplicatedTask, newTargetDateStr, duplicatedTaskRef.key, 'Nhân bản công việc theo khoảng ngày');
+                        await recordTaskEdit('duplicated', duplicatedTask, newTargetDateStr, duplicatedTaskRef.key, 'Nhân bản công việc theo khoảng ngày');
                     }
                 }
             } else {
@@ -7640,7 +7659,7 @@ confirmAdvBtn.onclick = async () => {
                         endDate: newEndDate
                     };
                     const duplicatedTaskRef = await push(tasksRef(ty, tm, tw, targetDate), duplicatedTask);
-                    recordTaskEdit('duplicated', duplicatedTask, targetDate, duplicatedTaskRef.key, 'Nhân bản công việc sang ngày khác');
+                    await recordTaskEdit('duplicated', duplicatedTask, targetDate, duplicatedTaskRef.key, 'Nhân bản công việc sang ngày khác');
                 }
             }
         };
@@ -8015,7 +8034,7 @@ if (document.getElementById('deleteDayBtn')) {
         showLoading();
         try {
             await remove(tasksRef(y, m, w, selectedDate));
-            recordTaskEdit('bulk_deleted', { content: `${cnt} công việc` }, selectedDate, '', `Đã xóa ${cnt} công việc trong ngày`);
+            await recordTaskEdit('bulk_deleted', { content: `${cnt} công việc` }, selectedDate, '', `Đã xóa ${cnt} công việc trong ngày`);
             hideLoading();
             await showCustomAlert(`✅ Đã xóa ${cnt} công việc`);
             taskTable.innerHTML = ""; // Xóa bảng hiển thị
@@ -8072,7 +8091,7 @@ if (document.getElementById('deleteWeekBtn')) {
             showLoading();
             try {
                 await remove(tasksRef(y, m, w));
-                recordTaskEdit('bulk_deleted', { content: `${stats.tasksCount} công việc` }, `${y}-${m}`, '', `Đã xóa ${stats.tasksCount} công việc trong tuần`);
+                await recordTaskEdit('bulk_deleted', { content: `${stats.tasksCount} công việc` }, `${y}-${m}`, '', `Đã xóa ${stats.tasksCount} công việc trong tuần`);
                 hideLoading();
                 await new Promise(r => requestAnimationFrame(r));
                 await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc)`);
@@ -8127,7 +8146,7 @@ if (document.getElementById('deleteMonthBtn')) {
             showLoading();
             try {
                 await remove(tasksRef(y, m));
-                recordTaskEdit('bulk_deleted', { content: `${stats.tasksCount} công việc` }, `${y}-${m}`, '', `Đã xóa ${stats.tasksCount} công việc trong tháng`);
+                await recordTaskEdit('bulk_deleted', { content: `${stats.tasksCount} công việc` }, `${y}-${m}`, '', `Đã xóa ${stats.tasksCount} công việc trong tháng`);
                 hideLoading();
                 await new Promise(r => requestAnimationFrame(r));
                 await showCustomAlert(`✅ Đã xóa ${stats.daysCount} ngày (${stats.tasksCount} công việc) của tháng ${m}/${y}`);
@@ -8194,7 +8213,7 @@ if (deleteSelect) {
                     const k = cb.dataset.key;
                     await remove(tasksRef(y, m, w, d, k));
                 }
-                recordTaskEdit('bulk_deleted', { content: `${selected.length} công việc` }, selected[0]?.dataset.date || '', '', `Đã xóa ${selected.length} công việc đã chọn`);
+                await recordTaskEdit('bulk_deleted', { content: `${selected.length} công việc` }, selected[0]?.dataset.date || '', '', `Đã xóa ${selected.length} công việc đã chọn`);
                 hideLoading();
                 await new Promise(r => requestAnimationFrame(r));
                 await showCustomAlert(`✅ Đã xóa ${selected.length} công việc`);
@@ -9469,7 +9488,7 @@ function renderSearchedTasks(tasks) {
                     const [y, m] = task.date.split("-");
                     const w = getWeekNumber(task.date);
                     const newTaskRef = await push(tasksRef(y, m, w, task.date), newTask);
-                    recordTaskEdit('duplicated', newTask, task.date, newTaskRef.key, 'Nhân bản từ kết quả tìm kiếm');
+                    await recordTaskEdit('duplicated', newTask, task.date, newTaskRef.key, 'Nhân bản từ kết quả tìm kiếm');
                     await showCustomAlert("🔁 Đã nhân bản công việc!");
                 } catch (e) {
                     console.error(e);
@@ -9496,7 +9515,7 @@ function renderSearchedTasks(tasks) {
 
                 try {
                     await remove(tasksRef(task.year, task.month, task.week, task.date, task.id));
-                    recordTaskEdit('deleted', task, task.date, task.id);
+                    await recordTaskEdit('deleted', task, task.date, task.id);
                     hideLoading();
                     // Reload searched tasks
                     await loadSearchedTasks();
