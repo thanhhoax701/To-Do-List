@@ -29,6 +29,32 @@ body {
     gap: 8px;
 }
 
+.reminder-enable-field {
+    align-items: center;
+    flex-direction: row;
+    gap: 10px;
+}
+
+#taskModal .reminder-enable-field > label {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    margin: 0;
+}
+
+#taskModal .reminder-enable-field > label input {
+    flex: 0 0 auto;
+    height: 16px;
+    margin: 0;
+    width: 16px;
+}
+
+.reminder-status {
+    color: #07875e;
+    font-size: 12px;
+    font-weight: 700;
+}
+
 .priority-badge,
 .category-badge {
     display: inline-block;
@@ -1516,6 +1542,10 @@ td select {
     min-width: 0;
     flex-direction: column;
     gap: 4px;
+}
+
+.task-form-field[hidden] {
+    display: none;
 }
 
 .task-form-field-wide,

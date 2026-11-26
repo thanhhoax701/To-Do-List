@@ -64,6 +64,8 @@ const reminderAtInput = document.getElementById("reminderAt");
 const reminderLeadInput = document.getElementById("reminderLead");
 const reminderRepeatInput = document.getElementById("reminderRepeat");
 const reminderEnabledInput = document.getElementById("reminderEnabled");
+const reminderStatus = document.getElementById("reminderStatus");
+const reminderOptionFields = document.querySelectorAll(".reminder-option-field");
 
 // Chỉ báo loading (vòng xoay chờ đợi khi xử lý async)
 const loadingIndicator = document.getElementById("loadingIndicator");
@@ -2783,6 +2785,10 @@ function getTaskReminderMarkup(task) {
 
 function syncReminderInputs() {
     const enabled = Boolean(reminderEnabledInput?.checked);
+    if (reminderStatus) reminderStatus.hidden = !enabled;
+    reminderOptionFields.forEach(field => {
+        field.hidden = !enabled;
+    });
     [reminderAtInput, reminderLeadInput, reminderRepeatInput].forEach(input => {
         if (input) input.disabled = !enabled;
     });
