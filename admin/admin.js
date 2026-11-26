@@ -84,6 +84,7 @@ let loginLogPage = 1;
 let loginLogsLoading = false;
 let editLogsLoading = false;
 let loginLogRefreshTimer = null;
+let editLogRefreshTimer = null;
 let logDeletionInProgress = false;
 let editLogPage = 1;
 const ADMIN_LOGS_PER_PAGE = 50;
@@ -115,8 +116,30 @@ function startLoginLogAutoRefresh() {
     }, 30000);
 }
 
+function stopEditLogAutoRefresh() {
+    if (editLogRefreshTimer !== null) {
+        window.clearInterval(editLogRefreshTimer);
+        editLogRefreshTimer = null;
+    }
+}
+
+function startEditLogAutoRefresh() {
+    stopEditLogAutoRefresh();
+    editLogRefreshTimer = window.setInterval(() => {
+        const editLogPanel = document.getElementById('panel-editLog');
+        if (document.visibilityState === 'visible' &&
+            adminPanel.style.display === 'block' &&
+            auth.currentUser &&
+            !logDeletionInProgress &&
+            editLogPanel?.style.display !== 'none') {
+            loadEditLogs({ preservePage: true });
+        }
+    }, 30000);
+}
+
 function switchPanel(panelId) {
     if (panelId !== 'panel-loginLog') stopLoginLogAutoRefresh();
+    if (panelId !== 'panel-editLog') stopEditLogAutoRefresh();
     // hide all panels
     panels.forEach(p => p.style.display = 'none');
     // remove active class
@@ -141,6 +164,7 @@ function switchPanel(panelId) {
     }
     if (panelId === 'panel-editLog') {
         loadEditLogs();
+        startEditLogAutoRefresh();
     }
     if (panelId === 'panel-accessRequests') {
         loadAccessRequests();
@@ -825,11 +849,11 @@ const editLogActionLabels = {
     reordered: 'Dời thứ tự công việc'
 };
 
-async function loadEditLogs() {
+async function loadEditLogs({ preservePage = false } = {}) {
     if (!editLogStatus || !editLogTableBody || editLogsLoading || logDeletionInProgress) return;
     editLogsLoading = true;
     refreshEditLogsBtn.disabled = true;
-    editLogPage = 1;
+    if (!preservePage) editLogPage = 1;
     editLogStatus.textContent = 'Đang tải nhật ký...';
 
     try {
@@ -1130,6 +1154,7 @@ adminPasswordInput.addEventListener('keydown', event => {
 });
 async function performAdminLogout() {
     stopLoginLogAutoRefresh();
+    stopEditLogAutoRefresh();
     try {
         await signOut(auth);
         activeAdminUser = null;

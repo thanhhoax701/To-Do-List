@@ -1,8 +1,9 @@
 // ========== NHẬP FIREBASE ==========
 // Nhập Firebase Realtime Database và các hàm cần thiết để thao tác với database
-import { auth, db, storage } from "./firebase.js";
+import { auth, db, storage, functions } from "./firebase.js";
 import { isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { ref, push, onValue, remove, update, get, set, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 import { ref as firebaseStorageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { recordSuccessfulLogin } from "./login-log.js";
 
@@ -299,33 +300,38 @@ async function warnTaskEditLogFailure(reason) {
     taskEditLogWarningShown = true;
     await showCustomAlert(
         'Thao tác công việc đã thực hiện, nhưng nhật ký chỉnh sửa chưa ghi được. ' +
-        'Vui lòng kiểm tra đăng nhập Super Admin và quyền taskEditLogs trong Firebase.'
+        'Vui lòng kiểm tra Cloud Function ghi nhật ký đã được triển khai.'
     );
 }
 
+const recordTaskEditCallable = httpsCallable(functions, 'recordTaskEdit');
+
 async function recordTaskEdit(action, task, taskDate, taskId = '', details = '') {
     const user = getCurrentUser();
-    if (user?.role !== 'superadmin') return;
-    if (!auth.currentUser?.uid || verifiedAdminUid !== auth.currentUser.uid) {
+    if (!user?.key) return;
+    const actorRole = user.role || 'member';
+    if (actorRole === 'superadmin' &&
+        (!auth.currentUser?.uid || verifiedAdminUid !== auth.currentUser.uid)) {
         await warnTaskEditLogFailure('Không thể ghi nhật ký chỉnh sửa: phiên Super Admin chưa được xác thực với Firebase.');
         return;
     }
-    if (!user?.key) {
-        await warnTaskEditLogFailure('Không thể ghi nhật ký chỉnh sửa: không xác định được tài khoản đang đăng nhập.');
+    if (actorRole !== 'superadmin' && !user.pin) {
+        await warnTaskEditLogFailure('Không thể ghi nhật ký chỉnh sửa: không có PIN của tài khoản hiện tại.');
         return;
     }
+
+    const logEntry = {
+        actorKey: String(user.key),
+        action,
+        taskId: String(taskId || ''),
+        taskContent: String(task?.content || '').slice(0, 200),
+        taskDate: String(taskDate || task?.taskDate || ''),
+        details: String(details || '').slice(0, 300)
+    };
+    if (actorRole !== 'superadmin') logEntry.pin = String(user.pin);
+
     try {
-        await push(ref(db, 'taskEditLogs'), {
-            actorId: String(user.key),
-            actorName: String(user.name || 'Tài khoản không tên'),
-            actorRole: String(user.role || 'member'),
-            action,
-            taskId: String(taskId || ''),
-            taskContent: String(task?.content || '').slice(0, 200),
-            taskDate: String(taskDate || task?.taskDate || ''),
-            details: String(details || '').slice(0, 300),
-            timestamp: serverTimestamp()
-        });
+        await recordTaskEditCallable(logEntry);
     } catch (error) {
         await warnTaskEditLogFailure(`Không thể ghi nhật ký chỉnh sửa công việc: ${error?.code || error?.message || error}`);
     }
