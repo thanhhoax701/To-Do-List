@@ -4,7 +4,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { getFunctions } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
 // Base64 chỉ làm mờ cấu hình client; không dùng như biện pháp bảo mật.
 const encodedFirebaseConfig = "eyJhcGlLZXkiOiJBSXphU3lDeTdScmVZM2ptb0RzV0t6bG1RR0d0NWNWc3h2ZGY2MXciLCJhdXRoRG9tYWluIjoidG8tZG8tbGlzdC05ZmRkNS5maXJlYmFzZWFwcC5jb20iLCJkYXRhYmFzZVVSTCI6Imh0dHBzOi8vdG8tZG8tbGlzdC05ZmRkNS1kZWZhdWx0LXJ0ZGIuZmlyZWJhc2Vpby5jb20iLCJwcm9qZWN0SWQiOiJ0by1kby1saXN0LTlmZGQ1Iiwic3RvcmFnZUJ1Y2tldCI6InRvLWRvLWxpc3QtOWZkZDUuZmlyZWJhc2VzdG9yYWdlLmFwcCIsIm1lc3NhZ2luZ1NlbmRlcklkIjoiNjU0OTM3MDY4MTA1IiwiYXBwSWQiOiIxOjY1NDkzNzA2ODEwNTp3ZWI6NDQ0MzYyNzFjYTU2NGQ3ODJhNjU5OCIsIm1lYXN1cmVtZW50SWQiOiJHLVRDWDJUOVc2WkMifQ==";
@@ -19,4 +18,3 @@ export const auth = getAuth(app);
 // Sử dụng: import { db } from "./firebase.js"
 export const db = getDatabase(app);
 export const storage = getStorage(app);
-export const functions = getFunctions(app, "us-central1");

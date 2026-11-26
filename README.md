@@ -47,14 +47,10 @@
 1. Cấu hình thông tin Firebase của dự án trong `firebase.js`.
 2. Trong Firebase Console, bật **Authentication → Sign-in method → Email/Password** cho Super Admin.
 3. Tạo tài khoản Email/Password của Super Admin trong **Authentication → Users**. Tạo nút `adminAccess/{UID}` trong Realtime Database với `enabled: true`, `userId` bằng khóa hồ sơ Super Admin trong `users`, và `role: "superadmin"`. Không cấp quyền này từ client; Rules từ chối client ghi `adminAccess`.
-4. Chọn đúng Firebase project, sau đó cài dependencies và triển khai Realtime Database Rules cùng Cloud Function ghi nhật ký:
+4. Chọn đúng Firebase project và triển khai Realtime Database Rules:
    ```powershell
-   cd functions
-   npm install
-   cd ..
-   firebase deploy --only database,functions --project YOUR_FIREBASE_PROJECT_ID
+   firebase deploy --only database --project YOUR_FIREBASE_PROJECT_ID
    ```
-   Cloud Functions yêu cầu project có billing và bật các dịch vụ triển khai cần thiết. Function dùng Node.js 20 tại `us-central1`.
 5. Trong **Authentication → Settings → Authorized domains**, thêm domain nơi triển khai ứng dụng (ví dụ `localhost` khi chạy local).
 6. Mở ứng dụng từ máy chủ web hoặc HTTPS; không mở trực tiếp bằng `file://` vì ứng dụng sử dụng ES modules.
 7. Truy cập `index.html` để dùng ứng dụng chính; trang quản trị chỉ dành cho Super Admin ở `admin/index.html`.
@@ -68,7 +64,7 @@ Cấu hình Firebase ở phía trình duyệt không phải thông tin bí mật
 
 Thành viên, Phòng Ban và Admin thường đăng nhập vào ứng dụng chính bằng mã nhân viên/PIN. Chỉ Super Admin dùng Email/Password Firebase; tài khoản này phải được ánh xạ bằng `adminAccess/{UID}` để mở trang quản trị và nhật ký.
 
-Nhật ký chỉnh sửa lưu các thao tác thêm, cập nhật, đổi trạng thái, xóa, nhân bản, nhập và sắp xếp công việc từ mọi tài khoản PIN, cùng Super Admin. Cloud Function xác thực lại PIN với hồ sơ trong Realtime Database, giới hạn thử PIN sai theo IP, rồi ghi log bằng Admin SDK; client không có quyền ghi trực tiếp `taskEditLogs`. Chỉ Super Admin đã được whitelist đọc nhật ký và xem tối đa 200 sự kiện mới nhất. Nhật ký không được tạo ngược cho dữ liệu cũ. Vì nhánh `users` hiện vẫn cho phép đọc công khai, đây chưa phải hệ thống kiểm toán an toàn trước người có thể lấy PIN từ database; cần siết Rules của `users` và đăng nhập PIN riêng để tăng độ tin cậy.
+Nhật ký chỉnh sửa lưu các thao tác thêm, cập nhật, đổi trạng thái, xóa, nhân bản, nhập và sắp xếp công việc trực tiếp vào Realtime Database từ ứng dụng. Rules cho phép client tạo log để hỗ trợ luồng đăng nhập PIN (không dùng Firebase Auth), nhưng chỉ Super Admin đã được whitelist mới đọc hoặc xóa log. Vì vậy nội dung log do client gửi không phải bằng chứng kiểm toán chống giả mạo; muốn xác thực danh tính và chống sửa log cần chuyển tài khoản PIN sang Firebase Auth hoặc dùng backend tin cậy. Nhật ký không được tạo ngược cho dữ liệu cũ và trang Admin xem tối đa 200 sự kiện mới nhất.
 
 **Giới hạn của Rules hiện tại:** để giữ quyền truy cập cũ theo phạm vi đã chọn, các nhánh dữ liệu ứng dụng như `users`, `tasks`, lịch và `accessRequests` vẫn được cấu hình đọc/ghi công khai. `loginLogs` cho phép ghi công khai để giữ luồng đăng nhập PIN hiện tại, nhưng chỉ Admin đã xác thực mới được đọc. Do đó thay đổi này khóa trang Admin và nhật ký chỉnh sửa, **không bảo vệ dữ liệu công việc/người dùng khỏi truy cập công khai**. Cần thiết kế lại quyền các nhánh ứng dụng riêng trước khi triển khai nếu muốn bảo mật toàn bộ dữ liệu.
 
