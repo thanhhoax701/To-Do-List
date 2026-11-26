@@ -1031,20 +1031,21 @@
                             <textarea id="description"></textarea>
                         </div>
                         <div class="task-form-field task-form-field-wide">
+                            <label for="unit">Đơn vị thực hiện</label>
+                            <div class="employee-autocomplete-field">
+                                <input type="text" id="unit" autocomplete="off" role="combobox"
+                                    aria-autocomplete="list" aria-expanded="false" aria-controls="employeeUnitList"
+                                    placeholder="Tìm và chọn đơn vị">
+                            </div>
+                        </div>
+                        <div class="task-form-field task-form-field-wide">
                             <label for="requester">Người yêu cầu</label>
                             <div class="employee-autocomplete-field">
                                 <input type="text" id="requester" autocomplete="off" role="combobox"
                                     aria-autocomplete="list" aria-expanded="false" aria-controls="employeeRequesterList"
-                                    aria-describedby="requesterHint" placeholder="Tìm và chọn người yêu cầu">
+                                    aria-describedby="requesterHint" placeholder="Chọn đơn vị trước">
                             </div>
                             <small id="requesterHint" class="task-form-hint">Có thể chọn nhiều người; phân cách bằng dấu phẩy.</small>
-                        </div>
-                        <div class="task-form-field task-form-field-wide">
-                            <label for="unit">Đơn vị thực hiện</label>
-                            <div class="employee-autocomplete-field">
-                                <input type="text" id="unit" autocomplete="off" role="combobox"
-                                    aria-autocomplete="list" aria-expanded="false" aria-controls="employeeUnitList">
-                            </div>
                         </div>
                         <div class="task-form-field task-form-field-wide">
                             <label for="assignee">Phụ trách</label>

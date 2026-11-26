@@ -2385,6 +2385,13 @@ function openModal(title, id = "", t = {}) {
     if (reminderLeadInput) reminderLeadInput.value = String(t.reminderLead ?? 0);
     if (reminderRepeatInput) reminderRepeatInput.value = t.reminderRepeat || "none";
     if (reminderEnabledInput) reminderEnabledInput.checked = Boolean(t.reminderEnabled);
+    originalTaskRequesterValue = requesterInput.value.trim();
+    selectedTaskRequesterUnit = unitInput.value.trim();
+    requesterInput.disabled = !selectedTaskRequesterUnit;
+    requesterInput.placeholder = selectedTaskRequesterUnit
+        ? "Tìm và chọn người yêu cầu"
+        : "Chọn đơn vị trước";
+    requesterInput.setAttribute('aria-disabled', String(requesterInput.disabled));
     syncReminderInputs();
 
     modal.style.display = "flex"; // Hiển thị modal
@@ -2438,6 +2445,22 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     if (unitInput) {
         setupEmployeeAutocomplete(unitInput, 'unit');
+        unitInput.addEventListener('input', () => {
+            if (unitInput.value === selectedTaskRequesterUnit) return;
+            selectedTaskRequesterUnit = '';
+            requesterInput.value = '';
+            requesterInput.disabled = true;
+            requesterInput.placeholder = "Chọn đơn vị trước";
+            requesterInput.setAttribute('aria-disabled', 'true');
+        });
+        unitInput.addEventListener('blur', () => {
+            const enteredUnit = unitInput.value.trim();
+            if (!enteredUnit) return;
+            selectedTaskRequesterUnit = enteredUnit;
+            requesterInput.disabled = false;
+            requesterInput.placeholder = 'Tìm và chọn người yêu cầu';
+            requesterInput.setAttribute('aria-disabled', 'false');
+        });
     }
     if (assigneeInput) {
         setupEmployeeAutocomplete(assigneeInput, 'assignee');
@@ -2539,6 +2562,13 @@ if (saveTaskBtn) {
             reminderEnabled: Boolean(reminderEnabledInput?.checked),
             taskDate: selectedDate
         };
+        if (data.requester &&
+            data.requester !== originalTaskRequesterValue &&
+            (!selectedTaskRequesterUnit || data.unit !== selectedTaskRequesterUnit)) {
+            await showCustomAlert('Vui lòng chọn Đơn vị thực hiện trước khi chọn Người yêu cầu.');
+            unitInput.focus();
+            return;
+        }
         if ((data.startDate && !isValidYmd(data.startDate)) ||
             (data.endDate && !isValidYmd(data.endDate))) {
             await showCustomAlert('Ngày bắt đầu hoặc ngày kết thúc không hợp lệ.');
@@ -5419,6 +5449,8 @@ let employeeTaskOptionsLoaded = false;
 let employeeRequesterOptions = [];
 let employeeAssigneeOptions = [];
 let employeeUnitOptions = [];
+let selectedTaskRequesterUnit = '';
+let originalTaskRequesterValue = '';
 const scheduleUnitExcludedOptions = new Set([
     'ban hang',
     'ban kiem soat',
@@ -5556,7 +5588,9 @@ async function loadEmployeeTaskOptions() {
                         value: `${code} _ ${name} _ ${detailPosition}`,
                         code,
                         name,
-                        detailPosition
+                        detailPosition,
+                        department: String(employee.department || '').trim(),
+                        location: String(employee.location || '').trim()
                     });
                     const searchablePosition = normalizeEmployeeText([
                         detailPosition,
@@ -5657,11 +5691,23 @@ function renderEmployeeAutocomplete() {
         : normalizeEmployeeText(queryValue);
     const hasReachedAssigneeLimit = isScheduleAssignee &&
         parseScheduleAssignees(input.value.split(',').slice(0, -1).join(',')).length >= 5;
-    const source = isUnitField
-        ? employeeUnitOptions.filter(item => !isExcludedEmployeeUnit(item.value))
-        : type === 'assignee' || isScheduleAssignee
-            ? employeeAssigneeOptions
-            : employeeRequesterOptions;
+    const selectedTaskUnit = normalizeEmployeeText(selectedTaskRequesterUnit);
+    const requestersInSelectedUnit = type === 'requester' && selectedTaskUnit
+        ? employeeRequesterOptions.filter(item =>
+            normalizeEmployeeText(item.department) === selectedTaskUnit ||
+            normalizeEmployeeText(item.location) === selectedTaskUnit
+        )
+        : [];
+    let source;
+    if (isUnitField) {
+        source = employeeUnitOptions.filter(item => !isExcludedEmployeeUnit(item.value));
+    } else if (type === 'assignee' || isScheduleAssignee) {
+        source = employeeAssigneeOptions;
+    } else if (type === 'requester' && requestersInSelectedUnit.length) {
+        source = requestersInSelectedUnit;
+    } else {
+        source = employeeRequesterOptions;
+    }
     const matches = source.filter(item => normalizeEmployeeText(item.value).includes(query)).slice(0, 40);
     const allUnitsMatch = isEmployeeDirectoryUnit &&
         (!query || normalizeEmployeeText('Tất cả đơn vị').includes(query));
@@ -5746,6 +5792,13 @@ function renderEmployeeAutocomplete() {
                 initializedEmployeeDepartments = false;
                 updateEmployeeDepartmentFilter();
                 renderEmployees();
+            } else if (type === 'unit') {
+                if (selectedTaskRequesterUnit !== item.value) requesterInput.value = '';
+                selectedTaskRequesterUnit = item.value;
+                input.value = item.value;
+                requesterInput.disabled = false;
+                requesterInput.placeholder = 'Tìm và chọn người yêu cầu';
+                requesterInput.setAttribute('aria-disabled', 'false');
             } else {
                 input.value = item.value;
             }
