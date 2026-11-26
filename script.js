@@ -272,6 +272,7 @@ let currentDate = new Date();
 let selectedDate = null;
 let taskDayUnsubscribe = null;
 let editingTaskLocation = null;
+let editingTaskOriginalData = null;
 // Danh sách nhiều ngày được chọn (cho tính năng nhân bản liên tiếp)
 let multiDates = [];
 // Lưu danh sách các ngày NB (Nghỉ Bù)
@@ -291,6 +292,73 @@ function getCurrentUserId() {
 function tasksRef(...parts) {
     const uid = getCurrentUserId();
     return ref(db, `tasks/${uid}${parts.length ? '/' + parts.join('/') : ''}`);
+}
+
+const taskLogFields = [
+    ['content', 'Công việc'],
+    ['description', 'Mô tả'],
+    ['requester', 'Người yêu cầu'],
+    ['unit', 'Đơn vị'],
+    ['assignee', 'Phụ trách'],
+    ['startDate', 'Ngày bắt đầu'],
+    ['endDate', 'Ngày kết thúc'],
+    ['result', 'Kết quả'],
+    ['direction', 'Hướng xử lý'],
+    ['completion', 'Tiến độ'],
+    ['status', 'Trạng thái'],
+    ['note', 'Ghi chú'],
+    ['category', 'Phân loại'],
+    ['priority', 'Ưu tiên'],
+    ['reminderAt', 'Thời gian nhắc'],
+    ['reminderLead', 'Nhắc trước'],
+    ['reminderRepeat', 'Lặp lại'],
+    ['reminderEnabled', 'Nhắc nhở']
+];
+
+function getTaskLogComparableValue(field, value) {
+    if (field === 'reminderEnabled') return Boolean(value);
+    if (field === 'reminderLead') return Number(value || 0);
+    if (field === 'reminderRepeat') return value || 'none';
+    if (field === 'status') return value || 'Chưa bắt đầu';
+    if (field === 'completion') return String(value ?? '').replace(/%$/, '').trim();
+    return String(value ?? '').trim();
+}
+
+function formatTaskLogValue(field, value) {
+    if (field === 'reminderEnabled') return value ? 'Bật' : 'Tắt';
+    if (field === 'reminderLead') return `${Number(value || 0)} phút`;
+    if (field === 'reminderRepeat') {
+        return ({ none: 'Không lặp', daily: 'Hằng ngày', weekly: 'Hằng tuần', monthly: 'Hằng tháng' })[value || 'none'] || String(value);
+    }
+
+    let text = String(value ?? '').replace(/\s+/g, ' ').trim();
+    if (!text) return '—';
+    if (field === 'reminderAt') text = text.replace('T', ' ');
+    if (field === 'completion' && !text.endsWith('%')) text += '%';
+    return text.length > 100 ? `${text.slice(0, 97)}...` : text;
+}
+
+function buildTaskChangeDetails(previousTask, nextTask) {
+    const changes = taskLogFields.flatMap(([field, label]) => {
+        const previousValue = getTaskLogComparableValue(field, previousTask?.[field]);
+        const nextValue = getTaskLogComparableValue(field, nextTask?.[field]);
+        return previousValue === nextValue
+            ? []
+            : [`${label}: ${formatTaskLogValue(field, previousTask?.[field])} → ${formatTaskLogValue(field, nextTask?.[field])}`];
+    });
+    return changes.length ? changes.join('\n') : 'Không có trường dữ liệu nào thay đổi.';
+}
+
+function buildTaskSummaryDetails(task, heading) {
+    const details = taskLogFields.flatMap(([field, label]) => {
+        if (field === 'content' || field === 'reminderEnabled' && !task?.reminderEnabled) return [];
+        if (['reminderAt', 'reminderLead', 'reminderRepeat'].includes(field) && !task?.reminderEnabled) return [];
+        const value = task?.[field];
+        const hasValue = value !== undefined && value !== null && String(value).trim() !== '';
+        if (!hasValue && !(task?.reminderEnabled && ['reminderAt', 'reminderLead', 'reminderRepeat'].includes(field))) return [];
+        return [`${label}: ${formatTaskLogValue(field, value)}`];
+    });
+    return [heading, ...details].join('\n');
 }
 
 let taskEditLogWarningShown = false;
@@ -323,7 +391,7 @@ async function recordTaskEdit(action, task, taskDate, taskId = '', details = '')
         taskId: String(taskId || ''),
         taskContent: String(task?.content || '').slice(0, 200),
         taskDate: String(taskDate || task?.taskDate || ''),
-        details: String(details || '').slice(0, 300),
+        details: String(details || '').slice(0, 4000),
         timestamp: serverTimestamp()
     };
 
@@ -2260,7 +2328,7 @@ function loadTasks(ds) {
                 showLoading();
                 try {
                     const newTaskRef = await push(tasksRef(y, m, w, ds), newTask);
-                    await recordTaskEdit('duplicated', newTask, ds, newTaskRef.key, 'Nhân bản từ công việc hiện có');
+                    await recordTaskEdit('duplicated', newTask, ds, newTaskRef.key, buildTaskSummaryDetails(newTask, 'Nhân bản từ công việc hiện có'));
                     await showCustomAlert("🔁 Đã nhân bản công việc!");
                 } catch (e) {
                     console.error(e);
@@ -2284,7 +2352,7 @@ function loadTasks(ds) {
 
                 try {
                     await remove(tasksRef(y, m, w, ds, k));
-                    await recordTaskEdit('deleted', t, ds, k);
+                    await recordTaskEdit('deleted', t, ds, k, buildTaskSummaryDetails(t, 'Đã xóa công việc'));
                     hideLoading();
                     // đợi trình duyệt vẽ lại để spinner biến mất trước khi thông báo
                     await new Promise(r => requestAnimationFrame(r));
@@ -2349,6 +2417,7 @@ async function moveTaskWithinDay(entries, fromIndex, direction, dateStr) {
 function openModal(title, id = "", t = {}) {
     modalTitle.innerText = title; // Đậu Để modal: "Thêm công việc" hoặc "Chỉnh sửa công việc"
     taskIdField.value = id; // Nếu có ID, tức là sửa; nếu trống là thêm mới
+    editingTaskOriginalData = id ? { ...t } : null;
     const sourceDate = t.date || selectedDate;
     editingTaskLocation = id && sourceDate
         ? {
@@ -2598,10 +2667,13 @@ if (saveTaskBtn) {
                 } else {
                     await update(tasksRef(sourceLocation.year, sourceLocation.month, sourceLocation.week, sourceLocation.date, existingTaskId), data);
                 }
-                await recordTaskEdit('updated', data, targetDate, existingTaskId, dateChanged ? `Đã chuyển từ ${sourceDate} sang ${targetDate}` : '');
+                const changeDetails = buildTaskChangeDetails(editingTaskOriginalData, data);
+                const dateChangeDetails = dateChanged ? `Ngày công việc: ${sourceDate} → ${targetDate}` : '';
+                await recordTaskEdit('updated', data, targetDate, existingTaskId, [changeDetails, dateChangeDetails].filter(Boolean).join('\n'));
             } else {
                 const newTaskRef = await push(tasksRef(targetYear, targetMonth, targetWeek, targetDate), data);
-                await recordTaskEdit('created', data, targetDate, newTaskRef.key, dateChanged ? `Đã tạo tại ngày ${targetDate}` : '');
+                const createDetails = buildTaskSummaryDetails(data, 'Tạo mới công việc');
+                await recordTaskEdit('created', data, targetDate, newTaskRef.key, createDetails);
             }
             if (dateChanged) navigateToTaskDate(targetDate);
             // ẩn spinner trước khi hiển thị xác nhận
@@ -2617,6 +2689,7 @@ if (saveTaskBtn) {
             }
             modal.style.display = "none";
             editingTaskLocation = null;
+            editingTaskOriginalData = null;
         } catch (error) {
             console.error(error);
             hideLoading();
@@ -7688,7 +7761,7 @@ confirmAdvBtn.onclick = async () => {
                             endDate: newEndDate
                         };
                         const duplicatedTaskRef = await push(tasksRef(nty, ntm, ntw, newTargetDateStr), duplicatedTask);
-                        await recordTaskEdit('duplicated', duplicatedTask, newTargetDateStr, duplicatedTaskRef.key, 'Nhân bản công việc theo khoảng ngày');
+                        await recordTaskEdit('duplicated', duplicatedTask, newTargetDateStr, duplicatedTaskRef.key, buildTaskSummaryDetails(duplicatedTask, 'Nhân bản theo khoảng ngày'));
                     }
                 }
             } else {
@@ -7719,7 +7792,7 @@ confirmAdvBtn.onclick = async () => {
                         endDate: newEndDate
                     };
                     const duplicatedTaskRef = await push(tasksRef(ty, tm, tw, targetDate), duplicatedTask);
-                    await recordTaskEdit('duplicated', duplicatedTask, targetDate, duplicatedTaskRef.key, 'Nhân bản công việc sang ngày khác');
+                    await recordTaskEdit('duplicated', duplicatedTask, targetDate, duplicatedTaskRef.key, buildTaskSummaryDetails(duplicatedTask, 'Nhân bản sang ngày khác'));
                 }
             }
         };
@@ -9548,7 +9621,7 @@ function renderSearchedTasks(tasks) {
                     const [y, m] = task.date.split("-");
                     const w = getWeekNumber(task.date);
                     const newTaskRef = await push(tasksRef(y, m, w, task.date), newTask);
-                    await recordTaskEdit('duplicated', newTask, task.date, newTaskRef.key, 'Nhân bản từ kết quả tìm kiếm');
+                    await recordTaskEdit('duplicated', newTask, task.date, newTaskRef.key, buildTaskSummaryDetails(newTask, 'Nhân bản từ kết quả tìm kiếm'));
                     await showCustomAlert("🔁 Đã nhân bản công việc!");
                 } catch (e) {
                     console.error(e);
@@ -9575,7 +9648,7 @@ function renderSearchedTasks(tasks) {
 
                 try {
                     await remove(tasksRef(task.year, task.month, task.week, task.date, task.id));
-                    await recordTaskEdit('deleted', task, task.date, task.id);
+                    await recordTaskEdit('deleted', task, task.date, task.id, buildTaskSummaryDetails(task, 'Đã xóa công việc'));
                     hideLoading();
                     // Reload searched tasks
                     await loadSearchedTasks();

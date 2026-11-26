@@ -956,9 +956,10 @@ function renderEditLogs() {
         const task = [log.taskContent || 'Công việc không tên', log.taskDate || '']
             .filter(Boolean)
             .join(' · ');
-        [date, actor, action, task || '—', log.details || '—'].forEach(value => {
+        [date, actor, action, task || '—', log.details || '—'].forEach((value, index) => {
             const cell = document.createElement('td');
             cell.textContent = String(value);
+            if (index === 4) cell.className = 'edit-log-details';
             row.appendChild(cell);
         });
         row.appendChild(createLogMobileCell(date, action, 'is-action', log.taskContent || 'Công việc không tên', [

@@ -3750,6 +3750,12 @@ body {
     min-width: 820px;
 }
 
+.edit-log-table td.edit-log-details {
+    min-width: 240px;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
 .login-log-refresh {
     min-height: 40px;
     padding: 0 14px;
